@@ -11,6 +11,7 @@ class Repo:
 
     def __init__(self, path: Path):
         self.path = path
+        path.mkdir()
         self.git("init", "-q", "-b", "main")
         self.git("config", "user.email", "toy@example.com")
         self.git("config", "user.name", "Toy")
@@ -20,10 +21,9 @@ class Repo:
             ["git", *args], cwd=self.path, check=True, capture_output=True, text=True
         ).stdout.strip()
 
-    def commit(self, message: str, **files: str) -> str:
-        """Write files (keyword name -> content, `__` for `/`) and commit them."""
-        for name, content in files.items():
-            target = self.path / name.replace("__", "/")
+    def commit(self, message: str, files: dict[str, str] | None = None) -> str:
+        for name, content in (files or {}).items():
+            target = self.path / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content)
         self.git("add", "-A")

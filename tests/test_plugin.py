@@ -28,11 +28,10 @@ def test_strictness_does_not_depend_on_ini(pytester):
     pytester.runpytest().assert_outcomes(failed=1)
 
 
-def test_green_scenario_runs_as_a_normal_test(pytester):
-    write(pytester, 'spec("TOY.S1")', PASSING)
-    pytester.runpytest("--strict-markers").assert_outcomes(passed=1)
-    write(pytester, 'spec("TOY.S1")', FAILING)
-    pytester.runpytest("--strict-markers").assert_outcomes(failed=1)
+@pytest.mark.parametrize(("body", "outcome"), [(PASSING, "passed"), (FAILING, "failed")])
+def test_green_scenario_runs_as_a_normal_test(pytester, body, outcome):
+    write(pytester, 'spec("TOY.S1")', body)
+    pytester.runpytest("--strict-markers").assert_outcomes(**{outcome: 1})
 
 
 @pytest.mark.parametrize("marker", ["spec", "spec()", 'spec("A", "B")', "spec(1)", 'spec("A", hold=True)'])

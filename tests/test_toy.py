@@ -24,13 +24,13 @@ def pytest_in(repo):
 
 
 def test_toy_red_then_green(repo):
-    repo.commit("R: GREET.S1 red", greet__py=STUB, test_greet__py=RED_TEST)
+    repo.commit("R: GREET.S1 red", {"greet.py": STUB, "test_greet.py": RED_TEST})
     red = pytest_in(repo)
     assert red.returncode == 0, red.stdout
     assert "1 xfailed" in red.stdout
 
     # Green: the code lands and the `new` flag is removed in the same commit.
-    repo.commit("G1: GREET.S1 green", greet__py=IMPL, test_greet__py=RED_TEST.replace(", new=True", ""))
+    repo.commit("G1: GREET.S1 green", {"greet.py": IMPL, "test_greet.py": RED_TEST.replace(", new=True", "")})
     green = pytest_in(repo)
     assert green.returncode == 0, green.stdout
     assert "1 passed" in green.stdout
@@ -38,13 +38,13 @@ def test_toy_red_then_green(repo):
 
 
 def test_toy_test_that_cannot_fail_is_caught_at_red(repo):
-    repo.commit("R: GREET.S1 red, but code already there", greet__py=IMPL, test_greet__py=RED_TEST)
+    repo.commit("R: GREET.S1 red, but code already there", {"greet.py": IMPL, "test_greet.py": RED_TEST})
     result = pytest_in(repo)
     assert result.returncode == 1
     assert "XPASS(strict)" in result.stdout
 
 
 def test_toy_green_squashed_with_red_is_caught_by_history(repo):
-    repo.commit("G1 only", greet__py=IMPL, test_greet__py=RED_TEST.replace(", new=True", ""))
+    repo.commit("G1 only", {"greet.py": IMPL, "test_greet.py": RED_TEST.replace(", new=True", "")})
     assert pytest_in(repo).returncode == 0
     assert main(["check-order", "--repo", str(repo.path)]) == 1
