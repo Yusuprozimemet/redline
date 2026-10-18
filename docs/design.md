@@ -82,6 +82,19 @@ Premises:
 
 A test is linked to its scenario with a marker, e.g. `@pytest.mark.spec("AUTH.2FA.S1")`.
 
+Steps, in order, with the scenarios each owns and the deferred items each step owns:
+
+```markdown
+## G1: Reject a wrong 2FA code
+Owns: AUTH.2FA.S1
+
+## Open items
+- O1 [G2]: rate-limit repeated wrong codes
+```
+
+A step is named `<change>/<step>` (e.g. `add-2fa/G1`). It counts as merged on `main` when a commit
+reachable from `main` carries the trailer `Redline-Step: add-2fa/G1`.
+
 ## 5. A change is always the same sequence of steps
 
 | Step | PR contents | CI proves |
