@@ -4,6 +4,7 @@ from pathlib import Path
 from redline.lines import LIMIT, check_lines
 from redline.links import check_links
 from redline.order import check_order
+from redline.start import Refused, start
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -17,7 +18,12 @@ def main(argv: list[str] | None = None) -> int:
     lines.add_argument("--base", help="base ref (default: merge-base with main)")
     links = commands.add_parser("check-links", help="link every scenario to a test, both ways")
     links.add_argument("--repo", type=Path, default=Path.cwd())
+    begin = commands.add_parser("start", help="start a step on a fresh branch and print its brief")
+    begin.add_argument("step", help="<change>/<step>, e.g. add-greet/G1")
+    begin.add_argument("--repo", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
+    if args.command == "start":
+        return run_start(args.repo, args.step)
     if args.command == "check-lines":
         return run_check_lines(args.repo, args.base)
     if args.command == "check-links":
@@ -50,6 +56,18 @@ def run_check_lines(repo: Path, base: str | None) -> int:
         print(f"FAIL: {count.total} changed lines since {count.base[:7]}, over the limit of {LIMIT}")
         return 1
     print(f"ok: {count.total} changed lines since {count.base[:7]} (limit {LIMIT})")
+    return 0
+
+
+def run_start(repo: Path, step: str) -> int:
+    try:
+        print(start(repo, step), end="")
+    except Refused as reason:
+        print(f"refused: {reason}")
+        return 1
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
     return 0
 
 
