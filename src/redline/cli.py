@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from redline.lines import LIMIT, check_lines
+from redline.links import check_links
 from redline.order import check_order
 
 
@@ -14,9 +15,13 @@ def main(argv: list[str] | None = None) -> int:
     lines = commands.add_parser("check-lines", help=f"fail if the change is over {LIMIT} lines")
     lines.add_argument("--repo", type=Path, default=Path.cwd())
     lines.add_argument("--base", help="base ref (default: merge-base with main)")
+    links = commands.add_parser("check-links", help="link every scenario to a test, both ways")
+    links.add_argument("--repo", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
     if args.command == "check-lines":
         return run_check_lines(args.repo, args.base)
+    if args.command == "check-links":
+        return run_check_links(args.repo)
 
     try:
         results = check_order(args.repo, args.rev)
@@ -45,4 +50,18 @@ def run_check_lines(repo: Path, base: str | None) -> int:
         print(f"FAIL: {count.total} changed lines since {count.base[:7]}, over the limit of {LIMIT}")
         return 1
     print(f"ok: {count.total} changed lines since {count.base[:7]} (limit {LIMIT})")
+    return 0
+
+
+def run_check_links(repo: Path) -> int:
+    try:
+        report = check_links(repo)
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for gap in report.gaps:
+        print(gap)
+    if report.gaps:
+        return 1
+    print(f"ok: {report.scenarios} scenarios, each linked to a test")
     return 0
