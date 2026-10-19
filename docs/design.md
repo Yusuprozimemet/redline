@@ -121,6 +121,10 @@ redline merged         confirms the merge via git, syncs main, refreshes status,
                        hand-off prompt for the next step → stop
 ```
 
+`pr` runs check-lines always, and check-links and check-order from the R step on (at S the
+delta's scenarios have no tests yet). Only when every gate passes does it put the `Redline-Step`
+trailer on each of the step's commits (once), push, and open the PR with `gh`.
+
 The brief (goal, owned scenario IDs, cited files, open items) is generated from the spec, the
 ledger and the open items. It's the whole hand-off: a new session needs nothing from the old one.
 

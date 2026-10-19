@@ -4,6 +4,7 @@ from pathlib import Path
 from redline.lines import LIMIT, check_lines
 from redline.links import check_links
 from redline.order import check_order
+from redline.pr import pr
 from redline.start import Refused, start
 
 
@@ -21,7 +22,12 @@ def main(argv: list[str] | None = None) -> int:
     begin = commands.add_parser("start", help="start a step on a fresh branch and print its brief")
     begin.add_argument("step", help="<change>/<step>, e.g. add-greet/G1")
     begin.add_argument("--repo", type=Path, default=Path.cwd())
+    finish = commands.add_parser("pr", help="run the local gates, then open the open step's PR")
+    finish.add_argument("--body", default="", help="text for the PR description")
+    finish.add_argument("--repo", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
+    if args.command == "pr":
+        return run_pr(args.repo, args.body)
     if args.command == "start":
         return run_start(args.repo, args.step)
     if args.command == "check-lines":
@@ -62,6 +68,18 @@ def run_check_lines(repo: Path, base: str | None) -> int:
 def run_start(repo: Path, step: str) -> int:
     try:
         print(start(repo, step), end="")
+    except Refused as reason:
+        print(f"refused: {reason}")
+        return 1
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    return 0
+
+
+def run_pr(repo: Path, body: str) -> int:
+    try:
+        print(f"ok: opened {pr(repo, body)}")
     except Refused as reason:
         print(f"refused: {reason}")
         return 1

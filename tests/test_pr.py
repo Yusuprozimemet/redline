@@ -48,7 +48,8 @@ def pr(repo, capsys) -> tuple[int, str]:
 
 
 def trailers(repo, rev_range: str) -> list[str]:
-    return repo.git("log", rev_range, "--format=%(trailers:key=Redline-Step,valueonly,separator=|)").splitlines()
+    log = repo.git("log", rev_range, "--format=>%(trailers:key=Redline-Step,valueonly,separator=|)")
+    return [line[1:] for line in log.splitlines()]
 
 
 def begin(repo, capsys, step: str, branch: str) -> None:
