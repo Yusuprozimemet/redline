@@ -6,7 +6,8 @@ each `- <ID> [<step>]: <text>` line is a deferred item owned by that step.
 
 A step is merged on main when a commit reachable from main carries the trailer
 `Redline-Step: <change>/<step>`. The open step is kept in the git directory, and stops being open
-once it is merged.
+once it is merged. A change is complete once its last step is merged. A change in an
+initiative's phase waits until every change of the earlier phases is complete (plan.py).
 """
 
 import re
@@ -14,6 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from redline.order import git
+from redline.plan import placed
 from redline.premises import premise_lines
 
 STEP = re.compile(r"^## (S|R|G\d+|C): (.+)$")
@@ -88,7 +90,33 @@ def brief(repo: Path, change: str, step: Step) -> str:
     parts += [scenario(repo, change, sid) + "\n" for sid in step.owns] or ["(none)", ""]
     parts += ["## Cited files (premises)"] + (premises(repo, change) or ["(none)"])
     parts += ["", "## Open items"] + (step.items or ["(none)"])
+    if found := placed(repo, change):
+        plan, index = found
+        phase = plan.phases[index]
+        parts += ["", f"## Initiative: {plan.name}", f"Goal: {plan.goal}",
+                  f"Phase {phase.number} of {len(plan.phases)}: {phase.name}", f"Stop: {phase.stop}"]
     return "\n".join(parts) + "\n"
+
+
+def complete(repo: Path, change: str, done: set[str]) -> bool:
+    """Whether the last step of the change is merged; a change with no steps yet isn't."""
+    try:
+        steps = read_steps(repo, change)
+    except RuntimeError:
+        return False
+    return bool(steps) and f"{change}/{steps[-1].name}" in done
+
+
+def waiting(repo: Path, change: str, done: set[str]) -> str:
+    """Why the change's phase can't begin yet, or nothing."""
+    if not (found := placed(repo, change)):
+        return ""
+    plan, index = found
+    for phase in plan.phases[:index]:
+        if behind := [c for c in phase.changes if not complete(repo, c, done)]:
+            return (f"phase {plan.phases[index].number} of {plan.name} waits for phase {phase.number}: "
+                    f"{', '.join(behind)} not complete")
+    return ""
 
 
 def merged_steps(repo: Path) -> set[str]:
@@ -124,6 +152,8 @@ def start(repo: Path, name: str) -> str:
     current = state.read_text().strip() if state.is_file() else ""
     if current and current != name and current not in merged:
         raise Refused(f"step {current} is still open; finish it with `redline pr` first")
+    if why := waiting(repo, change, merged):
+        raise Refused(why)
     if index and (previous := f"{change}/{steps[index - 1].name}") not in merged:
         raise Refused(f"previous step {previous} is not merged on main")
     head = git(repo, "rev-parse", "HEAD", "main").stdout.split()

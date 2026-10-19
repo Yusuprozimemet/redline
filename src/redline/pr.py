@@ -1,6 +1,6 @@
 """`redline pr`: run the local gates for the open step, then open its pull request.
 
-check-lines always runs. check-premises and check-audit run at the S step, on the step's own
+check-lines and check-plan always run. check-premises and check-audit run at the S step, on the step's own
 change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
@@ -21,6 +21,7 @@ from redline.lines import LIMIT, check_lines
 from redline.links import check_links
 from redline.lock import check_lock
 from redline.order import check_order, git
+from redline.plan import check_plan
 from redline.premises import check_premises
 from redline.start import TRAILER, Refused, open_step_file, read_steps
 
@@ -70,6 +71,7 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
             failures.append(over)
         elif why := approvals.approve(OVERSIZED, over):
             failures.append(why)
+    failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad]
     if step == "S":
         failures += [f"check-premises: {bad}" for bad in check_premises(repo, change).bad]
         failures += [f"check-audit: {bad}" for bad in check_audit(repo, change).bad]
