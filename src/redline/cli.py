@@ -11,6 +11,7 @@ from redline.links import check_links
 from redline.approval import Approvals
 from redline.lock import check_lock, write_lock
 from redline.order import check_order
+from redline.plan import check_plan
 from redline.pr import pr
 from redline.premises import check_premises
 from redline.start import Refused, start
@@ -30,6 +31,9 @@ def main(argv: list[str] | None = None) -> int:
     cited = commands.add_parser("check-premises", help="check every premise citation in the deltas")
     cited.add_argument("--change", help="check this change only (default: every change)")
     cited.add_argument("--repo", type=Path, default=Path.cwd())
+    planned = commands.add_parser("check-plan", help="check the structure of every initiative's plan, or one")
+    planned.add_argument("initiative", nargs="?", help="check this initiative only (default: every one)")
+    planned.add_argument("--repo", type=Path, default=Path.cwd())
     audit = commands.add_parser("check-audit", help="fail on a missing audit or an unresolved finding")
     audit.add_argument("change", help="the change, e.g. add-greet")
     audit.add_argument("--repo", type=Path, default=Path.cwd())
@@ -79,6 +83,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_links(args.repo)
     if args.command == "check-premises":
         return run_check_premises(args.repo, args.change)
+    if args.command == "check-plan":
+        return run_check_plan(args.repo, args.initiative)
     if args.command == "check-break":
         return run_check_break(args.repo, args.change)
     if args.command in ("lock", "check-lock"):
@@ -183,6 +189,21 @@ def run_check_premises(repo: Path, change: str | None) -> int:
         return 1
     n = report.citations
     print(f"ok: {n} premise citation{' resolves' if n == 1 else 's resolve'}")
+    return 0
+
+
+def run_check_plan(repo: Path, initiative: str | None) -> int:
+    try:
+        report = check_plan(repo, initiative)
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for bad in report.bad:
+        print(bad)
+    if report.bad:
+        return 1
+    print(f"ok: {report.plans} initiative{'' if report.plans == 1 else 's'}, "
+          f"{report.phases} phase{'' if report.phases == 1 else 's'}")
     return 0
 
 

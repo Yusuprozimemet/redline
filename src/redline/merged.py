@@ -4,7 +4,8 @@ Main is synced first (fetch, then fast-forward local main), so the check sees wh
 The step is merged when its `Redline-Step` trailer is reachable from main; if not, nothing else
 happens. Once it is, the checkout switches to main (the step branch is done, and the next step
 starts fresh from main) and the open-step record is cleared if the step it names is merged. Then
-the next step's brief is printed, or, after the last step, that the change is complete.
+the next step's brief is printed, or, after the last step, that the change is complete, and, if
+that completes its initiative's phase, the stopping point and the next phase.
 Uncommitted changes refuse before anything syncs. Fetching sits behind `Remote`, which tests
 replace.
 """
@@ -13,7 +14,8 @@ import subprocess
 from pathlib import Path
 
 from redline.order import git
-from redline.start import Refused, brief, find_step, merged_steps, open_step_file
+from redline.plan import placed
+from redline.start import Refused, brief, complete, find_step, merged_steps, open_step_file
 
 
 class Remote:
@@ -36,6 +38,23 @@ class Remote:
             self.run("git", "fetch", "-q", ".", "origin/main:main")
 
 
+def stopping_point(repo: Path, change: str, done: set[str]) -> str:
+    """When the change completes its initiative's phase: the stop, then what comes next, if anything."""
+    if not (found := placed(repo, change)):
+        return ""
+    plan, index = found
+    phase = plan.phases[index]
+    if not all(complete(repo, c, done) for c in phase.changes):
+        return ""
+    said = (f"The initiative {plan.name} is at a stopping point: phase {phase.number} ({phase.name}) "
+            f"is complete.\nStop: {phase.stop}\n")
+    if index == len(plan.phases) - 1:
+        return said + f"The initiative {plan.name} is complete.\n"
+    following = plan.phases[index + 1]
+    return said + (f"Next: phase {following.number} ({following.name}): {', '.join(following.changes)}. "
+                   f"Going on is the maintainer's call.\n")
+
+
 def merged(repo: Path, name: str) -> str:
     """Return the hand-off for the step after `name`, once `name` is merged on main."""
     change, steps, index = find_step(repo, name)
@@ -53,7 +72,7 @@ def merged(repo: Path, name: str) -> str:
         state.unlink()
     said = f"ok: {name} is merged on main; switched to main.\n"
     if index == len(steps) - 1:
-        return said + f"The change {change} is complete.\n"
+        return said + f"The change {change} is complete.\n" + stopping_point(repo, change, done)
     following = steps[index + 1]
     return said + (
         f"This session is over. In a new session, on a new branch fresh from main, run "
