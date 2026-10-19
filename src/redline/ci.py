@@ -2,7 +2,8 @@
 
 On a pull request, the step comes from the `Redline-Step` trailers of the PR's commits (base..HEAD),
 which must name exactly one step. Then the step's gates, the test suite and check-ledger against
-the base run, and every failure is reported. On a push to main, the suite runs and its result is
+the base run, and every failure is reported. A departure or an Oversized trailer needs its label
+on the PR (`--pr <number>`), read through `GitHub`. On a push to main, the suite runs and its result is
 recorded as a git note on the merged commit under refs/notes/redline-ci, which is then pushed.
 When the push merged an R step, check-break runs too, and the note gets each `hold` scenario's
 result under `break:`; a failed break fails the run.
@@ -19,7 +20,8 @@ import yaml
 from redline.breaks import check_break
 from redline.ledger import NOTES, check_ledger
 from redline.order import git
-from redline.pr import gates
+from redline.approval import Approvals
+from redline.pr import GitHub, gates
 from redline.start import TRAILER, Refused
 
 
@@ -62,10 +64,10 @@ def pr_step(repo: Path, base: str) -> str:
     return steps[0]
 
 
-def ci_pr(repo: Path, base: str) -> tuple[str, list[str]]:
+def ci_pr(repo: Path, base: str, number: int | None = None) -> tuple[str, list[str]]:
     name = pr_step(repo, base)
     change, _, step = name.partition("/")
-    failures = gates(repo, change, step) + suite(repo)
+    failures = gates(repo, change, step, Approvals(GitHub(repo), number)) + suite(repo)
     failures += [f"check-ledger: {p}" for p in check_ledger(repo, change, base)]
     return name, failures
 

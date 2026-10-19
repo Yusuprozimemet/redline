@@ -4,7 +4,9 @@ check-lines always runs. check-premises and check-audit run at the S step, on th
 change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
-check-lock runs at R, and at G steps against main's lock too.
+check-lock runs at R, and at G steps against main's lock too. Over 400 lines, an `Oversized:
+<reason>` trailer needs a maintainer's label, as a departure does (approval.py); locally, where
+the PR doesn't exist yet, `pr` only reports that CI will need it.
 If every gate passes, each commit of the step gets the `Redline-Step: <change>/<step>` trailer
 (once), the branch is pushed, the PR is opened with `gh`, and the step stops being open. Pushing and `gh` sit behind `GitHub`, which tests replace.
 """
@@ -12,6 +14,7 @@ If every gate passes, each commit of the step gets the `Redline-Step: <change>/<
 import subprocess
 from pathlib import Path
 
+from redline.approval import OVERSIZED, Approvals, claims
 from redline.audit import check_audit
 from redline.breaks import check_break, holds
 from redline.lines import LIMIT, check_lines
@@ -40,12 +43,33 @@ class GitHub:
     def create_pr(self, title: str, body: str) -> str:
         return self.run("gh", "pr", "create", "--title", title, "--body", body)
 
+    def labels(self, number: int) -> dict[str, str]:
+        """Each label on the PR, with whoever applied it last."""
+        events = self.run("gh", "api", "--paginate", f"repos/{{owner}}/{{repo}}/issues/{number}/events", "--jq",
+                          '.[] | select(.event == "labeled" or .event == "unlabeled") | [.event, .label.name, .actor.login] | @tsv')
+        applied = {}
+        for line in events.splitlines():
+            event, label, who = line.split("	")
+            if event == "labeled":
+                applied[label] = who
+            else:
+                applied.pop(label, None)
+        return applied
 
-def gates(repo: Path, change: str, step: str) -> list[str]:
+    def role(self, login: str) -> str:
+        return self.run("gh", "api", f"repos/{{owner}}/{{repo}}/collaborators/{login}/permission", "--jq", ".role_name")
+
+
+def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None) -> list[str]:
+    approvals = approvals or Approvals()
     failures = []
     count = check_lines(repo)
     if count.total > LIMIT:
-        failures.append(f"check-lines: {count.total} changed lines, over the limit of {LIMIT}")
+        over = f"check-lines: {count.total} changed lines, over the limit of {LIMIT}"
+        if not claims(repo, count.base, "Oversized"):
+            failures.append(over)
+        elif why := approvals.approve(OVERSIZED, over):
+            failures.append(why)
     if step == "S":
         failures += [f"check-premises: {bad}" for bad in check_premises(repo, change).bad]
         failures += [f"check-audit: {bad}" for bad in check_audit(repo, change).bad]
@@ -60,7 +84,8 @@ def gates(repo: Path, change: str, step: str) -> list[str]:
     if step == "R":
         failures += [f"check-break: {sid}: {why}" for sid, why in check_break(repo, change).bad.items()]
     if step == "R" or step.startswith("G"):  # at G the lock must also be main's, bar approved departures
-        failures += [f"check-lock: {bad}" for bad in check_lock(repo, change, None if step == "R" else "main").bad]
+        base = None if step == "R" else "main"
+        failures += [f"check-lock: {bad}" for bad in check_lock(repo, change, base, approvals).bad]
     return failures
 
 
@@ -76,8 +101,8 @@ def stamp(repo: Path, base: str, name: str) -> None:
         raise RuntimeError(f"could not add the {TRAILER} trailer: {done.stderr.strip()}")
 
 
-def pr(repo: Path, body: str = "") -> str:
-    """Open the PR for the open step and return its URL."""
+def pr(repo: Path, body: str = "") -> tuple[str, list[str]]:
+    """Open the PR for the open step; return its URL and the labels CI will need."""
     state = open_step_file(repo)
     name = state.read_text().strip() if state.is_file() else ""
     if not name:
@@ -91,11 +116,12 @@ def pr(repo: Path, body: str = "") -> str:
         raise Refused("the branch has no commits of its own to put in a PR")
     if git(repo, "status", "--porcelain").stdout.strip():
         raise Refused("there are uncommitted changes; commit or stash them first")
-    if failures := gates(repo, change, step_name):
+    approvals = Approvals()
+    if failures := gates(repo, change, step_name, approvals):
         raise Refused("the local gates failed:\n" + "\n".join(failures))
     stamp(repo, base, name)
     github = GitHub(repo)
     github.push(git(repo, "branch", "--show-current").stdout.strip())
     url = github.create_pr(f"{name}: {step.goal}", f"{body}\n\n{TRAILER}: {name}\n".lstrip())
     state.unlink()
-    return url
+    return url, approvals.pending

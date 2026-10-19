@@ -4,11 +4,14 @@ name: redline
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]  # a label re-runs the approval check
   push:
     branches: [main]
 
 permissions:
   contents: write  # push refs/notes/redline-ci after a run on main
+  issues: read  # who applied a PR's approval labels
+  pull-requests: read
 
 concurrency:
   group: redline-${{ github.ref }}  # runs on main push notes one at a time
@@ -30,7 +33,9 @@ jobs:
       - run: pip install -e ".[mutation]"  # mutmut, for check-break
       - name: Gates, suite and ledger for the PR's step
         if: github.event_name == 'pull_request'
-        run: redline ci pr --base main
+        run: redline ci pr --base main --pr ${{ github.event.pull_request.number }}
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Run the suite and note the result on the merged commit
         if: github.event_name == 'push'
         run: redline ci push --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
