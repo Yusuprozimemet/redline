@@ -36,13 +36,17 @@ DELTA = """## ADDED Requirements
 - THEN both are greeted
 
 ### Premises
-- P1: There is no greet function yet — `greet.py:1`
+- P1: Only a placeholder exists so far — `greet.py:1` (`placeholder`)
 """
 
 
 @pytest.fixture
 def change(repo):
-    repo.commit("add-greet spec", {f"{CHANGE}/steps.md": STEPS, f"{CHANGE}/specs/greet/delta.md": DELTA})
+    repo.commit("add-greet spec", {
+        f"{CHANGE}/steps.md": STEPS,
+        f"{CHANGE}/specs/greet/delta.md": DELTA,
+        "greet.py": "def placeholder():\n    pass\n",
+    })
     return repo
 
 
@@ -80,7 +84,7 @@ def test_brief_has_goal_owned_scenarios_cited_files_and_open_items(change, capsy
     assert '#### Scenario GREET.S1 [new]: greets by name\n- GIVEN the name "Ada"\n' in out
     assert '- THEN it returns "Hello, Ada!"' in out
     assert f"{CHANGE}/specs/greet/delta.md:5" in out
-    assert "- P1: There is no greet function yet — `greet.py:1`" in out
+    assert "- P1: Only a placeholder exists so far — `greet.py:1` (`placeholder`)" in out
     assert "- O1: decide on the punctuation" in out
     assert "GREET.S2" not in out  # owned by G2
     assert "O2" not in out
