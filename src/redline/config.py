@@ -15,12 +15,14 @@ RIGOR = re.compile(r"^Rigor:\s*(\S+)\s*$", re.MULTILINE)
 class Config:
     generated: list[str] = field(default_factory=list)  # globs for lockfiles and generated files
     rigor: str = "standard"  # the level of a change whose proposal declares none
+    rules: dict[str, list[str]] = field(default_factory=dict)  # cause -> lines every brief prints (§10)
 
 
 def load_config(repo: Path) -> Config:
     path = repo / PATH
     data = (yaml.safe_load(path.read_text()) if path.is_file() else None) or {}
-    return Config(generated=list(data.get("generated") or []), rigor=str(data.get("rigor") or "standard"))
+    rules = {str(cause): [str(r) for r in lines or []] for cause, lines in (data.get("rules") or {}).items()}
+    return Config(list(data.get("generated") or []), str(data.get("rigor") or "standard"), rules)
 
 
 def rigor(repo: Path, change: str) -> str:

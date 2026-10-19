@@ -4,6 +4,7 @@ from pathlib import Path
 from redline.audit import check_audit
 from redline.breaks import check_break
 from redline.ci import ci_pr, ci_push
+from redline.defects import check_defects, retro
 from redline.ledger import check_ledger, declared, write_ledger
 from redline.lines import LIMIT, check_lines
 from redline.merged import merged
@@ -37,6 +38,11 @@ def main(argv: list[str] | None = None) -> int:
     audit = commands.add_parser("check-audit", help="fail on a missing audit or an unresolved finding")
     audit.add_argument("change", help="the change, e.g. add-greet")
     audit.add_argument("--repo", type=Path, default=Path.cwd())
+    for name, help in (("check-defects", "check the form of a change's defect log, as at the C step"),
+                       ("retro", "group a change's defects by cause and propose rules; writes nothing")):
+        logged = commands.add_parser(name, help=help)
+        logged.add_argument("change", help="the change, e.g. add-greet")
+        logged.add_argument("--repo", type=Path, default=Path.cwd())
     broken = commands.add_parser("check-break", help="prove by mutation that each hold scenario's tests can fail")
     broken.add_argument("change", help="the change, e.g. add-greet")
     broken.add_argument("--repo", type=Path, default=Path.cwd())
@@ -87,6 +93,10 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_plan(args.repo, args.initiative)
     if args.command == "check-break":
         return run_check_break(args.repo, args.change)
+    if args.command == "check-defects":
+        return run_check_defects(args.repo, args.change)
+    if args.command == "retro":
+        return run_retro(args.repo, args.change)
     if args.command in ("lock", "check-lock"):
         return run_lock(args.repo, args.change, getattr(args, "base", None), args.command == "check-lock")
     if args.command == "check-audit":
@@ -218,6 +228,33 @@ def run_check_audit(repo: Path, change: str) -> int:
     if report.bad:
         return 1
     print(f"ok: {report.findings} finding{'' if report.findings == 1 else 's'}, none open")
+    return 0
+
+
+def run_check_defects(repo: Path, change: str) -> int:
+    try:
+        report = check_defects(repo, change)
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for bad in report.bad:
+        print(bad)
+    if report.bad:
+        return 1
+    n = len(report.defects)
+    print(f"ok: {n} defect{'' if n == 1 else 's'}, each with a cause and what found it")
+    return 0
+
+
+def run_retro(repo: Path, change: str) -> int:
+    try:
+        print(retro(repo, change), end="")
+    except Refused as reason:
+        print(f"refused: {reason}")
+        return 1
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
     return 0
 
 

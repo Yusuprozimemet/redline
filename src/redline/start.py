@@ -14,6 +14,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from redline.config import load_config
 from redline.order import git
 from redline.plan import placed
 from redline.premises import premise_lines
@@ -90,6 +91,8 @@ def brief(repo: Path, change: str, step: Step) -> str:
     parts += [scenario(repo, change, sid) + "\n" for sid in step.owns] or ["(none)", ""]
     parts += ["## Cited files (premises)"] + (premises(repo, change) or ["(none)"])
     parts += ["", "## Open items"] + (step.items or ["(none)"])
+    if rules := load_config(repo).rules:
+        parts += ["", "## Rules"] + [f"- {cause}: {rule}" for cause, lines in rules.items() for rule in lines]
     if found := placed(repo, change):
         plan, index = found
         phase = plan.phases[index]
