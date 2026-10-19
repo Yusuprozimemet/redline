@@ -439,12 +439,33 @@ CI is `.github/workflows/redline.yml`, a thin wrapper around `redline ci`; every
 CLI. It checks out the full history, `main` and `refs/notes/*`.
 
 On a pull request, `redline ci pr --base main` works out the step from the `Redline-Step`
-trailers of the PR's own commits (`main..HEAD`), which `pr` added. It refuses if no commit carries
-one, or if they name more than one distinct step: a PR is one step. It then runs that step's gates
-(the same ones `pr` runs locally), the test suite, and `check-ledger <change> --main main`, and
-prints every failure. This proves the PR's state: the gates hold, `new` tests fail strictly, and
-the committed ledger matches `main`'s evidence. It records nothing. A PR run is not evidence,
-because its commits are not on `main` yet.
+trailers of the PR's own commits (`main..HEAD`), which `pr` added. It refuses if they name more
+than one distinct step: a PR is one step. It then runs that step's gates (the same ones `pr` runs
+locally), the test suite, and `check-ledger <change> --main main`, and prints every failure. This
+proves the PR's state: the gates hold, `new` tests fail strictly, and the committed ledger
+matches `main`'s evidence. It records nothing. A PR run is not evidence, because its commits are
+not on `main` yet.
+
+A PR whose commits carry no `Redline-Step` trailer is **outside any step**: a rule PR from
+`retro` (§10), a plan edit, or a change to Redline itself. It is opened with `gh`, not `pr`.
+`redline ci pr` refuses it, before anything runs, if it touches `redline/changes/`,
+`redline/contracts/` or `redline/specs/`, and names each such file. Those files belong to steps:
+a proposal, delta, audit, defect log and ledger are written at S, R and C; the lock is rewritten
+only at R, or at G with an approved departure; deltas reach `specs/` at C. Outside a step, none
+of those gates would run, so a step could dodge them by leaving its trailer off.
+
+Otherwise it runs the gates that hold for any PR, and prints every failure:
+
+- **check-lines**, with the `Oversized` rule (§7, Approvals): over 400 lines needs the trailer and
+  a maintainer's `redline:oversized` label.
+- **check-plan** on every initiative.
+- **check-lock** on every change the lock names, without `--base`. The PR can't touch the lock,
+  so a locked test or (at critical) what it reaches can't change outside a step at all. A
+  `Redline-Departure` trailer doesn't help: a departure is a step's, and re-locks the test.
+- **The test suite.**
+
+It doesn't run check-links (on `main` an S step's scenarios have no tests yet, by design),
+check-ledger or check-defects (they are a change's, and the PR can't touch a change).
 
 On a push to `main`, `redline ci push` runs the suite on the merged commit and writes the note
 (`result: pass|fail`, `run: <url>`) on it under `refs/notes/redline-ci`, then pushes that ref. A
@@ -582,7 +603,10 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   `conftest.py` files, so helpers imported from shared test modules, plugin fixtures and dynamic
   lookups aren't locked (§5). Decide whether to follow imports into files `redline/config.yaml`
   names as test support.
-- O-RETRO1 [build 6, the part after the defect log]: a rule PR from `retro` belongs to no step,
-  so it carries no `Redline-Step` trailer, and `redline ci pr` refuses it, as it refuses
-  Redline's own PRs. Decide what CI runs on a PR that changes only `redline/config.yaml`: the
-  always-on gates (check-lines, check-plan) and the suite, at least.
+- O-RETRO1 [closed, build 6 part 3]: a rule PR from `retro` belongs to no step, so `redline ci
+  pr` refused it, as it refused Redline's own PRs. Now a PR outside any step runs check-lines
+  (with `Oversized`), check-plan, check-lock on every locked change and the suite, and is refused
+  if it touches a change, the lock or the living specs (§7).
+- O-CI1 [build 6, the part on one track per Green PR]: a PR outside any step may still change
+  `rigor:` in `redline/config.yaml`, which sets the level of every change whose proposal declares
+  none, and so what its gates require. Decide whether that needs a label, like `Oversized`.
