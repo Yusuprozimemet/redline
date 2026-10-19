@@ -166,7 +166,39 @@ source, from its first decorator to its last line, with `\n` line endings. It co
 not the whole file, because the R step's test files also hold `new` tests. Every G step edits
 those, removing `new=True` and fixing the tests, and a whole-file hash would make every one of
 those edits a departure. The cost is that the hash doesn't cover helpers and fixtures the test
-calls (O-LOCK2, §12).
+calls.
+
+At **critical** rigor (§8) each entry also hashes what the test reaches, and is a map:
+
+```yaml
+add-2fa:
+  AUTH.2FA.H1:
+    tests/test_login.py::test_lockout:
+      test: 9c1e…    # the function, as above
+      reach: 4b7a…   # what it reaches, below
+```
+
+`reach` is the SHA-256 of these sources, each labelled with its file and sorted by file and line:
+
+- **Fixtures**: each parameter of the test, each `usefixtures` name, and each `autouse` fixture,
+  found as a `@pytest.fixture` function in the test's class, then its file, then each
+  `conftest.py` from its directory up to the root. The nearest wins, as in pytest.
+- **Helpers**: each name a reached function reads that its own file defines at module level: a
+  function, a class or an assignment (`TIMEOUT = 5`). Fixtures' parameters are fixtures again.
+  This repeats until nothing new is reached.
+- **Marks**: the module's `pytestmark`, and the test's class decorators and `pytestmark`.
+- **Settings**: the root pytest configuration section (`pytest.ini`, `[tool.pytest.ini_options]`
+  in `pyproject.toml`, `tox.ini`, `[tool:pytest]` in `setup.cfg`, first found), where pytest-timeout's
+  `timeout` and `addopts` such as `--timeout` or `--reruns` live.
+
+Only the test's file and its `conftest.py` files are searched. An imported name isn't followed,
+because the code under test is imported too, and hashing it would make every G step a departure.
+
+An entry that is a plain hash, as every lock written before this was, still reads: it is
+`{test: <hash>}` with no `reach`. Below critical, `redline lock` keeps writing plain hashes.
+
+The change's level is the `Rigor: lite|standard|critical` line of its `proposal.md`, else
+`rigor:` in `redline/config.yaml`, else `standard`. Any other value is an error.
 
 ## 5. A change is always the same sequence of steps
 
@@ -209,14 +241,53 @@ The R step also writes the lock (§4). `redline lock <change>` rewrites that cha
 tests as they are now. `redline check-lock <change>` prints each difference between the lock and
 the code:
 
-- **A hash differs**: a locked test's source has changed.
+- **A hash differs**: a locked test's source has changed, or (where the entry has `reach`) a
+  fixture, helper, mark or setting it reaches.
 - **A locked test is missing**: it was deleted or renamed, or its marker now has `new=True`.
 - **A hold test isn't locked**: the test exists but the lock has no entry for it.
+- **A critical entry has no `reach`**: it was locked before the change was critical.
+
+Every hash an entry has is checked, whatever the level. The level decides only what `redline
+lock` writes and whether a missing `reach` is a difference. So lowering the level in the
+proposal checks nothing less, unless the lock is rewritten, and at G that is a change since
+`main`, below.
 
 At R, the gate runs exactly that check, so every hold test is in the lock and current. At G1…Gn
 the gate adds a fourth difference, `--base main`: the change's lock entries differ from the lock
 at the merge-base with `main`. Without it, a G step could edit a frozen test and re-run `redline
-lock`. `pr` and `redline ci pr` run both checks.
+lock`. An entry has changed when a hash it had at the merge-base differs, or it was added or
+removed. A `reach` added where the merge-base had none hasn't changed it: the frozen source is
+the same, and it is now checked further. `pr` and `redline ci pr` run both checks.
+
+**Timing is part of what a frozen test expects** (`../migration-engine`, "The safety net is
+frozen"). A test that asserted an effect at once and now waits for it, or waits longer, expects
+something else with every value unedited. In Python and pytest, timing is any of these:
+
+| Timing | Where | Caught by |
+|---|---|---|
+| `time.sleep`, `asyncio.sleep`; a poll loop and its bound (`range(50)`, a deadline); a `timeout=` argument | the test's body | the function hash, every level |
+| `@pytest.mark.timeout(n)`, `@pytest.mark.flaky(reruns=n)`, Hypothesis `@settings(deadline=…)` | the test's decorators | the function hash, every level |
+| any of the above in a fixture or helper; a constant such as `TIMEOUT = 5` | the test's file, its `conftest.py` files | `reach`, critical |
+| `pytestmark = pytest.mark.timeout(n)`; a class decorator | the module, the test's class | `reach`, critical |
+| `timeout`, `--timeout`, `--reruns` in the pytest configuration | the root config file | `reach`, critical |
+
+A new or longer wait, poll bound or timeout, or a rerun added to quiet a flaky test, is a
+departure, approved like any other: the `Redline-Departure` trailer and the `redline:departure`
+label (§7). There is no second path. A fixture or helper edit changes the `reach` of every
+critical test that reaches it, so each of those tests needs its own trailer. One label covers
+them all.
+
+What the lock still doesn't prove:
+
+- **Timing from outside the files it reads**: an environment variable (`PYTEST_TIMEOUT`,
+  `PYTEST_ADDOPTS`, a value the test reads with `os.environ`), a command-line flag in the CI
+  workflow, or a value read from a data file.
+- **What it can't find statically**: helpers imported from another module (a shared
+  `tests/helpers.py`), fixtures from plugins, `request.getfixturevalue`, a fixture renamed with
+  `@pytest.fixture(name=…)`, or names reached through attributes (O-LOCK3, §12).
+- **That the code under test still meets the bound.** The lock freezes what the test expects,
+  not what the API shows while it waits. The migration engine pins that with a second test
+  outside the frozen set, which the departure's spec names. Redline doesn't check that it exists.
 
 Editing a frozen test after R is a **departure**. The step re-runs `redline lock`, and one of its
 commits carries a trailer naming the test, the person and the reason:
@@ -332,7 +403,7 @@ The real `gh api` calls are tested only by hand; the suite uses the fake.
 |---|---|
 | **lite** | Nothing; S and R may share one PR |
 | **standard** (default) | Mutation testing on the touched files, and a defect log |
-| **critical** | Frozen contract lock (timing included), one track per Green PR, a plan-auditor at the start and end of each phase, blind relabelling of defects, independent end-of-initiative auditors |
+| **critical** | Contract lock covers what each test reaches, timing included (§4, §5), one track per Green PR, a plan-auditor at the start and end of each phase, blind relabelling of defects, independent end-of-initiative auditors |
 
 The proposal declares its level. The auditor may raise it (auth, payments, data migrations,
 public APIs are critical) but never lower it.
@@ -379,5 +450,13 @@ every finding and closes only what it has checked. The `Waived-by:` line is the 
 - O-LOCK1 [closed, build 5 part 3]: a departure's approval was a recorded line, not proof. Now
   `redline ci pr` checks a maintainer's `redline:departure` label, with the same function that
   checks `Oversized` (§7, Approvals), and §7 says what that still doesn't prove.
-- O-LOCK2 [build 5, critical lock]: the lock hashes test functions only, so a weakened helper or fixture
-  isn't caught. The critical level's lock (with timing) decides whether to hash what a test calls.
+- O-LOCK2 [closed, build 5 part 4]: the lock hashed test functions only, so a weakened helper or
+  fixture wasn't caught. At critical it now hashes what each test reaches (§4), not only timing
+  values: picking timing out of code by name (`sleep`, `timeout`, `wait`) misses a bare
+  `range(50)` poll bound and a renamed helper, and a weakened assert in a fixture is the same
+  quiet weakening. The cost is a departure for every critical test a shared fixture edit reaches.
+  Every level keeps the function hash, which already holds the test's own timing.
+- O-LOCK3 [build 5, a part after the critical tracks]: `reach` stops at the test's file and its
+  `conftest.py` files, so helpers imported from shared test modules, plugin fixtures and dynamic
+  lookups aren't locked (§5). Decide whether to follow imports into files `redline/config.yaml`
+  names as test support.
