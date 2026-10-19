@@ -128,15 +128,19 @@ scenarios:
 it is the red commit that is an ancestor of green), and `green` is the commit where `new` was
 removed. `merged` is the first commit on `main`'s first-parent line that contains `commit`, which
 is the commit CI ran on after the merge. `result` is that run's outcome: `pass`, `fail`, or
-`unverified` when no result is recorded. `break` is the mutation result for `hold` scenarios and
-stays `null` until step 5.
+`unverified` when no result is recorded. `break` is the mutation evidence (§5) and is `null` for a
+`new` scenario. A `hold` scenario is the other way round: its test carries no `new=True`, so it
+has no red and no green, and both stay `null`. Its `break` is `{commit, merged, result}`:
+`commit` is the first commit on `main` whose tests link the scenario without `new=True`, `merged`
+is found as for red, and `result` is the scenario's entry in the `break:` map of the CI note on
+`merged` (`pass` or `fail`). It is `unverified` when that note, or its entry, is missing.
 
 `redline ledger <change>` rebuilds the ledger from `main`'s history and writes it.
 `redline check-ledger <change>` rebuilds it and fails if the committed file is missing or
 differs. Only commits reachable from `main` count. So a step's PR carries the evidence of the
 steps merged before it, never of its own commits: `pr` changes their hashes when it adds
 trailers, and CI hasn't run on them after a merge. By the C step, the ledger holds every
-scenario's red and green.
+`new` scenario's red and green, and every `hold` scenario's break.
 
 From git alone, the rebuild knows which commits made each scenario red and green, and where they
 merged. It can't know whether the tests really failed or passed there. Only a CI run can say
@@ -153,11 +157,35 @@ who can push to `refs/notes/redline-ci`, because branch protection doesn't cover
 | **S: Spec** | Proposal and delta spec, with audit findings resolved | Structure is valid, every premise citation resolves, IDs are unique, every finding is closed or waived |
 | **R: Red** | Linked tests: `new` as strict expected failures (`xfail(strict=True)`, Jest `test.failing`); `hold` added to the lock | Every `new` test fails on today's code; every `hold` test passes, then fails under mutation |
 | **G1…Gn: Green** | Code that turns expected failures into passes | Owned scenarios pass with their markers removed, the lock is unchanged, nothing else regressed |
-| **C: Close** | Verify report, delta merged into `specs/`, defect log, deferred items with owners | Every scenario has red, break (for `hold`) and green results from merged commits, and the red commit is an ancestor of the green one |
+| **C: Close** | Verify report, delta merged into `specs/`, defect log, deferred items with owners | Every `new` scenario has red and green results from merged commits, the red commit an ancestor of the green one; every `hold` scenario has a break result |
 
 Red tests can merge onto `main` while CI stays green, because CI expects them to fail. A `new` test
 that passes before the code exists turns CI red under strict expected-failure, so a check that
 can't fail can't get in. Git history then records test-first as fact.
+
+A `hold` test can't prove itself that way, because it passes from the start. A **break** proves
+it can fail. `redline check-break <change>` checks every `hold` scenario the change's deltas
+declare:
+
+- **Its tests** are the tests whose marker names the scenario without `new=True`. A `new=True`
+  marker on a `hold` scenario doesn't count. No such test is a failure.
+- **Unmutated**, those tests alone (`pytest --redline-spec <ID>`) must pass on today's code.
+- **Mutated files** are the step's touched files only (§12). The R step's own diff adds tests and
+  nothing else, so its touched code is the code its scenarios protect: the Python files the
+  change's premises cite, which the auditor has checked. No other file is mutated.
+- **Pass** means at least one mutant of those files makes the tests fail. A scenario fails if its
+  tests survive every mutant, or if there is nothing to mutate.
+
+It runs at the R step only. `pr` and `redline ci pr` run it as a gate there, as previews. After an
+R step merges, `redline ci push` runs it again on the merged commit and adds one result per
+`hold` scenario to the CI note (`break:` then `  <ID>: pass|fail`). A failed break fails the run.
+That note is the only source of a ledger `break`. A local or PR run is never evidence.
+
+The mutation tool is mutmut, behind the `Mutator` seam in `redline/breaks.py`, which tests
+replace. mutmut doesn't run on Windows (3.8 refuses and points at WSL), so the real tool runs only
+in CI on Linux, and the tests always use the fake. On Windows, check-break still checks each
+scenario's tests and their unmutated run. It reports the mutation as skipped, not failed, because
+CI runs it.
 
 At **lite** rigor, S and R may share one PR, so the smallest change is two sessions.
 
@@ -174,7 +202,8 @@ redline merged         confirms the merge via git, syncs main, refreshes status,
 
 `pr` runs check-lines always, check-premises and check-audit at S (on the step's own change: an
 older change's premises may go stale as the code moves on), and check-links and check-order from
-the R step on (at S the delta's scenarios have no tests yet). Only when every gate passes does it put the
+the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
+which have no red by design), and check-break at the R step only. Only when every gate passes does it put the
 `Redline-Step` trailer on each of the step's commits (once), push, and open the PR with `gh`.
 
 `merged <step>` fetches and fast-forwards local `main` first, then looks for the step's trailer on
