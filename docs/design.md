@@ -32,7 +32,8 @@ of being taken on the agent's word.
 2. **Red before green, proved on `main`.** A test for a `new` scenario lands as a *strict expected
    failure*, and CI confirms it really fails.
 3. **Every PR is ≤ 400 changed lines.** Specs and tests count; lockfiles and generated files
-   (declared in config) don't. An `Oversized: <reason>` line needs a person's approval label.
+   (declared in config) don't. A bigger PR needs an `Oversized: <reason>` trailer on one of its
+   commits and a maintainer's `redline:oversized` label (§7).
 4. **One session per step.** A step is one PR. A merge ends the session.
 5. **An independent audit before code.** A read-only agent in a fresh context, on the strongest
    model. If that model isn't available, the work stops; it never falls back to a weaker one.
@@ -227,9 +228,8 @@ Redline-Departure: tests/test_greet.py::test_placeholder_returns_nothing approve
 A test with a trailer like that among the step's own commits (`base..HEAD`) may change its lock
 entry. Every other check still applies, so the lock must match the edited test. A trailer
 missing `approved-by @person: <reason>` doesn't count. The trailer stays in `main`'s history, so
-the departure is recorded with its approver (§2.7). Git alone can't prove the named person
-approved it. That proof needs a maintainer's label checked through the `GitHub` seam (O-LOCK1,
-§12), as `Oversized` does.
+the departure is recorded with its approver (§2.7). The trailer is only a claim, so in CI it also
+needs a maintainer's `redline:departure` label on the PR (§7).
 
 At **lite** rigor, S and R may share one PR, so the smallest change is two sessions.
 
@@ -248,8 +248,10 @@ redline merged         confirms the merge via git, syncs main, refreshes status,
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
 which have no red by design), check-break at the R step only, and check-lock from R on (G steps
-with `--base main`, §5). Only when every gate passes does it put the
-`Redline-Step` trailer on each of the step's commits (once), push, and open the PR with `gh`.
+with `--base main`, §5). A departure or an `Oversized` trailer doesn't refuse: the PR and its
+labels don't exist yet, so `pr` prints that CI will need the label (§7). Only when every gate
+passes does it put the `Redline-Step` trailer on each of the step's commits (once), push, and open
+the PR with `gh`.
 
 `merged <step>` fetches and fast-forwards local `main` first, then looks for the step's trailer on
 `main` and refuses if it isn't there. Once it is, it switches to `main` (the next step starts fresh
@@ -283,6 +285,46 @@ On a push to `main`, `redline ci push` runs the suite on the merged commit and w
 (`result: pass|fail`, `run: <url>`) on it under `refs/notes/redline-ci`, then pushes that ref. A
 failed suite is still recorded, and the run fails. This is the only evidence Redline writes, and
 the next PR's `check-ledger` picks it up.
+
+### Approvals
+
+A person's approval is a label on the PR, applied by a maintainer. A commit trailer in the PR's
+own commits (`base..HEAD`) says what is approved and why, and stays in `main`'s history. The label
+says a maintainer agreed. Two claims need one:
+
+| Trailer | Allows | Label |
+|---|---|---|
+| `Redline-Departure: <test> approved-by @person: <reason>` | a frozen test's lock entry to change (§5) | `redline:departure` |
+| `Oversized: <reason>` | more than 400 changed lines (§2.3) | `redline:oversized` |
+
+A trailer without its reason (or, for a departure, without `approved-by @person:`) allows nothing.
+One label covers every claim of its kind in the PR. The labels are separate, so approving the size
+doesn't approve weakening a test. Both rules call one function, `approve` in
+`redline/approval.py`, which returns why a claim isn't approved, or nothing.
+
+`redline ci pr --pr <number>` reads the labels through the `GitHub` seam, and only when a claim
+needs one. The PR's issue events (`gh api repos/{owner}/{repo}/issues/<number>/events`) give, for
+each label still on the PR, who applied it last. That person is a maintainer when their role on
+the repository (`gh api repos/{owner}/{repo}/collaborators/<login>/permission`, `role_name`) is
+`admin` or `maintain`. The role comes from GitHub, not from a list in `redline/config.yaml`,
+because a PR can edit the config to name its own author. A claim fails when its label is missing,
+was applied by someone else, or there is no PR number. The workflow passes the number and a
+read-only token, and also runs on `labeled` and `unlabeled`, so applying the label re-runs CI.
+
+Locally there is no PR, so no label can exist yet. `redline pr` and `redline check-lock` don't
+refuse a claim. They print that CI will need its label. A trailer that allows nothing still fails.
+
+What the label still doesn't prove:
+
+- **Who pressed the button.** Anyone holding a maintainer's token, including an agent given it,
+  applies the label as that maintainer.
+- **What they saw.** The label isn't tied to a commit. Commits pushed after it, with new
+  departures, are covered by it until someone removes it.
+- **That the named person agreed.** Any maintainer's label approves a departure, whoever its
+  trailer names.
+- **The role at the time.** The role is read when CI runs, not when the label was applied.
+
+The real `gh api` calls are tested only by hand; the suite uses the fake.
 
 ## 8. Rigor levels (on top of the invariants)
 
@@ -334,8 +376,8 @@ every finding and closes only what it has checked. The `Waived-by:` line is the 
   which the auditor may challenge.
 - Mutation cost on large codebases: touched files only, at the Red step only.
 - Whether a test asserts its scenario's THEN clauses is a judgment; the auditor checks it.
-- O-LOCK1 [build 5, part 3]: a departure's approval is a recorded line, not proof. The proof is
-  a maintainer's label, read through the `GitHub` seam and checked by `redline ci pr`, shared with
-  `Oversized` (§2.3), which has no label check yet either.
-- O-LOCK2 [build 5, part 3]: the lock hashes test functions only, so a weakened helper or fixture
+- O-LOCK1 [closed, build 5 part 3]: a departure's approval was a recorded line, not proof. Now
+  `redline ci pr` checks a maintainer's `redline:departure` label, with the same function that
+  checks `Oversized` (§7, Approvals), and §7 says what that still doesn't prove.
+- O-LOCK2 [build 5, critical lock]: the lock hashes test functions only, so a weakened helper or fixture
   isn't caught. The critical level's lock (with timing) decides whether to hash what a test calls.
