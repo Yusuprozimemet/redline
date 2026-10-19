@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from redline.audit import check_audit
+from redline.breaks import check_break
 from redline.ci import ci_pr, ci_push
 from redline.ledger import check_ledger, declared, write_ledger
 from redline.lines import LIMIT, check_lines
@@ -30,6 +31,9 @@ def main(argv: list[str] | None = None) -> int:
     audit = commands.add_parser("check-audit", help="fail on a missing audit or an unresolved finding")
     audit.add_argument("change", help="the change, e.g. add-greet")
     audit.add_argument("--repo", type=Path, default=Path.cwd())
+    broken = commands.add_parser("check-break", help="prove by mutation that each hold scenario's tests can fail")
+    broken.add_argument("change", help="the change, e.g. add-greet")
+    broken.add_argument("--repo", type=Path, default=Path.cwd())
     for name, help in (("ledger", "rebuild a change's ledger.yaml from main's history"),
                        ("check-ledger", "fail if a change's ledger.yaml doesn't match main's history")):
         led = commands.add_parser(name, help=help)
@@ -65,6 +69,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_links(args.repo)
     if args.command == "check-premises":
         return run_check_premises(args.repo, args.change)
+    if args.command == "check-break":
+        return run_check_break(args.repo, args.change)
     if args.command == "check-audit":
         return run_check_audit(args.repo, args.change)
     if args.command in ("ledger", "check-ledger"):
@@ -176,6 +182,23 @@ def run_check_audit(repo: Path, change: str) -> int:
     if report.bad:
         return 1
     print(f"ok: {report.findings} finding{'' if report.findings == 1 else 's'}, none open")
+    return 0
+
+
+def run_check_break(repo: Path, change: str) -> int:
+    try:
+        report = check_break(repo, change)
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for sid, why in report.bad.items():
+        print(f"{sid}: {why}")
+    if report.bad:
+        return 1
+    if report.skipped:
+        print(f"skipped: {report.skipped}; CI runs the mutation")
+    proved = "" if report.skipped else " and fail under a mutant"
+    print(f"ok: {len(report.results)} hold scenario(s): tests pass unmutated{proved}")
     return 0
 
 
