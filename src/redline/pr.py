@@ -3,6 +3,7 @@
 check-lines always runs. check-premises and check-audit run at the S step, on the step's own
 change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
+check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
 If every gate passes, each commit of the step gets the `Redline-Step: <change>/<step>` trailer
 (once), the branch is pushed, the PR is opened with `gh`, and the step stops being open. Pushing and `gh` sit behind `GitHub`, which tests replace.
 """
@@ -11,6 +12,7 @@ import subprocess
 from pathlib import Path
 
 from redline.audit import check_audit
+from redline.breaks import check_break, holds
 from redline.lines import LIMIT, check_lines
 from redline.links import check_links
 from redline.order import check_order, git
@@ -47,11 +49,14 @@ def gates(repo: Path, change: str, step: str) -> list[str]:
         failures += [f"check-audit: {bad}" for bad in check_audit(repo, change).bad]
     else:
         failures += [f"check-links: {gap}" for gap in check_links(repo).gaps]
+        held = set(holds(repo))  # a hold test has no red by design
         failures += [
             f"check-order: {r.scenario}: green {r.green[:7]} has no red commit among its ancestors"
             for r in check_order(repo)
-            if r.status == "fail"
+            if r.status == "fail" and r.scenario not in held
         ]
+    if step == "R":
+        failures += [f"check-break: {sid}: {why}" for sid, why in check_break(repo, change).bad.items()]
     return failures
 
 

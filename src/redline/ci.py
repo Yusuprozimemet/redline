@@ -4,6 +4,8 @@ On a pull request, the step comes from the `Redline-Step` trailers of the PR's c
 which must name exactly one step. Then the step's gates, the test suite and check-ledger against
 the base run, and every failure is reported. On a push to main, the suite runs and its result is
 recorded as a git note on the merged commit under refs/notes/redline-ci, which is then pushed.
+When the push merged an R step, check-break runs too, and the note gets each `hold` scenario's
+result under `break:`; a failed break fails the run.
 Pushing sits behind `Remote`, which tests replace.
 """
 
@@ -12,6 +14,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+import yaml
+
+from redline.breaks import check_break
 from redline.ledger import NOTES, check_ledger
 from redline.order import git
 from redline.pr import gates
@@ -68,6 +73,16 @@ def ci_pr(repo: Path, base: str) -> tuple[str, list[str]]:
 def ci_push(repo: Path, run_url: str, rev: str = "HEAD") -> list[str]:
     failures = suite(repo)
     message = f"result: {'fail' if failures else 'pass'}\nrun: {run_url}\n"
+    try:
+        change, _, step = pr_step(repo, f"{rev}^").partition("/")
+    except Refused:  # no step merged here, e.g. a commit of Redline itself
+        step = ""
+    if step == "R":
+        report = check_break(repo, change)
+        failures += [f"check-break: {sid}: {why}" for sid, why in report.bad.items()]
+        failures += [f"check-break: {sid}: not mutated: {report.skipped}" for sid in report.results if report.skipped]
+        broken = {sid: "fail" if why or report.skipped else "pass" for sid, why in report.results.items()}
+        message += yaml.safe_dump({"break": broken}, sort_keys=False) if broken else ""
     noted = git(repo, "-c", "user.name=redline-ci", "-c", "user.email=redline-ci@users.noreply.github.com",
                 "notes", f"--ref={NOTES}", "add", "-f", "-m", message, rev)
     if noted.returncode:

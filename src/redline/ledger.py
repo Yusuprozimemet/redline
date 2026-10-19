@@ -4,13 +4,15 @@ Every scenario the change's deltas declare gets `red`, `green` and `break` entri
 are check-order's commits on main, each with `merged`, the first commit on main's first-parent
 line that contains it (the commit CI ran on), and `result`, which only CI knows: it comes from the
 git note CI left on `merged` under refs/notes/redline-ci, and is `unverified` without one. Commits
-not reachable from main aren't evidence. `break` (mutation, for `hold`) stays empty until step 5.
+not reachable from main aren't evidence. A `hold` scenario has no red or green; its `break` is the
+commit where its test landed, with the result CI noted for it under `break:` (see redline.breaks).
 """
 
 from pathlib import Path
 
 import yaml
 
+from redline.breaks import holds
 from redline.order import check_order, git, is_ancestor
 from redline.start import HEADING
 
@@ -36,7 +38,8 @@ def declared(repo: Path, change: str) -> list[str]:
     return ids
 
 
-def ci_result(repo: Path, commit: str) -> str:
+def ci_result(repo: Path, commit: str, broken: str | None = None) -> str:
+    """The suite's result in the CI note on `commit`, or with `broken`, that scenario's break."""
     shown = git(repo, "notes", f"--ref={NOTES}", "show", commit)
     if shown.returncode:
         return "unverified"
@@ -44,7 +47,11 @@ def ci_result(repo: Path, commit: str) -> str:
     result = data.get("result") if isinstance(data, dict) else None
     if result not in ("pass", "fail"):
         raise RuntimeError(f"the CI note on {commit[:7]} has no result: pass or fail")
-    return result
+    if broken is None:
+        return result
+    breaks = data.get("break")
+    result = breaks.get(broken) if isinstance(breaks, dict) else None
+    return result if result in ("pass", "fail") else "unverified"
 
 
 def rebuild(repo: Path, change: str, main: str = "main") -> dict:
@@ -55,15 +62,19 @@ def rebuild(repo: Path, change: str, main: str = "main") -> dict:
     line = listing.stdout.split()
     found = {r.scenario: r for r in check_order(repo, main)}
 
-    def evidence(commit: str | None) -> dict | None:
+    def evidence(commit: str | None, broken: str | None = None) -> dict | None:
         if commit is None:
             return None
         merged = next(c for c in line if is_ancestor(repo, commit, c))
-        return {"commit": commit, "merged": merged, "result": ci_result(repo, merged)}
+        return {"commit": commit, "merged": merged, "result": ci_result(repo, merged, broken)}
 
+    held = set(holds(repo, change))
     scenarios = {}
     for sid in ids:
         result = found.get(sid)
+        if sid in held:  # check-order calls the commit where a hold test landed its green
+            scenarios[sid] = {"red": None, "green": None, "break": evidence(result and result.green, sid)}
+            continue
         scenarios[sid] = {
             "red": evidence(result and result.red),
             "green": evidence(result and result.green),

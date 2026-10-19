@@ -63,13 +63,13 @@ def mutator(monkeypatch) -> FakeMutator:
     return fake
 
 
+def delta(holds: str) -> str:
+    return DELTA.replace("### Premises", holds + "### Premises") + "- P2: The readme says nothing — `README.md:1`\n"
+
+
 @pytest.fixture
 def holds(change):
-    change.commit("hold scenarios", {
-        f"{CHANGE}/specs/greet/delta.md": DELTA.replace("### Premises", HOLDS + "### Premises")
-        + "- P2: The readme says nothing — `README.md:1`\n",
-        "README.md": "toy\n",
-    })
+    change.commit("hold scenarios", {f"{CHANGE}/specs/greet/delta.md": delta(HOLDS), "README.md": "toy\n"})
     return change
 
 
@@ -79,14 +79,11 @@ def check_break(repo, capsys) -> tuple[int, str]:
 
 
 def test_a_hold_scenario_holds_when_its_tests_pass_and_kill_a_mutant(holds, capsys, mutator):
-    holds.commit("one hold test", {
-        "test_hold.py": HOLD_TESTS.split('@pytest.mark.spec("GREET.H2"')[0],
-        "test_unrelated.py": UNRELATED,  # fails, but isn't linked to GREET.H1
-    })
-    holds.commit("only H1", {f"{CHANGE}/specs/greet/delta.md": delta(HOLDS.split("#### Scenario GREET.H2")[0])})
-    code, out = check_break(holds, capsys)
+    holds.commit("only H1", {f"{CHANGE}/specs/greet/delta.md": delta(HOLDS.split("#### Scenario GREET.H2")[0]),
+                             "test_hold.py": HOLD_TESTS.split('@pytest.mark.spec("GREET.H2"')[0], "test_unrelated.py": UNRELATED})
+    code, out = check_break(holds, capsys)  # test_unrelated fails, but isn't linked to GREET.H1
     assert code == 0, out
-    assert "ok: 1 hold scenario passes unmutated and fails under a mutant" in out
+    assert "ok: 1 hold scenario(s): tests pass unmutated and fail under a mutant" in out
     assert mutator.calls == [(["greet.py"], "GREET.H1")]  # premise-cited Python files only
 
 
@@ -136,8 +133,7 @@ def test_check_break_does_not_run_at_a_green_step(holds, capsys, mutator, github
 
 def test_a_push_after_the_red_step_notes_each_break_and_fills_the_ledger(holds, capsys, mutator, remote):
     mutator.outcomes["GREET.H3"] = (2, 0)
-    tests = HOLD_TESTS.replace('"GREET.H2", new=True', '"GREET.H2"').replace('placeholder() == "boom"', "True")
-    hold = holds.commit("R\n\nRedline-Step: add-greet/R", {"tests/test_greet.py": RED_TESTS, "test_hold.py": tests})
+    hold = holds.commit("R\n\nRedline-Step: add-greet/R", {"tests/test_greet.py": RED_TESTS, "test_hold.py": PASSING})
     code, out = ci(holds, capsys, "push", "--run-url", RUN)
     assert code == 1
     assert "check-break: GREET.H3: its tests survive every mutant" in out
@@ -154,8 +150,7 @@ def test_a_push_after_the_red_step_notes_each_break_and_fills_the_ledger(holds, 
 def test_a_push_after_another_step_runs_no_mutation(holds, capsys, mutator, remote):
     merge_step(holds, "S")
     ci(holds, capsys, "push", "--run-url", RUN)
-    assert mutator.calls == []
-    assert "break" not in holds.git("notes", "--ref=redline-ci", "show", "HEAD")
+    assert mutator.calls == [] and "break" not in holds.git("notes", "--ref=redline-ci", "show", "HEAD")
 
 
 def test_a_hold_break_without_a_noted_result_is_unverified_and_hand_edits_are_caught(holds, capsys):
