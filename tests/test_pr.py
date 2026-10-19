@@ -2,7 +2,7 @@ import pytest
 
 from redline.cli import main
 from redline.start import open_step_file
-from test_start import change, fresh_branch, merge_step, start  # noqa: F401 (change is a fixture)
+from test_start import CHANGE, DELTA, change, fresh_branch, merge_step, start  # noqa: F401 (change is a fixture)
 
 URL = "https://github.com/toy/toy/pull/1"
 
@@ -165,3 +165,24 @@ def test_a_failed_pr_keeps_the_step_open(change, capsys, github):
     assert code == 2
     assert "could not create the pull request" in out
     assert open_step_file(change.path).read_text().strip() == "add-greet/S"
+
+
+def test_spec_step_refuses_on_a_premise_that_does_not_resolve(change, capsys, github):
+    begin(change, capsys, "S", "spec")
+    change.commit("stale premise", {f"{CHANGE}/specs/greet/delta.md": DELTA + "- P2: Greeting happens at `greet.py:9`\n"})
+    code, out = pr(change, capsys)
+    assert code == 1
+    assert (
+        f"check-premises: {CHANGE}/specs/greet/delta.md:16: greet.py:9: "
+        "line 9 is past the end of the file (2 lines)"
+    ) in out
+    assert all(not fake.calls for fake in github.fakes)
+    assert open_step_file(change.path).read_text().strip() == "add-greet/S"
+
+
+def test_spec_step_checks_only_its_own_changes_premises(change, capsys, github):
+    change.commit("another change", {"redline/changes/old/specs/x/delta.md": "### Premises\n- P1: Gone — `gone.py:1`\n"})
+    begin(change, capsys, "S", "spec")
+    change.commit("proposal", {f"{CHANGE}/proposal.md": "why\n"})
+    code, out = pr(change, capsys)
+    assert code == 0, out

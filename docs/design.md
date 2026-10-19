@@ -80,6 +80,24 @@ Premises:
 - P2: There is no 2FA check before `create_session` — `auth/login.py:18-35`
 ```
 
+A citation is a backquoted `file:line` or `file:first-last` from the repository root, optionally
+followed by a symbol in brackets. `redline check-premises` checks that the file exists, the lines
+are within it, and the symbol is on them; a premise with no citation fails too.
+
+Audit findings, written by the auditor only (closing a finding is a re-audit, never the main
+session's word); a waiver names the person who approved it:
+
+```markdown
+## F1 [open]: P2 is wrong; `auth/login.py:30` already calls `verify_code`
+## F2 [closed]: P1 cited the wrong line
+Resolution: P1 now cites `auth/session.py:42`
+## F3 [waived]: no test for the lockout timing
+Waived-by: @maintainer: timing is a manual check (O2)
+```
+
+`pr` at S refuses if `audit.md` is missing, or any finding is `[open]`, a `[closed]` one has no
+`Resolution:` or a `[waived]` one has no `Waived-by:`.
+
 A test is linked to its scenario with a marker, e.g. `@pytest.mark.spec("AUTH.2FA.S1")`.
 
 Steps, in order, with the scenarios each owns and the deferred items each step owns:
@@ -121,9 +139,10 @@ redline merged         confirms the merge via git, syncs main, refreshes status,
                        hand-off prompt for the next step → stop
 ```
 
-`pr` runs check-lines always, and check-links and check-order from the R step on (at S the
-delta's scenarios have no tests yet). Only when every gate passes does it put the `Redline-Step`
-trailer on each of the step's commits (once), push, and open the PR with `gh`.
+`pr` runs check-lines always, check-premises at S (on the step's own change: an older change's
+premises may go stale as the code moves on), and check-links and check-order from the R step on
+(at S the delta's scenarios have no tests yet). Only when every gate passes does it put the
+`Redline-Step` trailer on each of the step's commits (once), push, and open the PR with `gh`.
 
 `merged <step>` fetches and fast-forwards local `main` first, then looks for the step's trailer on
 `main` and refuses if it isn't there. Once it is, it switches to `main` (the next step starts fresh

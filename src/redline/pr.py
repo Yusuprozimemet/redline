@@ -1,9 +1,9 @@
 """`redline pr`: run the local gates for the open step, then open its pull request.
 
-check-lines always runs. check-links and check-order run from the R step on: at S the delta
-declares scenarios that have no tests yet. If every gate passes, each commit of the step gets the
-`Redline-Step: <change>/<step>` trailer (once), the branch is pushed, the PR is opened with `gh`,
-and the step stops being open. Pushing and `gh` sit behind `GitHub`, which tests replace.
+check-lines always runs. check-premises runs at the S step, on the step's own change. check-links
+and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
+If every gate passes, each commit of the step gets the `Redline-Step: <change>/<step>` trailer
+(once), the branch is pushed, the PR is opened with `gh`, and the step stops being open. Pushing and `gh` sit behind `GitHub`, which tests replace.
 """
 
 import subprocess
@@ -12,6 +12,7 @@ from pathlib import Path
 from redline.lines import LIMIT, check_lines
 from redline.links import check_links
 from redline.order import check_order, git
+from redline.premises import check_premises
 from redline.start import TRAILER, Refused, open_step_file, read_steps
 
 
@@ -34,12 +35,14 @@ class GitHub:
         return self.run("gh", "pr", "create", "--title", title, "--body", body)
 
 
-def gates(repo: Path, step: str) -> list[str]:
+def gates(repo: Path, change: str, step: str) -> list[str]:
     failures = []
     count = check_lines(repo)
     if count.total > LIMIT:
         failures.append(f"check-lines: {count.total} changed lines, over the limit of {LIMIT}")
-    if step != "S":
+    if step == "S":
+        failures += [f"check-premises: {bad}" for bad in check_premises(repo, change).bad]
+    else:
         failures += [f"check-links: {gap}" for gap in check_links(repo).gaps]
         failures += [
             f"check-order: {r.scenario}: green {r.green[:7]} has no red commit among its ancestors"
@@ -76,7 +79,7 @@ def pr(repo: Path, body: str = "") -> str:
         raise Refused("the branch has no commits of its own to put in a PR")
     if git(repo, "status", "--porcelain").stdout.strip():
         raise Refused("there are uncommitted changes; commit or stash them first")
-    if failures := gates(repo, step_name):
+    if failures := gates(repo, change, step_name):
         raise Refused("the local gates failed:\n" + "\n".join(failures))
     stamp(repo, base, name)
     github = GitHub(repo)
