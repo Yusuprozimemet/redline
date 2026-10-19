@@ -125,6 +125,11 @@ redline merged         confirms the merge via git, syncs main, refreshes status,
 delta's scenarios have no tests yet). Only when every gate passes does it put the `Redline-Step`
 trailer on each of the step's commits (once), push, and open the PR with `gh`.
 
+`merged <step>` fetches and fast-forwards local `main` first, then looks for the step's trailer on
+`main` and refuses if it isn't there. Once it is, it switches to `main` (the next step starts fresh
+from it, so uncommitted changes refuse before anything syncs), clears the open-step record if the
+step it names is merged, and prints the next step's brief, or that the change is complete after C.
+
 The brief (goal, owned scenario IDs, cited files, open items) is generated from the spec, the
 ledger and the open items. It's the whole hand-off: a new session needs nothing from the old one.
 
