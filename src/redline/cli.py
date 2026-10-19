@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from redline.audit import check_audit
+from redline.ledger import check_ledger, declared, write_ledger
 from redline.lines import LIMIT, check_lines
 from redline.merged import merged
 from redline.links import check_links
@@ -28,6 +29,12 @@ def main(argv: list[str] | None = None) -> int:
     audit = commands.add_parser("check-audit", help="fail on a missing audit or an unresolved finding")
     audit.add_argument("change", help="the change, e.g. add-greet")
     audit.add_argument("--repo", type=Path, default=Path.cwd())
+    for name, help in (("ledger", "rebuild a change's ledger.yaml from main's history"),
+                       ("check-ledger", "fail if a change's ledger.yaml doesn't match main's history")):
+        led = commands.add_parser(name, help=help)
+        led.add_argument("change", help="the change, e.g. add-greet")
+        led.add_argument("--main", default="main", help="the ref whose history is evidence")
+        led.add_argument("--repo", type=Path, default=Path.cwd())
     begin = commands.add_parser("start", help="start a step on a fresh branch and print its brief")
     begin.add_argument("step", help="<change>/<step>, e.g. add-greet/G1")
     begin.add_argument("--repo", type=Path, default=Path.cwd())
@@ -52,6 +59,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_premises(args.repo, args.change)
     if args.command == "check-audit":
         return run_check_audit(args.repo, args.change)
+    if args.command in ("ledger", "check-ledger"):
+        return run_ledger(args.repo, args.change, args.main, args.command == "check-ledger")
 
     try:
         results = check_order(args.repo, args.rev)
@@ -159,4 +168,23 @@ def run_check_audit(repo: Path, change: str) -> int:
     if report.bad:
         return 1
     print(f"ok: {report.findings} finding{'' if report.findings == 1 else 's'}, none open")
+    return 0
+
+
+def run_ledger(repo: Path, change: str, main: str, check: bool) -> int:
+    try:
+        if not check:
+            data = write_ledger(repo, change, main)
+            print(f"ok: wrote the ledger of {change}, {len(data['scenarios'])} scenarios")
+            return 0
+        problems = check_ledger(repo, change, main)
+        count = len(declared(repo, change))
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for problem in problems:
+        print(problem)
+    if problems:
+        return 1
+    print(f"ok: {count} scenario{' matches' if count == 1 else 's match'} the history of {main}")
     return 0
