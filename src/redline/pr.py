@@ -1,6 +1,7 @@
 """`redline pr`: run the local gates for the open step, then open its pull request.
 
-check-lines always runs. check-premises runs at the S step, on the step's own change. check-links
+check-lines always runs. check-premises and check-audit run at the S step, on the step's own
+change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
 If every gate passes, each commit of the step gets the `Redline-Step: <change>/<step>` trailer
 (once), the branch is pushed, the PR is opened with `gh`, and the step stops being open. Pushing and `gh` sit behind `GitHub`, which tests replace.
@@ -9,6 +10,7 @@ If every gate passes, each commit of the step gets the `Redline-Step: <change>/<
 import subprocess
 from pathlib import Path
 
+from redline.audit import check_audit
 from redline.lines import LIMIT, check_lines
 from redline.links import check_links
 from redline.order import check_order, git
@@ -42,6 +44,7 @@ def gates(repo: Path, change: str, step: str) -> list[str]:
         failures.append(f"check-lines: {count.total} changed lines, over the limit of {LIMIT}")
     if step == "S":
         failures += [f"check-premises: {bad}" for bad in check_premises(repo, change).bad]
+        failures += [f"check-audit: {bad}" for bad in check_audit(repo, change).bad]
     else:
         failures += [f"check-links: {gap}" for gap in check_links(repo).gaps]
         failures += [
