@@ -5,6 +5,7 @@ from redline.start import open_step_file
 from test_start import CHANGE, DELTA, change, fresh_branch, merge_step, start  # noqa: F401 (change is a fixture)
 
 URL = "https://github.com/toy/toy/pull/1"
+AUDIT = {f"{CHANGE}/audit.md": "# Audit: add-greet\n\nNo findings.\n"}
 
 
 class FakeGitHub:
@@ -59,7 +60,7 @@ def begin(repo, capsys, step: str, branch: str) -> None:
 
 def test_pr_pushes_opens_the_pr_and_ends_the_step(change, capsys, github):
     begin(change, capsys, "S", "spec")
-    change.commit("proposal", {"redline/changes/add-greet/proposal.md": "why\n"})
+    change.commit("proposal", {"redline/changes/add-greet/proposal.md": "why\n", **AUDIT})
     code, out = pr(change, capsys)
     assert code == 0, out
     assert URL in out
@@ -72,7 +73,7 @@ def test_pr_pushes_opens_the_pr_and_ends_the_step(change, capsys, github):
 
 def test_every_commit_of_the_step_carries_the_trailer_once(change, capsys, github):
     begin(change, capsys, "S", "spec")
-    change.commit("one", {"a.md": "a\n"})
+    change.commit("one", {"a.md": "a\n", **AUDIT})
     change.commit("two\n\nRedline-Step: add-greet/S\nCo-Authored-By: Toy <toy@example.com>", {"b.md": "b\n"})
     change.commit("three", {"c.md": "c\n"})
     assert pr(change, capsys)[0] == 0
@@ -153,14 +154,14 @@ def test_from_the_red_step_on_green_without_red_refuses(change, capsys, github):
 
 def test_spec_step_skips_the_link_check(change, capsys, github):
     begin(change, capsys, "S", "spec")  # the delta declares GREET.S1 and S2; no tests yet
-    change.commit("proposal", {"redline/changes/add-greet/proposal.md": "why\n"})
+    change.commit("proposal", {"redline/changes/add-greet/proposal.md": "why\n", **AUDIT})
     assert pr(change, capsys)[0] == 0
 
 
 def test_a_failed_pr_keeps_the_step_open(change, capsys, github):
     github.fail = True
     begin(change, capsys, "S", "spec")
-    change.commit("proposal", {"redline/changes/add-greet/proposal.md": "why\n"})
+    change.commit("proposal", {"redline/changes/add-greet/proposal.md": "why\n", **AUDIT})
     code, out = pr(change, capsys)
     assert code == 2
     assert "could not create the pull request" in out
@@ -183,6 +184,37 @@ def test_spec_step_refuses_on_a_premise_that_does_not_resolve(change, capsys, gi
 def test_spec_step_checks_only_its_own_changes_premises(change, capsys, github):
     change.commit("another change", {"redline/changes/old/specs/x/delta.md": "### Premises\n- P1: Gone — `gone.py:1`\n"})
     begin(change, capsys, "S", "spec")
-    change.commit("proposal", {f"{CHANGE}/proposal.md": "why\n"})
+    change.commit("proposal", {f"{CHANGE}/proposal.md": "why\n", **AUDIT})
     code, out = pr(change, capsys)
     assert code == 0, out
+
+
+def test_spec_step_refuses_without_an_audit(change, capsys, github):
+    begin(change, capsys, "S", "spec")
+    change.commit("proposal", {f"{CHANGE}/proposal.md": "why\n"})
+    code, out = pr(change, capsys)
+    assert code == 1
+    assert f"check-audit: {CHANGE}/audit.md: missing; run the auditor on the change" in out
+    assert all(not fake.calls for fake in github.fakes)
+    assert open_step_file(change.path).read_text().strip() == "add-greet/S"
+
+
+def test_spec_step_refuses_on_an_unresolved_finding(change, capsys, github):
+    begin(change, capsys, "S", "spec")
+    change.commit("audit", {f"{CHANGE}/audit.md": (
+        "# Audit: add-greet\n\n"
+        "## F1 [open]: P1 says only a placeholder exists; say what greet.py must not do yet\n"
+        "## F2 [waived]: GREET.S2's THEN clause is vague\n"
+    )})
+    code, out = pr(change, capsys)
+    assert code == 1
+    assert f"check-audit: {CHANGE}/audit.md:3: F1 is open: P1 says only a placeholder exists" in out
+    assert f"check-audit: {CHANGE}/audit.md:4: F2 is waived with no `Waived-by: @person: <reason>` line" in out
+    assert all(not fake.calls for fake in github.fakes)
+
+
+def test_from_the_red_step_on_the_audit_is_not_checked(change, capsys, github):
+    merge_step(change, "S")
+    begin(change, capsys, "R", "red")  # the change has no audit.md; R doesn't ask for one
+    change.commit("red tests", {"tests/test_greet.py": RED_TESTS})
+    assert pr(change, capsys)[0] == 0
