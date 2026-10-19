@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from redline.lines import LIMIT, check_lines
+from redline.merged import merged
 from redline.links import check_links
 from redline.order import check_order
 from redline.pr import pr
@@ -25,7 +26,12 @@ def main(argv: list[str] | None = None) -> int:
     finish = commands.add_parser("pr", help="run the local gates, then open the open step's PR")
     finish.add_argument("--body", default="", help="text for the PR description")
     finish.add_argument("--repo", type=Path, default=Path.cwd())
+    done = commands.add_parser("merged", help="confirm a step merged, sync main, hand off the next")
+    done.add_argument("step", help="<change>/<step>, e.g. add-greet/G1")
+    done.add_argument("--repo", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
+    if args.command == "merged":
+        return run_merged(args.repo, args.step)
     if args.command == "pr":
         return run_pr(args.repo, args.body)
     if args.command == "start":
@@ -68,6 +74,18 @@ def run_check_lines(repo: Path, base: str | None) -> int:
 def run_start(repo: Path, step: str) -> int:
     try:
         print(start(repo, step), end="")
+    except Refused as reason:
+        print(f"refused: {reason}")
+        return 1
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    return 0
+
+
+def run_merged(repo: Path, step: str) -> int:
+    try:
+        print(merged(repo, step), end="")
     except Refused as reason:
         print(f"refused: {reason}")
         return 1

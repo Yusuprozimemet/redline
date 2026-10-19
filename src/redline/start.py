@@ -112,7 +112,8 @@ def open_step_file(repo: Path) -> Path:
     return repo / found.stdout.strip()
 
 
-def start(repo: Path, name: str) -> str:
+def find_step(repo: Path, name: str) -> tuple[str, list[Step], int]:
+    """The change, its steps, and the index of the step that `<change>/<step>` names."""
     change, _, step_name = name.partition("/")
     if not change or not step_name:
         raise RuntimeError(f"a step is <change>/<step>, e.g. add-greet/G1, not {name!r}")
@@ -120,6 +121,11 @@ def start(repo: Path, name: str) -> str:
     index = next((i for i, s in enumerate(steps) if s.name == step_name), None)
     if index is None:
         raise RuntimeError(f"no step {step_name} in redline/changes/{change}/steps.md")
+    return change, steps, index
+
+
+def start(repo: Path, name: str) -> str:
+    change, steps, index = find_step(repo, name)
     merged = merged_steps(repo)
     state = open_step_file(repo)
     current = state.read_text().strip() if state.is_file() else ""
