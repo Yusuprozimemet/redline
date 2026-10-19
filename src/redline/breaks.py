@@ -82,6 +82,12 @@ def functions(tree: ast.AST, prefix: str = ""):
             yield prefix + node.name, node
 
 
+def source(lines: list[str], node: ast.AST) -> str:
+    """A node's lines, from its first decorator (if it has any) to its last line."""
+    decorators = getattr(node, "decorator_list", None)
+    return "\n".join(lines[(decorators[0] if decorators else node).lineno - 1:node.end_lineno])
+
+
 def hold_tests(repo: Path, change: str) -> dict[str, dict[str, str]]:
     """Each `hold` scenario of the change -> {`path::name`: SHA-256 of the test's source} for the
     tests whose marker names it without `new=True`. check-break proves them; the lock freezes them."""
@@ -95,8 +101,7 @@ def hold_tests(repo: Path, change: str) -> dict[str, dict[str, str]]:
             raise RuntimeError(f"{path}: {error}") from None
         lines = text.split("\n")
         for name, node in functions(tree):
-            first = node.decorator_list[0].lineno if node.decorator_list else node.lineno
-            digest = hashlib.sha256(("\n".join(lines[first - 1:node.end_lineno]) + "\n").encode()).hexdigest()
+            digest = hashlib.sha256((source(lines, node) + "\n").encode()).hexdigest()
             for decorator in node.decorator_list:
                 for sid, new in MARKER.findall(ast.get_source_segment(text, decorator) or ""):
                     if not new and sid in found:
