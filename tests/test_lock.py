@@ -92,8 +92,12 @@ def test_a_green_step_changes_a_frozen_test_only_with_an_approved_departure(hold
     assert "check-lock: GREET.H1: test_hold.py::test_h1: its lock entry changed since main, with no approved departure" in out
     assert "changed since it was locked" not in out
     holds.git("commit", "-q", "--amend", "-m", f"relock\n\n{APPROVED}")
+    code, out = check_lock(holds, capsys, "--base", "main")
+    assert code == 0, out
+    assert "CI will need the `redline:departure` label from a maintainer" in out
     code, out = pr(holds, capsys)
     assert code == 0, out
+    assert "CI will need the `redline:departure` label from a maintainer" in out
 
 
 def test_ci_runs_check_lock_at_a_green_step(holds, capsys):

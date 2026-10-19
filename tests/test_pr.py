@@ -11,9 +11,11 @@ AUDIT = {f"{CHANGE}/audit.md": "# Audit: add-greet\n\nNo findings.\n"}
 class FakeGitHub:
     """Stands in for git push and gh: records what would have gone over the network."""
 
-    def __init__(self, repo, fail: bool = False):
+    def __init__(self, repo, fail: bool = False, applied: dict | None = None, roles: dict | None = None):
         self.repo = repo
         self.fail = fail
+        self.applied = {} if applied is None else applied  # label -> who applied it
+        self.roles = {} if roles is None else roles
         self.calls: list[tuple] = []
 
     def push(self, branch: str) -> None:
@@ -25,14 +27,23 @@ class FakeGitHub:
         self.calls.append(("pr", title, body))
         return URL
 
+    def labels(self, number: int) -> dict[str, str]:
+        self.calls.append(("labels", number))
+        return self.applied
+
+    def role(self, login: str) -> str:
+        return self.roles.get(login, "write")
+
 
 class Seam:
     def __init__(self):
         self.fail = False
+        self.applied: dict[str, str] = {}
+        self.roles = {"maintainer": "admin"}
         self.fakes: list[FakeGitHub] = []
 
     def __call__(self, repo) -> FakeGitHub:
-        self.fakes.append(FakeGitHub(repo, self.fail))
+        self.fakes.append(FakeGitHub(repo, self.fail, self.applied, self.roles))
         return self.fakes[-1]
 
 
@@ -40,6 +51,7 @@ class Seam:
 def github(monkeypatch) -> Seam:
     seam = Seam()
     monkeypatch.setattr("redline.pr.GitHub", seam, raising=False)
+    monkeypatch.setattr("redline.ci.GitHub", seam, raising=False)
     return seam
 
 

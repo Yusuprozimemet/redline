@@ -8,6 +8,7 @@ from redline.ledger import check_ledger, declared, write_ledger
 from redline.lines import LIMIT, check_lines
 from redline.merged import merged
 from redline.links import check_links
+from redline.approval import Approvals
 from redline.lock import check_lock, write_lock
 from redline.order import check_order
 from redline.pr import pr
@@ -61,10 +62,11 @@ def main(argv: list[str] | None = None) -> int:
     ci.add_argument("event", choices=["pr", "push"])
     ci.add_argument("--base", default="main", help="pr: the PR's base ref")
     ci.add_argument("--run-url", default="", help="push: the CI run to record in the note")
+    ci.add_argument("--pr", type=int, help="pr: the PR's number, to read its approval labels")
     ci.add_argument("--repo", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
     if args.command == "ci":
-        return run_ci(args.repo, args.event, args.base, args.run_url)
+        return run_ci(args.repo, args.event, args.base, args.run_url, args.pr)
     if args.command == "merged":
         return run_merged(args.repo, args.step)
     if args.command == "pr":
@@ -142,7 +144,10 @@ def run_merged(repo: Path, step: str) -> int:
 
 def run_pr(repo: Path, body: str) -> int:
     try:
-        print(f"ok: opened {pr(repo, body)}")
+        url, pending = pr(repo, body)
+        for note in pending:
+            print(f"note: {note}")
+        print(f"ok: opened {url}")
     except Refused as reason:
         print(f"refused: {reason}")
         return 1
@@ -217,12 +222,15 @@ def run_lock(repo: Path, change: str, base: str | None, check: bool) -> int:
         if not check:
             print(f"ok: locked {write_lock(repo, change)} hold test(s) of {change}")
             return 0
-        report = check_lock(repo, change, base)
+        approvals = Approvals()
+        report = check_lock(repo, change, base, approvals)
     except RuntimeError as error:
         print(f"redline: {error}")
         return 2
     for bad in report.bad:
         print(bad)
+    for note in approvals.pending:
+        print(f"note: {note}")
     if report.bad:
         return 1
     print(f"ok: {report.locked} locked test(s) match the code")
@@ -248,10 +256,10 @@ def run_ledger(repo: Path, change: str, main: str, check: bool) -> int:
     return 0
 
 
-def run_ci(repo: Path, event: str, base: str, run_url: str) -> int:
+def run_ci(repo: Path, event: str, base: str, run_url: str, number: int | None) -> int:
     try:
         if event == "pr":
-            name, failures = ci_pr(repo, base)
+            name, failures = ci_pr(repo, base, number)
             done = f"ok: {name} passes the gates, the test suite and check-ledger"
         else:
             failures = ci_push(repo, run_url)

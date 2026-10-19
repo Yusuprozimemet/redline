@@ -4,7 +4,8 @@
 `redline check-lock <change>` prints each difference from the code: a hash differs, a locked test
 is missing, or a hold test isn't locked. With a base (the G steps), an entry that changed since
 the merge-base is a difference too, unless a `Redline-Departure: <test> approved-by @person:
-<reason>` trailer in base..HEAD names the test. See docs/design.md, §4 and §5.
+<reason>` trailer in base..HEAD names the test and a maintainer's label approves it (approval.py).
+See docs/design.md, §4, §5 and §7.
 """
 
 import re
@@ -13,11 +14,12 @@ from pathlib import Path
 
 import yaml
 
+from redline.approval import DEPARTURE, Approvals, claims
 from redline.breaks import hold_tests
 from redline.order import git
 
 LOCK = "redline/contracts/lock.yaml"
-DEPARTURE = re.compile(r"^(\S+) approved-by @\S+: \S")
+CLAIM = re.compile(r"^(\S+) approved-by @\S+: \S")
 
 
 @dataclass
@@ -44,7 +46,8 @@ def write_lock(repo: Path, change: str) -> int:
     return len(entries(lock, change))
 
 
-def check_lock(repo: Path, change: str, base: str | None = None) -> LockReport:
+def check_lock(repo: Path, change: str, base: str | None = None, approvals: Approvals | None = None) -> LockReport:
+    approvals = approvals or Approvals()
     locked = entries(read_lock(repo), change)
     now = entries({change: hold_tests(repo, change)}, change)
     report = LockReport(len(locked))
@@ -61,9 +64,12 @@ def check_lock(repo: Path, change: str, base: str | None = None) -> LockReport:
             raise RuntimeError(f"no merge-base with {base}: {fork.stderr.strip()}")
         shown = git(repo, "show", f"{fork.stdout.strip()}:{LOCK}")
         before = entries(yaml.safe_load(shown.stdout) if shown.returncode == 0 else None, change)
-        log = git(repo, "log", f"{fork.stdout.strip()}..HEAD", "--format=%(trailers:key=Redline-Departure,valueonly)")
-        approved = {m[1] for line in log.stdout.splitlines() if (m := DEPARTURE.match(line.strip()))}
+        claimed = {m[1] for line in claims(repo, fork.stdout.strip(), "Redline-Departure") if (m := CLAIM.match(line))}
         for sid, test in sorted(set(before) | set(locked)):
-            if before.get((sid, test)) != locked.get((sid, test)) and test not in approved:
+            if before.get((sid, test)) == locked.get((sid, test)):
+                continue
+            if test not in claimed:
                 report.bad.append(f"{sid}: {test}: its lock entry changed since {base}, with no approved departure")
+            elif why := approvals.approve(DEPARTURE, f"{sid}: {test}: its lock entry changed since {base}"):
+                report.bad.append(why)
     return report
