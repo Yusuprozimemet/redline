@@ -183,6 +183,12 @@ public APIs are critical) but never lower it.
 
 The CLI holds the rules; each AI tool gets thin skills or commands, as in OpenSpec.
 
+For Claude Code the auditor is `.claude/agents/redline-auditor.md`: tools `Read, Grep, Glob` only,
+`model: fable`, and it refuses on any other model rather than run on a weaker one. Claude Code
+can't limit Write to one file, so the auditor stays read-only and replies with the whole
+`audit.md`, which the main session writes unedited. A re-run reads the old `audit.md`, keeps
+every finding and closes only what it has checked. The `Waived-by:` line is the maintainer's.
+
 ## 10. Learning loop
 
 `redline retro` at each close groups the change's defects by cause and proposes rule changes to
