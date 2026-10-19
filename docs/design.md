@@ -58,7 +58,7 @@ one initiative. Most changes belong to none.
 
 ```
 redline/
-├── config.yaml                     # rigor default, generated-file globs, runner, rules
+├── config.yaml                     # rigor default, generated-file globs, runner, rules (§10)
 ├── specs/<domain>/spec.md          # living behaviour; each scenario carries its ID
 ├── contracts/lock.yaml             # hashes of frozen `hold` tests
 ├── initiatives/<id>/plan.md        # goal, phases, the changes of each, stopping points
@@ -68,6 +68,7 @@ redline/
     ├── design.md                   # how (optional at lite)
     ├── steps.md                    # S, R, G1..Gn, C, and the scenario IDs each step owns
     ├── audit.md                    # auditor findings and their resolution
+    ├── defects.md                  # the defect log: what went wrong, its cause, what found it
     └── ledger.yaml                 # a cache of evidence; CI rebuilds it and fails on a mismatch
 ```
 
@@ -234,6 +235,54 @@ a change with no `steps.md` yet isn't. A phase is complete when all its changes 
 - **A phase without changes or without a stop**: no `Changes:` line, an empty one, or no `Stop:`.
 - **A change listed twice**, in one plan or across plans.
 
+The defect log, `redline/changes/add-2fa/defects.md`, records what went wrong in the change's
+own work after it was committed: a wrong premise found at G2, a test that couldn't fail, a fix
+a later step had to make. A test failing on red, as it should, isn't a defect. The main session
+adds an entry when it finds one, at any step:
+
+```markdown
+# Defects: add-2fa
+
+## D1: the lockout counted wrong codes per session, not per account
+Cause: premise
+Found-by: add-2fa/G2
+P2 said the counter lived in the session; it lives on the account row.
+```
+
+The heading says what went wrong. `Cause:` is one label from a fixed set, so labels can be
+counted and compared:
+
+| Cause | What was wrong |
+|---|---|
+| `premise` | a claim about the code the spec rested on |
+| `spec` | a scenario missing, or one that says the wrong thing |
+| `test` | a test that couldn't fail, or didn't check its scenario |
+| `code` | the code, where the spec and its test were right |
+| `handoff` | something lost between steps: a brief, an open item, a deferral |
+| `tooling` | Redline, CI or the environment gave a wrong answer |
+
+`Found-by:` is the step that found it (`<change>/<step>`, any change's), or a commit reachable from
+`main`. A branch commit doesn't count: `pr` rewrites those when it adds trailers. Lines after
+those are free text.
+
+The cause is on its own line and nowhere else, so the critical level's blind relabelling (§8) can
+show a second labeller the entry with the `Cause:` line removed and compare the two labels by ID.
+The heading and the free text say what happened, not which cause it was. Relabelling isn't built;
+when it is, the second labels go outside `defects.md`, so the first labeller can't edit them after
+seeing them.
+
+`redline check-defects <change>` fails on:
+
+- **A missing log** at the C step, at standard and critical. A log with no entries is valid: it
+  says the change found none. At lite the log is optional; if it exists, it's checked. Run on
+  its own, the command checks as at C.
+- **A `## ` heading that isn't `## D<n>: <text>`**, or a repeated ID.
+- **No `Cause:` line, more than one, or a label not in the table.**
+- **No `Found-by:` line**, or one that names no step of any change's `steps.md` and no commit
+  reachable from `main`.
+
+It checks the log's form, never that it is complete: a defect nobody writes down is missed (§7).
+
 ## 5. A change is always the same sequence of steps
 
 | Step | PR contents | CI proves |
@@ -241,7 +290,7 @@ a change with no `steps.md` yet isn't. A phase is complete when all its changes 
 | **S: Spec** | Proposal and delta spec, with audit findings resolved | Structure is valid, every premise citation resolves, IDs are unique, every finding is closed or waived |
 | **R: Red** | Linked tests: `new` as strict expected failures (`xfail(strict=True)`, Jest `test.failing`); `hold` added to the lock | Every `new` test fails on today's code; every `hold` test passes, then fails under mutation |
 | **G1…Gn: Green** | Code that turns expected failures into passes | Owned scenarios pass with their markers removed, the lock is unchanged, nothing else regressed |
-| **C: Close** | Verify report, delta merged into `specs/`, defect log, deferred items with owners | Every `new` scenario has red and green results from merged commits, the red commit an ancestor of the green one; every `hold` scenario has a break result |
+| **C: Close** | Verify report, delta merged into `specs/`, defect log, deferred items with owners | Every `new` scenario has red and green results from merged commits, the red commit an ancestor of the green one; every `hold` scenario has a break result; the defect log exists (standard, critical) and is well formed |
 
 Red tests can merge onto `main` while CI stays green, because CI expects them to fail. A `new` test
 that passes before the code exists turns CI red under strict expected-failure, so a check that
@@ -356,8 +405,9 @@ the changes are independent, each with its own sessions.
 `pr` runs check-lines and check-plan always, check-premises and check-audit at S (on the step's own change: an
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
-which have no red by design), check-break at the R step only, and check-lock from R on (G steps
-with `--base main`, §5). A departure or an `Oversized` trailer doesn't refuse: the PR and its
+which have no red by design), check-break at the R step only, check-lock from R on (G steps
+with `--base main`, §5), and check-defects at every step on the step's change (a log is
+required only at C). A departure or an `Oversized` trailer doesn't refuse: the PR and its
 labels don't exist yet, so `pr` prints that CI will need the label (§7). Only when every gate
 passes does it put the `Redline-Step` trailer on each of the step's commits (once), push, and open
 the PR with `gh`.
@@ -365,13 +415,14 @@ the PR with `gh`.
 `merged <step>` fetches and fast-forwards local `main` first, then looks for the step's trailer on
 `main` and refuses if it isn't there. Once it is, it switches to `main` (the next step starts fresh
 from it, so uncommitted changes refuse before anything syncs), clears the open-step record if the
-step it names is merged, and prints the next step's brief, or that the change is complete after C.
+step it names is merged, and prints the next step's brief, or that the change is complete after C
+and that `redline retro <change>` comes next (§10).
 When that completes the change's phase, it also prints that the initiative is at a stopping
 point, and the phase's `Stop:` line. Then it prints the next phase and its changes, or that the
 initiative is complete. It starts nothing: going on is the maintainer's call.
 
-The brief (goal, owned scenario IDs, cited files, open items) is generated from the spec, the
-ledger and the open items. For a change in an initiative, it also gives the initiative's goal,
+The brief (goal, owned scenario IDs, cited files, open items, the rules of `redline/config.yaml`)
+is generated from the spec, the ledger, the open items and the config. For a change in an initiative, it also gives the initiative's goal,
 the phase and its `Stop:` line, so a session knows what its change is for. It's the whole
 hand-off: a new session needs nothing from the old one.
 
@@ -473,6 +524,32 @@ every finding and closes only what it has checked. The `Waived-by:` line is the 
 `redline retro` at each close groups the change's defects by cause and proposes rule changes to
 `redline/config.yaml`, each as a normal small PR.
 
+A rule is a line under its cause in the config's `rules:`, and every brief prints all of them, so
+every later session sees what earlier defects taught:
+
+```yaml
+rules:
+  premise:
+    - Cite where a value is stored, not only where it is read
+```
+
+`redline retro <change>` reads the change's `defects.md` (it refuses unless check-defects passes,
+whatever the level) and the config's `rules:`. It prints, for each cause with defects, most
+first: the count, the IDs and headings, and how many rules the cause has already. Then one
+proposal per cause: add a rule under `rules.<cause>` against those defects. With no defects, it
+says there is nothing to propose.
+
+It writes nothing. The wording of a rule is a judgment, so the session or the maintainer writes
+it, one cause per PR, and the maintainer reviews it like any other change. On its own, `retro`
+never:
+
+- **edits `redline/config.yaml`**, commits, pushes or opens a PR;
+- **edits `defects.md`**: a tool that rewrote causes would bias any later relabelling;
+- **proposes removing or weakening** anything: no rule removed, no rigor lowered. A change's level
+  is its proposal's and its auditor's call (§8), so `retro` doesn't propose one.
+
+Its output is a proposal, never evidence (§7), and CI doesn't run it.
+
 ## 11. Build order (riskiest first)
 
 1. **Red/green proof**: pytest plugin with `spec` markers and strict expected failures, plus the
@@ -505,3 +582,7 @@ every finding and closes only what it has checked. The `Waived-by:` line is the 
   `conftest.py` files, so helpers imported from shared test modules, plugin fixtures and dynamic
   lookups aren't locked (§5). Decide whether to follow imports into files `redline/config.yaml`
   names as test support.
+- O-RETRO1 [build 6, the part after the defect log]: a rule PR from `retro` belongs to no step,
+  so it carries no `Redline-Step` trailer, and `redline ci pr` refuses it, as it refuses
+  Redline's own PRs. Decide what CI runs on a PR that changes only `redline/config.yaml`: the
+  always-on gates (check-lines, check-plan) and the suite, at least.
