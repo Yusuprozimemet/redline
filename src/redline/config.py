@@ -22,8 +22,7 @@ def load_config(repo: Path) -> Config:
     path = repo / PATH
     data = (yaml.safe_load(path.read_text()) if path.is_file() else None) or {}
     rules = {str(cause): [str(r) for r in lines or []] for cause, lines in (data.get("rules") or {}).items()}
-    return Config(generated=list(data.get("generated") or []), rigor=str(data.get("rigor") or "standard"),
-                  rules=rules)
+    return Config(list(data.get("generated") or []), str(data.get("rigor") or "standard"), rules)
 
 
 def rigor(repo: Path, change: str) -> str:

@@ -101,12 +101,11 @@ def retro(repo: Path, change: str) -> str:
     order = sorted(groups, key=lambda c: (-len(groups[c]), CAUSES.index(c)))
     rules = load_config(repo).rules
     said = [f"retro {change}: {len(report.defects)} defect(s) by cause"]
+    ids = {cause: ", ".join(d.id for d in found) for cause, found in groups.items()}
     for cause in order:
         have = len(rules.get(cause) or [])
-        ids = ", ".join(d.id for d in groups[cause])
-        said.append(f"{cause}: {len(groups[cause])} ({ids}); {have} rule{'' if have == 1 else 's'} so far")
+        said.append(f"{cause}: {len(groups[cause])} ({ids[cause]}); {have} rule{'' if have == 1 else 's'} so far")
         said += [f"  {d.id}: {d.what}" for d in groups[cause]]
     said += ["", "Proposals, each its own small PR to redline/config.yaml; retro changes nothing:"]
-    said += [f"{n}. Add a rule under rules.{c} against {', '.join(d.id for d in groups[c])}"
-             for n, c in enumerate(order, 1)]
+    said += [f"{n}. Add a rule under rules.{c} against {ids[c]}" for n, c in enumerate(order, 1)]
     return "\n".join(said) + "\n"
