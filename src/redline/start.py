@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from redline.order import git
+from redline.premises import premise_lines
 
 STEP = re.compile(r"^## (S|R|G\d+|C): (.+)$")
 OWNS = re.compile(r"^Owns: (.+)$")
@@ -79,15 +80,7 @@ def scenario(repo: Path, change: str, sid: str) -> str:
 
 
 def premises(repo: Path, change: str) -> list[str]:
-    found = []
-    for path in sorted((repo / "redline/changes" / change / "specs").glob("**/delta.md")):
-        inside = False
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line.startswith("#"):
-                inside = line == "### Premises"
-            elif inside and line.startswith("- "):
-                found.append(line)
-    return found
+    return [text for _, _, text in premise_lines(repo, change)]
 
 
 def brief(repo: Path, change: str, step: Step) -> str:

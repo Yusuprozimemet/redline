@@ -6,6 +6,7 @@ from redline.merged import merged
 from redline.links import check_links
 from redline.order import check_order
 from redline.pr import pr
+from redline.premises import check_premises
 from redline.start import Refused, start
 
 
@@ -20,6 +21,9 @@ def main(argv: list[str] | None = None) -> int:
     lines.add_argument("--base", help="base ref (default: merge-base with main)")
     links = commands.add_parser("check-links", help="link every scenario to a test, both ways")
     links.add_argument("--repo", type=Path, default=Path.cwd())
+    cited = commands.add_parser("check-premises", help="check every premise citation in the deltas")
+    cited.add_argument("--change", help="check this change only (default: every change)")
+    cited.add_argument("--repo", type=Path, default=Path.cwd())
     begin = commands.add_parser("start", help="start a step on a fresh branch and print its brief")
     begin.add_argument("step", help="<change>/<step>, e.g. add-greet/G1")
     begin.add_argument("--repo", type=Path, default=Path.cwd())
@@ -40,6 +44,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_lines(args.repo, args.base)
     if args.command == "check-links":
         return run_check_links(args.repo)
+    if args.command == "check-premises":
+        return run_check_premises(args.repo, args.change)
 
     try:
         results = check_order(args.repo, args.rev)
@@ -118,4 +124,19 @@ def run_check_links(repo: Path) -> int:
     if report.gaps:
         return 1
     print(f"ok: {report.scenarios} scenarios, each linked to a test")
+    return 0
+
+
+def run_check_premises(repo: Path, change: str | None) -> int:
+    try:
+        report = check_premises(repo, change)
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for bad in report.bad:
+        print(bad)
+    if report.bad:
+        return 1
+    n = report.citations
+    print(f"ok: {n} premise citation{' resolves' if n == 1 else 's resolve'}")
     return 0
