@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from redline.audit import check_audit
+from redline.ci import ci_pr, ci_push
 from redline.ledger import check_ledger, declared, write_ledger
 from redline.lines import LIMIT, check_lines
 from redline.merged import merged
@@ -44,7 +45,14 @@ def main(argv: list[str] | None = None) -> int:
     done = commands.add_parser("merged", help="confirm a step merged, sync main, hand off the next")
     done.add_argument("step", help="<change>/<step>, e.g. add-greet/G1")
     done.add_argument("--repo", type=Path, default=Path.cwd())
+    ci = commands.add_parser("ci", help="what the GitHub Action runs, on a PR or a push to main")
+    ci.add_argument("event", choices=["pr", "push"])
+    ci.add_argument("--base", default="main", help="pr: the PR's base ref")
+    ci.add_argument("--run-url", default="", help="push: the CI run to record in the note")
+    ci.add_argument("--repo", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
+    if args.command == "ci":
+        return run_ci(args.repo, args.event, args.base, args.run_url)
     if args.command == "merged":
         return run_merged(args.repo, args.step)
     if args.command == "pr":
@@ -187,4 +195,26 @@ def run_ledger(repo: Path, change: str, main: str, check: bool) -> int:
     if problems:
         return 1
     print(f"ok: {count} scenario{' matches' if count == 1 else 's match'} the history of {main}")
+    return 0
+
+
+def run_ci(repo: Path, event: str, base: str, run_url: str) -> int:
+    try:
+        if event == "pr":
+            name, failures = ci_pr(repo, base)
+            done = f"ok: {name} passes the gates, the test suite and check-ledger"
+        else:
+            failures = ci_push(repo, run_url)
+            done = "ok: the test suite passed; noted on refs/notes/redline-ci"
+    except Refused as reason:
+        print(f"refused: {reason}")
+        return 1
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for failure in failures:
+        print(failure)
+    if failures:
+        return 1
+    print(done)
     return 0
