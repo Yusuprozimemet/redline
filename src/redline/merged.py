@@ -72,7 +72,8 @@ def merged(repo: Path, name: str) -> str:
         state.unlink()
     said = f"ok: {name} is merged on main; switched to main.\n"
     if index == len(steps) - 1:
-        return said + f"The change {change} is complete.\n" + stopping_point(repo, change, done)
+        retro = f"Run `redline retro {change}` to propose rule changes from its defect log.\n"
+        return said + f"The change {change} is complete.\n" + retro + stopping_point(repo, change, done)
     following = steps[index + 1]
     return said + (
         f"This session is over. In a new session, on a new branch fresh from main, run "
