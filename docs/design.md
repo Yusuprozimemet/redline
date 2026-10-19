@@ -48,6 +48,12 @@ Initiative  (optional)   plan.md: goal, phases, stopping points
        └─ Step           ONE PR ≤ 400 lines = ONE session
 ```
 
+An initiative is work too big for one change: a goal, reached in phases, each phase a set of
+changes. A phase ends at a **stopping point**, where every change of the phase is complete and
+`main` is coherent enough to stop for good: the initiative may end there and leave nothing half
+done. Whether to go on is the maintainer's call. A change belongs to at most one phase of at most
+one initiative. Most changes belong to none.
+
 ## 4. Files
 
 ```
@@ -55,6 +61,7 @@ redline/
 ├── config.yaml                     # rigor default, generated-file globs, runner, rules
 ├── specs/<domain>/spec.md          # living behaviour; each scenario carries its ID
 ├── contracts/lock.yaml             # hashes of frozen `hold` tests
+├── initiatives/<id>/plan.md        # goal, phases, the changes of each, stopping points
 └── changes/<id>/
     ├── proposal.md                 # why, scope, non-goals, rigor level
     ├── specs/<domain>/delta.md     # ADDED/MODIFIED/REMOVED; scenarios tagged new | hold; premises
@@ -200,6 +207,33 @@ An entry that is a plain hash, as every lock written before this was, still read
 The change's level is the `Rigor: lite|standard|critical` line of its `proposal.md`, else
 `rigor:` in `redline/config.yaml`, else `standard`. Any other value is an error.
 
+An initiative's plan, `redline/initiatives/2fa-rollout/plan.md`:
+
+```markdown
+# Initiative: 2fa-rollout
+Goal: every account can require a second factor at login
+
+## Phase 1: Codes from an authenticator app
+Changes: add-2fa, add-recovery-codes
+Stop: users can enrol and log in with a code; nobody is made to
+
+## Phase 2: Required for admins
+Changes: enforce-admin-2fa
+Stop: every admin login asks for a code
+```
+
+The plan is the only place that says which initiative and phase a change is in; a proposal
+doesn't repeat it. A listed change needn't exist yet: the plan names changes before their S
+steps. A change is **complete** when the last step of its `steps.md` is merged on `main` (§6);
+a change with no `steps.md` yet isn't. A phase is complete when all its changes are.
+
+`redline check-plan [<initiative>]` checks every plan, or one, and fails on:
+
+- **No goal**: the plan has no `Goal:` line.
+- **No phases**, or phases not numbered `1, 2, …` in order.
+- **A phase without changes or without a stop**: no `Changes:` line, an empty one, or no `Stop:`.
+- **A change listed twice**, in one plan or across plans.
+
 ## 5. A change is always the same sequence of steps
 
 | Step | PR contents | CI proves |
@@ -315,7 +349,11 @@ redline merged         confirms the merge via git, syncs main, refreshes status,
                        hand-off prompt for the next step → stop
 ```
 
-`pr` runs check-lines always, check-premises and check-audit at S (on the step's own change: an
+A change in an initiative waits for its phase: `start` also refuses any step of a change in
+phase N while a change of an earlier phase isn't complete, and names that change. Within a phase
+the changes are independent, each with its own sessions.
+
+`pr` runs check-lines and check-plan always, check-premises and check-audit at S (on the step's own change: an
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
 which have no red by design), check-break at the R step only, and check-lock from R on (G steps
@@ -328,9 +366,14 @@ the PR with `gh`.
 `main` and refuses if it isn't there. Once it is, it switches to `main` (the next step starts fresh
 from it, so uncommitted changes refuse before anything syncs), clears the open-step record if the
 step it names is merged, and prints the next step's brief, or that the change is complete after C.
+When that completes the change's phase, it also prints that the initiative is at a stopping
+point, and the phase's `Stop:` line. Then it prints the next phase and its changes, or that the
+initiative is complete. It starts nothing: going on is the maintainer's call.
 
 The brief (goal, owned scenario IDs, cited files, open items) is generated from the spec, the
-ledger and the open items. It's the whole hand-off: a new session needs nothing from the old one.
+ledger and the open items. For a change in an initiative, it also gives the initiative's goal,
+the phase and its `Stop:` line, so a session knows what its change is for. It's the whole
+hand-off: a new session needs nothing from the old one.
 
 ## 7. Trust model
 
@@ -439,7 +482,9 @@ every finding and closes only what it has checked. The `Waived-by:` line is the 
 3. Premise citations and the auditor agent.
 4. Ledger rebuilt by CI; GitHub Action.
 5. Mutation (mutmut, then Stryker, PIT); contract lock; critical level.
-6. Initiatives and plans; `retro`.
+6. Initiatives and plans (part 1); the defect log and `retro` (part 2). The rest of the
+   critical level builds on phases: a plan-auditor at each phase's start and end,
+   end-of-initiative auditors, one track per Green PR, blind relabelling.
 
 ## 12. Open problems
 
