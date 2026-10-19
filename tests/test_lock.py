@@ -91,7 +91,7 @@ def test_a_green_step_changes_a_frozen_test_only_with_an_approved_departure(hold
     assert code == 1
     assert "check-lock: GREET.H1: test_hold.py::test_h1: its lock entry changed since main, with no approved departure" in out
     assert "changed since it was locked" not in out
-    holds.commit(f"approve\n\n{APPROVED}")
+    holds.git("commit", "-q", "--amend", "-m", f"relock\n\n{APPROVED}")
     code, out = pr(holds, capsys)
     assert code == 0, out
 

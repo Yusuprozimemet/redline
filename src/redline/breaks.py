@@ -5,7 +5,9 @@ of the Python files the change's premises cite. mutmut sits behind `Mutator`, wh
 it doesn't run on Windows, so there the mutation is skipped (CI runs it). See docs/design.md, §5.
 """
 
+import ast
 import configparser
+import hashlib
 import os
 import re
 import shutil
@@ -71,6 +73,37 @@ def holds(repo: Path, change: str | None = None) -> list[str]:
     return ids
 
 
+def functions(tree: ast.AST, prefix: str = ""):
+    """(test id within its file, node) for each function, methods as `Class::name`."""
+    for node in ast.iter_child_nodes(tree):
+        if isinstance(node, ast.ClassDef):
+            yield from functions(node, f"{prefix}{node.name}::")
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            yield prefix + node.name, node
+
+
+def hold_tests(repo: Path, change: str) -> dict[str, dict[str, str]]:
+    """Each `hold` scenario of the change -> {`path::name`: SHA-256 of the test's source} for the
+    tests whose marker names it without `new=True`. check-break proves them; the lock freezes them."""
+    found: dict[str, dict[str, str]] = {sid: {} for sid in holds(repo, change)}
+    paths = sorted({path for path, _, _ in grep(repo, r"mark\.spec\(", "*.py")}) if found else []
+    for path in paths:
+        text = (repo / path).read_text(encoding="utf-8")
+        try:
+            tree = ast.parse(text, path)
+        except SyntaxError as error:
+            raise RuntimeError(f"{path}: {error}") from None
+        lines = text.split("\n")
+        for name, node in functions(tree):
+            first = node.decorator_list[0].lineno if node.decorator_list else node.lineno
+            digest = hashlib.sha256(("\n".join(lines[first - 1:node.end_lineno]) + "\n").encode()).hexdigest()
+            for decorator in node.decorator_list:
+                for sid, new in MARKER.findall(ast.get_source_segment(text, decorator) or ""):
+                    if not new and sid in found:
+                        found[sid][f"{path}::{name}"] = digest
+    return found
+
+
 def touched(repo: Path, change: str) -> list[str]:
     """The Python files the change's premises cite: the code its R step's tests protect."""
     cited = {path for _, _, text in premise_lines(repo, change) for path, *_ in CITATION.findall(text)}
@@ -88,15 +121,14 @@ def passes(repo: Path, sid: str) -> bool:
 
 def check_break(repo: Path, change: str) -> BreakReport:
     report = BreakReport()
-    ids = holds(repo, change)
-    if not ids:
+    tests = hold_tests(repo, change)
+    if not tests:
         return report
-    linked = {sid for _, _, text in grep(repo, r"mark\.spec\(", "*.py") for sid, new in MARKER.findall(text) if not new}
     files = touched(repo, change)
     mutator = Mutator(repo)
     report.skipped = mutator.unavailable()
-    for sid in ids:
-        if sid not in linked:
+    for sid in tests:
+        if not tests[sid]:
             report.results[sid] = "no test links it without new=True"
         elif not passes(repo, sid):
             report.results[sid] = "its tests fail on unmutated code"
