@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 
+from redline.audit import check_audit
 from redline.lines import LIMIT, check_lines
 from redline.merged import merged
 from redline.links import check_links
@@ -24,6 +25,9 @@ def main(argv: list[str] | None = None) -> int:
     cited = commands.add_parser("check-premises", help="check every premise citation in the deltas")
     cited.add_argument("--change", help="check this change only (default: every change)")
     cited.add_argument("--repo", type=Path, default=Path.cwd())
+    audit = commands.add_parser("check-audit", help="fail on a missing audit or an unresolved finding")
+    audit.add_argument("change", help="the change, e.g. add-greet")
+    audit.add_argument("--repo", type=Path, default=Path.cwd())
     begin = commands.add_parser("start", help="start a step on a fresh branch and print its brief")
     begin.add_argument("step", help="<change>/<step>, e.g. add-greet/G1")
     begin.add_argument("--repo", type=Path, default=Path.cwd())
@@ -46,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_links(args.repo)
     if args.command == "check-premises":
         return run_check_premises(args.repo, args.change)
+    if args.command == "check-audit":
+        return run_check_audit(args.repo, args.change)
 
     try:
         results = check_order(args.repo, args.rev)
@@ -139,4 +145,18 @@ def run_check_premises(repo: Path, change: str | None) -> int:
         return 1
     n = report.citations
     print(f"ok: {n} premise citation{' resolves' if n == 1 else 's resolve'}")
+    return 0
+
+
+def run_check_audit(repo: Path, change: str) -> int:
+    try:
+        report = check_audit(repo, change)
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for bad in report.bad:
+        print(bad)
+    if report.bad:
+        return 1
+    print(f"ok: {report.findings} finding{'' if report.findings == 1 else 's'}, none open")
     return 0

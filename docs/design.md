@@ -139,9 +139,9 @@ redline merged         confirms the merge via git, syncs main, refreshes status,
                        hand-off prompt for the next step → stop
 ```
 
-`pr` runs check-lines always, check-premises at S (on the step's own change: an older change's
-premises may go stale as the code moves on), and check-links and check-order from the R step on
-(at S the delta's scenarios have no tests yet). Only when every gate passes does it put the
+`pr` runs check-lines always, check-premises and check-audit at S (on the step's own change: an
+older change's premises may go stale as the code moves on), and check-links and check-order from
+the R step on (at S the delta's scenarios have no tests yet). Only when every gate passes does it put the
 `Redline-Step` trailer on each of the step's commits (once), push, and open the PR with `gh`.
 
 `merged <step>` fetches and fast-forwards local `main` first, then looks for the step's trailer on
