@@ -113,6 +113,39 @@ Owns: AUTH.2FA.S1
 A step is named `<change>/<step>` (e.g. `add-2fa/G1`). It counts as merged on `main` when a commit
 reachable from `main` carries the trailer `Redline-Step: add-2fa/G1`.
 
+The ledger has one entry for each scenario the change's deltas declare:
+
+```yaml
+change: add-2fa
+scenarios:
+  AUTH.2FA.S1:
+    red: {commit: 1a2b3c…, merged: 4d5e6f…, result: pass}
+    green: null
+    break: null
+```
+
+`red` is check-order's red commit (where the test's marker has `new=True`; once there is a green,
+it is the red commit that is an ancestor of green), and `green` is the commit where `new` was
+removed. `merged` is the first commit on `main`'s first-parent line that contains `commit`, which
+is the commit CI ran on after the merge. `result` is that run's outcome: `pass`, `fail`, or
+`unverified` when no result is recorded. `break` is the mutation result for `hold` scenarios and
+stays `null` until step 5.
+
+`redline ledger <change>` rebuilds the ledger from `main`'s history and writes it.
+`redline check-ledger <change>` rebuilds it and fails if the committed file is missing or
+differs. Only commits reachable from `main` count. So a step's PR carries the evidence of the
+steps merged before it, never of its own commits: `pr` changes their hashes when it adds
+trailers, and CI hasn't run on them after a merge. By the C step, the ledger holds every
+scenario's red and green.
+
+From git alone, the rebuild knows which commits made each scenario red and green, and where they
+merged. It can't know whether the tests really failed or passed there. Only a CI run can say
+that. After a run on a merged commit, CI records the outcome as a git note on that commit under
+`refs/notes/redline-ci` (`result: pass` or `result: fail`, then `run: <url>`), and the rebuild
+reads that note. Until the note exists, the result is `unverified`. Once it lands, the committed
+ledger is stale, and the next step's PR refreshes it. A note is only as trustworthy as the people
+who can push to `refs/notes/redline-ci`, because branch protection doesn't cover that ref.
+
 ## 5. A change is always the same sequence of steps
 
 | Step | PR contents | CI proves |
