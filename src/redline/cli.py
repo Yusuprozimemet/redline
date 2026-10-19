@@ -8,6 +8,7 @@ from redline.ledger import check_ledger, declared, write_ledger
 from redline.lines import LIMIT, check_lines
 from redline.merged import merged
 from redline.links import check_links
+from redline.lock import check_lock, write_lock
 from redline.order import check_order
 from redline.pr import pr
 from redline.premises import check_premises
@@ -34,6 +35,13 @@ def main(argv: list[str] | None = None) -> int:
     broken = commands.add_parser("check-break", help="prove by mutation that each hold scenario's tests can fail")
     broken.add_argument("change", help="the change, e.g. add-greet")
     broken.add_argument("--repo", type=Path, default=Path.cwd())
+    locks = commands.add_parser("lock", help="write a change's hold tests into the contract lock")
+    locks.add_argument("change", help="the change, e.g. add-greet")
+    locks.add_argument("--repo", type=Path, default=Path.cwd())
+    locked = commands.add_parser("check-lock", help="print each difference between the contract lock and the code")
+    locked.add_argument("change", help="the change, e.g. add-greet")
+    locked.add_argument("--base", help="also fail on lock entries changed since this ref, as G steps do")
+    locked.add_argument("--repo", type=Path, default=Path.cwd())
     for name, help in (("ledger", "rebuild a change's ledger.yaml from main's history"),
                        ("check-ledger", "fail if a change's ledger.yaml doesn't match main's history")):
         led = commands.add_parser(name, help=help)
@@ -71,6 +79,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_premises(args.repo, args.change)
     if args.command == "check-break":
         return run_check_break(args.repo, args.change)
+    if args.command in ("lock", "check-lock"):
+        return run_lock(args.repo, args.change, getattr(args, "base", None), args.command == "check-lock")
     if args.command == "check-audit":
         return run_check_audit(args.repo, args.change)
     if args.command in ("ledger", "check-ledger"):
@@ -199,6 +209,23 @@ def run_check_break(repo: Path, change: str) -> int:
         print(f"skipped: {report.skipped}; CI runs the mutation")
     proved = "" if report.skipped else " and fail under a mutant"
     print(f"ok: {len(report.results)} hold scenario(s): tests pass unmutated{proved}")
+    return 0
+
+
+def run_lock(repo: Path, change: str, base: str | None, check: bool) -> int:
+    try:
+        if not check:
+            print(f"ok: locked {write_lock(repo, change)} hold test(s) of {change}")
+            return 0
+        report = check_lock(repo, change, base)
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for bad in report.bad:
+        print(bad)
+    if report.bad:
+        return 1
+    print(f"ok: {report.locked} locked test(s) match the code")
     return 0
 
 

@@ -150,6 +150,23 @@ reads that note. Until the note exists, the result is `unverified`. Once it land
 ledger is stale, and the next step's PR refreshes it. A note is only as trustworthy as the people
 who can push to `refs/notes/redline-ci`, because branch protection doesn't cover that ref.
 
+The contract lock, `redline/contracts/lock.yaml`, freezes each change's `hold` tests:
+
+```yaml
+add-greet:
+  GREET.H1:
+    tests/test_greet.py::test_placeholder_returns_nothing: 9c1e…   # sha256
+```
+
+Its tests are the same ones check-break counts (§5): a `hold` scenario of the change's deltas,
+named by a spec marker without `new=True`. One function finds them for both. A test is
+`path::name`, or `path::Class::name` for a method. Its hash is the SHA-256 of the function's
+source, from its first decorator to its last line, with `\n` line endings. It covers the function,
+not the whole file, because the R step's test files also hold `new` tests. Every G step edits
+those, removing `new=True` and fixing the tests, and a whole-file hash would make every one of
+those edits a departure. The cost is that the hash doesn't cover helpers and fixtures the test
+calls (O-LOCK2, §12).
+
 ## 5. A change is always the same sequence of steps
 
 | Step | PR contents | CI proves |
@@ -187,6 +204,33 @@ in CI on Linux, and the tests always use the fake. On Windows, check-break still
 scenario's tests and their unmutated run. It reports the mutation as skipped, not failed, because
 CI runs it.
 
+The R step also writes the lock (§4). `redline lock <change>` rewrites that change's entry from the
+tests as they are now. `redline check-lock <change>` prints each difference between the lock and
+the code:
+
+- **A hash differs**: a locked test's source has changed.
+- **A locked test is missing**: it was deleted or renamed, or its marker now has `new=True`.
+- **A hold test isn't locked**: the test exists but the lock has no entry for it.
+
+At R, the gate runs exactly that check, so every hold test is in the lock and current. At G1…Gn
+the gate adds a fourth difference, `--base main`: the change's lock entries differ from the lock
+at the merge-base with `main`. Without it, a G step could edit a frozen test and re-run `redline
+lock`. `pr` and `redline ci pr` run both checks.
+
+Editing a frozen test after R is a **departure**. The step re-runs `redline lock`, and one of its
+commits carries a trailer naming the test, the person and the reason:
+
+```
+Redline-Departure: tests/test_greet.py::test_placeholder_returns_nothing approved-by @maintainer: the placeholder now returns ""
+```
+
+A test with a trailer like that among the step's own commits (`base..HEAD`) may change its lock
+entry. Every other check still applies, so the lock must match the edited test. A trailer
+missing `approved-by @person: <reason>` doesn't count. The trailer stays in `main`'s history, so
+the departure is recorded with its approver (§2.7). Git alone can't prove the named person
+approved it. That proof needs a maintainer's label checked through the `GitHub` seam (O-LOCK1,
+§12), as `Oversized` does.
+
 At **lite** rigor, S and R may share one PR, so the smallest change is two sessions.
 
 ## 6. Session protocol
@@ -203,7 +247,8 @@ redline merged         confirms the merge via git, syncs main, refreshes status,
 `pr` runs check-lines always, check-premises and check-audit at S (on the step's own change: an
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
-which have no red by design), and check-break at the R step only. Only when every gate passes does it put the
+which have no red by design), check-break at the R step only, and check-lock from R on (G steps
+with `--base main`, §5). Only when every gate passes does it put the
 `Redline-Step` trailer on each of the step's commits (once), push, and open the PR with `gh`.
 
 `merged <step>` fetches and fast-forwards local `main` first, then looks for the step's trailer on
@@ -289,3 +334,8 @@ every finding and closes only what it has checked. The `Waived-by:` line is the 
   which the auditor may challenge.
 - Mutation cost on large codebases: touched files only, at the Red step only.
 - Whether a test asserts its scenario's THEN clauses is a judgment; the auditor checks it.
+- O-LOCK1 [build 5, part 3]: a departure's approval is a recorded line, not proof. The proof is
+  a maintainer's label, read through the `GitHub` seam and checked by `redline ci pr`, shared with
+  `Oversized` (§2.3), which has no label check yet either.
+- O-LOCK2 [build 5, part 3]: the lock hashes test functions only, so a weakened helper or fixture
+  isn't caught. The critical level's lock (with timing) decides whether to hash what a test calls.
