@@ -62,16 +62,21 @@ class GitHub:
         return self.run("gh", "api", f"repos/{{owner}}/{{repo}}/collaborators/{login}/permission", "--jq", ".role_name")
 
 
+def size(repo: Path, approvals: Approvals) -> list[str]:
+    """check-lines, where more than 400 lines needs an approved `Oversized` claim."""
+    count = check_lines(repo)
+    if count.total <= LIMIT:
+        return []
+    over = f"check-lines: {count.total} changed lines, over the limit of {LIMIT}"
+    if not claims(repo, count.base, "Oversized"):
+        return [over]
+    why = approvals.approve(OVERSIZED, over)
+    return [why] if why else []
+
+
 def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None) -> list[str]:
     approvals = approvals or Approvals()
-    failures = []
-    count = check_lines(repo)
-    if count.total > LIMIT:
-        over = f"check-lines: {count.total} changed lines, over the limit of {LIMIT}"
-        if not claims(repo, count.base, "Oversized"):
-            failures.append(over)
-        elif why := approvals.approve(OVERSIZED, over):
-            failures.append(why)
+    failures = size(repo, approvals)
     failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad]
     failures += [f"check-defects: {bad}" for bad in check_defects(repo, change, step == "C").bad]
     if step == "S":

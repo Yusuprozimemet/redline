@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[mutation]"  # mutmut, for check-break
-      - name: Gates, suite and ledger for the PR's step
+      - name: Gates, suite and ledger for the PR's step, or the gates for a PR outside any step
         if: github.event_name == 'pull_request'
         run: redline ci pr --base main --pr ${{ github.event.pull_request.number }}
         env:

@@ -318,7 +318,8 @@ def run_ci(repo: Path, event: str, base: str, run_url: str, number: int | None) 
     try:
         if event == "pr":
             name, failures = ci_pr(repo, base, number)
-            done = f"ok: {name} passes the gates, the test suite and check-ledger"
+            done = (f"ok: {name} passes the gates, the test suite and check-ledger" if name else
+                    "ok: a PR outside any step passes check-lines, check-plan, check-lock and the test suite")
         else:
             failures = ci_push(repo, run_url)
             done = "ok: the test suite passed; noted on refs/notes/redline-ci"
