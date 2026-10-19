@@ -1,0 +1,36 @@
+# Redline's CI: thin on purpose, every rule lives in `redline ci`. See docs/design.md, section 7.
+name: redline
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: write  # push refs/notes/redline-ci after a run on main
+
+concurrency:
+  group: redline-${{ github.ref }}  # runs on main push notes one at a time
+  cancel-in-progress: false
+
+jobs:
+  redline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # the ledger and check-order read the whole history
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}  # the PR's own commits, not a merge
+      - name: Fetch main and the CI notes
+        run: git fetch --no-tags origin '+refs/heads/main:refs/heads/main' '+refs/notes/*:refs/notes/*'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Gates, suite and ledger for the PR's step
+        if: github.event_name == 'pull_request'
+        run: redline ci pr --base main
+      - name: Run the suite and note the result on the merged commit
+        if: github.event_name == 'push'
+        run: redline ci push --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

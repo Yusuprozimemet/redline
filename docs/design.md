@@ -194,6 +194,22 @@ ledger and the open items. It's the whole hand-off: a new session needs nothing 
 | The agent's report or summary | Never |
 | `ledger.yaml` | A cache, which CI rebuilds from history |
 
+CI is `.github/workflows/redline.yml`, a thin wrapper around `redline ci`; every rule lives in the
+CLI. It checks out the full history, `main` and `refs/notes/*`.
+
+On a pull request, `redline ci pr --base main` works out the step from the `Redline-Step`
+trailers of the PR's own commits (`main..HEAD`), which `pr` added. It refuses if no commit carries
+one, or if they name more than one distinct step: a PR is one step. It then runs that step's gates
+(the same ones `pr` runs locally), the test suite, and `check-ledger <change> --main main`, and
+prints every failure. This proves the PR's state: the gates hold, `new` tests fail strictly, and
+the committed ledger matches `main`'s evidence. It records nothing. A PR run is not evidence,
+because its commits are not on `main` yet.
+
+On a push to `main`, `redline ci push` runs the suite on the merged commit and writes the note
+(`result: pass|fail`, `run: <url>`) on it under `refs/notes/redline-ci`, then pushes that ref. A
+failed suite is still recorded, and the run fails. This is the only evidence Redline writes, and
+the next PR's `check-ledger` picks it up.
+
 ## 8. Rigor levels (on top of the invariants)
 
 | Level | Adds |
