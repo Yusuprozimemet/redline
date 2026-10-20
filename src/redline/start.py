@@ -1,7 +1,8 @@
 """`redline start <change>/<step>`: refuse unless the step may begin, then print its brief.
 
 A change's steps come from redline/changes/<change>/steps.md, in order: a `## <step>: <goal>`
-heading for each, with an `Owns: ID, ID` line for the scenarios it owns. Under `## Open items`,
+heading for each, with an `Owns: ID, ID` line for the scenarios it owns and, for a G step, a
+`Track: glob, glob` line for the code it may change (track.py). Under `## Open items`,
 each `- <ID> [<step>]: <text>` line is a deferred item owned by that step.
 
 A step is merged on main when a commit reachable from main carries the trailer
@@ -21,6 +22,7 @@ from redline.premises import premise_lines
 
 STEP = re.compile(r"^## (S|R|G\d+|C): (.+)$")
 OWNS = re.compile(r"^Owns: (.+)$")
+TRACK = re.compile(r"^Track:(.*)$")
 ITEM = re.compile(r"^- (\S+) \[(\S+)\]: (.+)$")
 HEADING = re.compile(r"^#### Scenario (\S+) \[(?:new|hold)\]:")
 TRAILER = "Redline-Step"
@@ -36,15 +38,20 @@ class Step:
     goal: str
     owns: list[str] = field(default_factory=list)
     items: list[str] = field(default_factory=list)
+    track: list[str] | None = None  # None: no Track: line
 
 
 def read_steps(repo: Path, change: str) -> list[Step]:
     path = f"redline/changes/{change}/steps.md"
     if not (repo / path).is_file():
         raise RuntimeError(f"no steps file {path}")
+    return parse_steps((repo / path).read_text(encoding="utf-8"))
+
+
+def parse_steps(text: str) -> list[Step]:
     steps: list[Step] = []
     in_items = False
-    for line in (repo / path).read_text(encoding="utf-8").splitlines():
+    for line in text.splitlines():
         if heading := STEP.match(line):
             steps.append(Step(heading[1], heading[2]))
             in_items = False
@@ -57,6 +64,8 @@ def read_steps(repo: Path, change: str) -> list[Step]:
             owner.items.append(f"- {item[1]}: {item[3]}")
         elif steps and not in_items and (owns := OWNS.match(line)):
             steps[-1].owns += [sid.strip() for sid in owns[1].split(",") if sid.strip()]
+        elif steps and not in_items and (track := TRACK.match(line)):
+            steps[-1].track = [glob.strip() for glob in track[1].split(",") if glob.strip()]
     return steps
 
 
@@ -91,6 +100,8 @@ def brief(repo: Path, change: str, step: Step) -> str:
     parts += [scenario(repo, change, sid) + "\n" for sid in step.owns] or ["(none)", ""]
     parts += ["## Cited files (premises)"] + (premises(repo, change) or ["(none)"])
     parts += ["", "## Open items"] + (step.items or ["(none)"])
+    if step.track:
+        parts += ["", "## Track", ", ".join(step.track)]
     if rules := load_config(repo).rules:
         parts += ["", "## Rules"] + [f"- {cause}: {rule}" for cause, lines in rules.items() for rule in lines]
     if found := placed(repo, change):

@@ -3,8 +3,8 @@
 On a pull request, the step comes from the `Redline-Step` trailers of the PR's commits (base..HEAD),
 which must name at most one step. Then the step's gates, the test suite and check-ledger against
 the base run, and every failure is reported. A PR with no trailer is outside any step: it may not
-touch a change, the lock or the specs, and gets check-lines, check-plan, check-lock on every locked
-change and the suite. A departure or an Oversized trailer needs its label
+touch a change, the lock or the specs, and gets check-lines, the rigor claim, check-plan, check-lock
+on every locked change and the suite. A departure or an Oversized trailer needs its label
 on the PR (`--pr <number>`), read through `GitHub`. On a push to main, the suite runs and its result is
 recorded as a git note on the merged commit under refs/notes/redline-ci, which is then pushed.
 When the push merged an R step, check-break runs too, and the note gets each `hold` scenario's
@@ -25,7 +25,7 @@ from redline.lock import check_lock, read_lock
 from redline.order import git
 from redline.approval import Approvals
 from redline.plan import check_plan
-from redline.pr import GitHub, gates, size
+from redline.pr import GitHub, gates, rigor_claim, size
 from redline.start import TRAILER, Refused
 
 STEPS_ONLY = ("redline/changes/", "redline/contracts/", "redline/specs/")  # written only by a step's gates
@@ -79,7 +79,8 @@ def outside(repo: Path, base: str, approvals: Approvals) -> list[str]:
     diff = git(repo, "diff", "--name-only", "--no-renames", fork.stdout.strip(), "HEAD")
     if touched := [p for p in diff.stdout.splitlines() if p.startswith(STEPS_ONLY)]:
         raise Refused(f"outside any step a PR can't touch a change, the lock or the specs: {', '.join(touched)}")
-    failures = size(repo, approvals) + [f"check-plan: {bad}" for bad in check_plan(repo).bad]
+    failures = size(repo, approvals) + rigor_claim(repo, approvals)
+    failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad]
     for change in sorted(read_lock(repo)):  # no Redline-Step, so no departure: the lock can't change here
         failures += [f"check-lock: {change}: {bad}" for bad in check_lock(repo, change).bad]
     return failures + suite(repo)

@@ -4,7 +4,8 @@ check-lines, check-plan and check-defects always run; the defect log is required
 change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
-check-lock runs at R, and at G steps against main's lock too. Over 400 lines, an `Oversized:
+check-lock runs at R, and at G steps against main's lock too. check-track runs at G steps (track.py).
+A changed `rigor:` in the config needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
 <reason>` trailer needs a maintainer's label, as a departure does (approval.py); locally, where
 the PR doesn't exist yet, `pr` only reports that CI will need it.
 If every gate passes, each commit of the step gets the `Redline-Step: <change>/<step>` trailer
@@ -14,9 +15,12 @@ If every gate passes, each commit of the step gets the `Redline-Step: <change>/<
 import subprocess
 from pathlib import Path
 
-from redline.approval import OVERSIZED, Approvals, claims
+import yaml
+
+from redline.approval import OVERSIZED, RIGOR, Approvals, claims
 from redline.audit import check_audit
 from redline.breaks import check_break, holds
+from redline.config import load_config
 from redline.defects import check_defects
 from redline.lines import LIMIT, check_lines
 from redline.links import check_links
@@ -25,6 +29,7 @@ from redline.order import check_order, git
 from redline.plan import check_plan
 from redline.premises import check_premises
 from redline.start import TRAILER, Refused, open_step_file, read_steps
+from redline.track import check_track
 
 
 class GitHub:
@@ -74,9 +79,23 @@ def size(repo: Path, approvals: Approvals) -> list[str]:
     return [why] if why else []
 
 
+def rigor_claim(repo: Path, approvals: Approvals) -> list[str]:
+    """A changed `rigor:` in the config needs an approved `Redline-Rigor` claim, on any PR."""
+    fork = git(repo, "merge-base", "main", "HEAD").stdout.strip()
+    shown = git(repo, "show", f"{fork}:redline/config.yaml")
+    old = str(((yaml.safe_load(shown.stdout) if shown.returncode == 0 else None) or {}).get("rigor") or "standard")
+    if old == (new := load_config(repo).rigor):
+        return []
+    what = f"rigor: `rigor:` in redline/config.yaml changed from {old} to {new}"
+    if not claims(repo, fork, "Redline-Rigor"):
+        return [f"{what}, with no Redline-Rigor trailer"]
+    why = approvals.approve(RIGOR, what)
+    return [why] if why else []
+
+
 def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None) -> list[str]:
     approvals = approvals or Approvals()
-    failures = size(repo, approvals)
+    failures = size(repo, approvals) + rigor_claim(repo, approvals)
     failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad]
     failures += [f"check-defects: {bad}" for bad in check_defects(repo, change, step == "C").bad]
     if step == "S":
@@ -95,6 +114,8 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
     if step == "R" or step.startswith("G"):  # at G the lock must also be main's, bar approved departures
         base = None if step == "R" else "main"
         failures += [f"check-lock: {bad}" for bad in check_lock(repo, change, base, approvals).bad]
+    if step.startswith("G"):
+        failures += check_track(repo, change, step, approvals)
     return failures
 
 
