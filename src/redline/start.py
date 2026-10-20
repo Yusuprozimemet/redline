@@ -134,11 +134,33 @@ def waiting(repo: Path, change: str, done: set[str]) -> str:
     return ""
 
 
-def merged_steps(repo: Path) -> set[str]:
-    log = git(repo, "log", "main", f"--format=%(trailers:key={TRAILER},valueonly)")
+def merged_steps(repo: Path, ref: str = "main") -> set[str]:
+    log = git(repo, "log", ref, f"--format=%(trailers:key={TRAILER},valueonly)")
     if log.returncode:
         raise RuntimeError(log.stderr.strip())
     return {line.strip() for line in log.stdout.splitlines() if line.strip()}
+
+
+def next_step(repo: Path, name: str, base: str) -> None:
+    """Refuse unless `<change>/<step>` is in steps.md at the merge-base with `base`, every step before it
+    there is merged on `base`, and it isn't; with no steps.md there, only S, which writes it, may be open."""
+    change, _, step = name.partition("/")
+    fork = git(repo, "merge-base", base, "HEAD")
+    if fork.returncode:
+        raise RuntimeError(f"no merge-base with {base}: {fork.stderr.strip()}")
+    path = f"redline/changes/{change}/steps.md"
+    shown = git(repo, "show", f"{fork.stdout.strip()}:{path}")
+    if shown.returncode and step != "S":
+        raise Refused(f"{name}: redline/changes/{change} has no steps.md at the merge-base, "
+                      "so it can only be at its S step, which writes it")
+    names = [s.name for s in parse_steps(shown.stdout)] if shown.returncode == 0 else ["S"]
+    if step not in names:
+        raise Refused(f"{name}: {path} at the merge-base has no step {step}")
+    merged = merged_steps(repo, base)
+    if name in merged:
+        raise Refused(f"{name} is already merged on {base}: a step is one PR")
+    if behind := [f"{change}/{s}" for s in names[:names.index(step)] if f"{change}/{s}" not in merged]:
+        raise Refused(f"{name} isn't next; not merged on {base}: {', '.join(behind)}")
 
 
 def open_step_file(repo: Path) -> Path:

@@ -1,7 +1,9 @@
 """`redline ci`: what the GitHub Action runs (.github/workflows/redline.yml).
 
 On a pull request, the step comes from the `Redline-Step` trailers of the PR's commits (base..HEAD),
-which must name at most one step. Then the step's gates, the test suite (each runner's the
+which must name at most one step, and that step must be the change's next, as `start` checks: in its
+steps.md at the merge-base (only S when there is none), every step before it merged on the base, and
+itself not merged. Then the step's gates, the test suite (each runner's the
 repository uses, which fails when none is or when Jest is listed but can't run) and check-ledger against
 the base run, and every failure is reported. A PR with no trailer is outside any step: it may not
 touch a change, the lock or the specs, and gets check-lines, the rigor claim, check-plan, check-lock
@@ -33,7 +35,7 @@ from redline.plan import check_plan
 from redline.planaudit import check_plan_audits
 from redline.pr import GitHub, gates, rigor_claim, size
 from redline.runner import JEST, RUNNERS, Runner, check_helpers, run
-from redline.start import TRAILER, Refused
+from redline.start import TRAILER, Refused, next_step
 
 STEPS_ONLY = ("redline/changes/", "redline/contracts/", "redline/specs/")  # written only by a step's gates
 
@@ -112,6 +114,7 @@ def ci_pr(repo: Path, base: str, number: int | None = None) -> tuple[str, list[s
     approvals = Approvals(GitHub(repo), number)
     if not name:
         return "", outside(repo, base, approvals)
+    next_step(repo, name, base)  # before any gate: a step's name decides which gates run
     change, _, step = name.partition("/")
     failures = gates(repo, change, step, approvals) + suite(repo)
     failures += [f"check-ledger: {p}" for p in check_ledger(repo, change, base)]

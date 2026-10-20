@@ -7,7 +7,7 @@ import yaml
 from redline.cli import main
 from test_ledger import LEDGER, RED, land
 from test_pr import RED_TESTS
-from test_start import STEPS, change, fresh_branch, merge_step  # noqa: F401 (change is a fixture)
+from test_start import DELTA, STEPS, change, fresh_branch, merge_step  # noqa: F401 (change is a fixture)
 
 RUN = "https://github.com/toy/toy/actions/runs/7"
 WORKFLOW = Path(__file__).parent.parent / ".github/workflows/redline.yml"
@@ -110,7 +110,7 @@ def test_a_step_already_merged_is_refused(change, capsys):
 
 
 def test_a_change_with_no_steps_md_at_the_merge_base_can_only_be_at_its_s_step(change, capsys):
-    wave = {"redline/changes/add-wave/steps.md": STEPS}
+    wave = {"redline/changes/add-wave/steps.md": STEPS, "redline/changes/add-wave/specs/wave/delta.md": DELTA.replace("GREET", "WAVE")}
     out = step_pr(change, capsys, "add-wave/G1", files=wave)
     assert ("refused: add-wave/G1: redline/changes/add-wave has no steps.md at the merge-base, "
             "so it can only be at its S step, which writes it") in out
