@@ -108,6 +108,17 @@ ID, a scenario it already has; each is copied there, heading to last line, under
 a heading, so it needs no test and no evidence: once it leaves `specs/`, a test still linked to it
 fails check-links as an unknown scenario. Deleting that test, if it is frozen, is a departure (§5).
 
+A change is **closed** once its C step is merged on `main`: a commit reachable from `main` carries
+`Redline-Step: <change>/C`. Its delta stays, the record of what it declared, and its own checks
+still read it, but it declares nothing any more: the living spec holds what it said. So every
+check that reads all the deltas skips a closed change's: check-links, whose duplicate rule would
+otherwise fail a later change that MODIFIES a scenario a closed one ADDED, and which would still
+count a scenario a later change REMOVES as declared; the `hold` scenarios check-order leaves out
+(§6), where a closed delta's stale tag would keep one out after a later change made it `new`; and
+`redline check-premises` run without a change, since a closed change's premises go stale as the
+code moves on (§6). Until its C step merges, a change's delta and the living spec may both carry
+an ID, as a MODIFIED scenario does, and as every scenario does in the C PR itself.
+
 Premises:
 
 ```markdown
@@ -1029,7 +1040,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    claims of a change taken out of its plan (O-PLAN7).
 7. **The close**: part 1 checks the C step against the ledger's evidence (O-CLOSE1); part 2
    checks that the delta reached `specs/` (O-CLOSE2); part 3 lets a closed change's delta stop
-   counting as a declaration (O-CLOSE3).
+   counting as a declaration (O-CLOSE3); part 4 takes a change's evidence from its own steps only
+   (O-CLOSE4).
 
 ## 12. Open problems
 
@@ -1098,7 +1110,17 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   living specs, and the verify report had no form. Now the delta's sections have a form (§4),
   `check-specs` runs at C and fails on a declared change missing from `specs/` or an undeclared
   one in it, and the verify report is dropped: the ledger and check-close are the verify (§5).
-- O-CLOSE3 [build 7 part 3]: a closed change keeps its delta, so when a later change MODIFIES a
-  scenario an earlier one ADDED, check-links finds the ID in the living spec and two changes'
-  deltas and fails it as a duplicate. A change whose C step is merged on `main` should stop
-  counting as a declaration.
+- O-CLOSE3 [closed, build 7 part 3]: a closed change keeps its delta, so when a later change
+  MODIFIED a scenario an earlier one ADDED, check-links found the ID in the living spec and two
+  changes' deltas and failed it as a duplicate; and a scenario a later change REMOVED stayed
+  declared by the closed delta, so a test still linked to it wasn't unknown, as §4 says it is. Now
+  a change whose C step is merged on `main` is closed, and check-links, the `hold` scenarios
+  check-order leaves out, and `check-premises` without a change skip its delta (§4). Its own
+  checks still read it.
+- O-CLOSE4 [build 7 part 4]: evidence is found by scenario ID across all of `main`'s history, not
+  by change. When a later change MODIFIES a `new` scenario an earlier one closed, check-order pairs
+  the later green with the first red among its ancestors, the earlier change's, and if the later
+  change never makes it red again, its ledger holds the earlier change's red and green. A `hold`
+  scenario's break is the first commit whose tests link it, again the earlier change's. Either way
+  check-close passes the later change on evidence it didn't make. A change's red, green and break
+  should count only from commits after its own S step merged.
