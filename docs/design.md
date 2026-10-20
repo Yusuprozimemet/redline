@@ -907,7 +907,8 @@ A change in an initiative waits for its phase: `start` also refuses any step of 
 phase N while a change of an earlier phase isn't complete, and names that change. Within a phase
 the changes are independent, each with its own sessions. In a critical initiative, it also
 refuses while the phase's start audit, or an earlier phase's end audit, is missing or unresolved
-on `main` (§4, plan audits).
+on `main` (§4, plan audits). `start` runs on the agent's machine, so `redline ci pr` repeats its
+first refusal on every step's PR: the step must be the change's next (§7).
 
 `pr` runs check-lines and check-plan always, check-premises and check-audit at S (on the step's own change: an
 older change's premises may go stale as the code moves on), and check-links and check-order from
@@ -953,7 +954,21 @@ installs Node and runs `npm ci` in its workflow before `redline ci`, so the suit
 
 On a pull request, `redline ci pr --base main` works out the step from the `Redline-Step`
 trailers of the PR's own commits (`main..HEAD`), which `pr` added. It refuses if they name more
-than one distinct step: a PR is one step. It then runs that step's gates (the same ones `pr` runs
+than one distinct step: a PR is one step.
+
+It also refuses, before anything runs, a step that isn't next, as `start` does (§6): the step must
+be in the change's `steps.md` at the merge-base with `main`, every step before it there must be
+merged on `main`, and the step itself must not be. A change with no `steps.md` at the merge-base
+may only be at its S step, which writes it. Without this, a trailer could name a step that doesn't
+exist, which `gates` gives the fewest checks, or one already merged, such as a closed change's R,
+whose gates don't run check-specs, while the PR still counts as in a step and may touch
+`redline/changes/`, `redline/contracts/` and `redline/specs/`; and a G1 PR could pass CI before its
+S step merged, against invariant 1. `steps.md` is read at the merge-base, as check-track reads
+`Track:` lines (§5), so a PR can't add itself a step. `start`'s other refusals, a change whose
+earlier phase isn't complete and a critical initiative's missing plan audits, aren't repeated in
+CI yet (O-CI3).
+
+It then runs that step's gates (the same ones `pr` runs
 locally), the test suite, and `check-ledger <change> --main main`, and prints every failure. This
 proves the PR's state: the gates hold, `new` tests fail strictly, and the committed ledger
 matches `main`'s evidence. It records nothing. A PR run is not evidence, because its commits are
@@ -1170,8 +1185,9 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
 8. **More runners**, once Jest is complete and verified: JUnit 5 and PIT (O-RUN2); the critical
    `reach` of Jest and JUnit tests (O-RUN3); runner configuration that can weaken tests outside
    a step (O-RUN4); Jest tests outside the root `package.json` (O-RUN9).
-9. **Fixes from the review of 2026-10-20**: text encoding on Windows (O-ENC1). The review's other
-   code items join this step, each with its own O-ID, as they are taken.
+9. **Fixes from the review of 2026-10-20**: a step's PR must be the change's next step (O-CI2);
+   `start`'s phase and plan-audit refusals in CI (O-CI3); text encoding on Windows (O-ENC1). The
+   review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
 ## 12. Open problems
@@ -1201,6 +1217,16 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   `redline/config.yaml`, which sets the level of every change whose proposal declares none. Now
   any PR that changes it needs a `Redline-Rigor` trailer and a maintainer's `redline:rigor` label
   (§7).
+- O-CI2 [closed, build 9]: `redline ci pr` checked only that a `Redline-Step` trailer had a `/`. A
+  trailer naming a step `steps.md` lacks got the fewest gates, and one naming a step already merged
+  got that step's, while the PR, counted as in a step, could touch `redline/specs/` with no
+  check-specs; and a G1 PR passed CI before its S step merged. Only the local `start` checked the
+  order. Now CI refuses, before anything runs, a step that isn't in `steps.md` at the merge-base,
+  one with an earlier step not merged on `main`, and one already merged (§7).
+- O-CI3 [build 9]: `start` also refuses a change whose earlier phase isn't complete, and a critical
+  initiative's step while its plan audits on `main` are missing, unresolved or stale (§6); CI
+  repeats neither. `placed` reads the plan from the working tree, so doing it in CI means reading
+  the plan at the merge-base, as `steps.md` is read for O-CI2.
 - O-PLAN1 [closed, build 6 part 8]: an initiative was critical only through its changes' levels,
   and a change with no proposal yet takes the config's, so an initiative whose first S step
   declared `Rigor: critical` skipped that phase's start audit. Now the plan has its own `Rigor:`
