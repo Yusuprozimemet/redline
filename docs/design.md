@@ -703,8 +703,15 @@ and the command that runs its tests, all of them or one scenario's. Its mutation
 
 check-links, check-order, check-break and the lock read every runner's markers, so a scenario may
 be linked from either language. A marker is read from one line, as pytest's is. Jest's test files
-are its default `testMatch`, by extension only, so an `openapi.spec.json` stays code. The suite
-`redline ci` runs is still pytest's alone (O-RUN8).
+are its default `testMatch`, by extension only, so an `openapi.spec.json` stays code.
+
+The suite `redline ci` runs is every test of each runner the repository uses, run by the command
+check-break runs (all tests, no `REDLINE_SPEC`). pytest is used when git tracks one of its test
+files; Jest when the root `package.json` lists `jest` in `dependencies` or `devDependencies`. Jest
+listed without `npx`, or without `node_modules/jest`, fails the suite, naming what is missing, and
+so does a repository that uses no runner: a run that didn't happen proves nothing. Each runner that
+fails gives one line, `suite: the test suite failed (<runner> exit <code>): <last line of its
+output>`. Jest tests a root `package.json` doesn't list Jest for never run there (O-RUN9).
 
 Jest has no marker, so Redline ships one. `redline install jest` writes `redline/runners/jest.js`,
 which tests import. It isn't named `spec.js`: Jest's default `testMatch` takes any `spec.js` for a
@@ -941,7 +948,8 @@ hand-off: a new session needs nothing from the old one.
 
 CI is `.github/workflows/redline.yml`, a thin wrapper around `redline ci`; every rule lives in the
 CLI. It checks out the full history, `main` and `refs/notes/*`. A second job, `runners`, runs the
-real Jest and Stryker on a toy project (§5) and records nothing.
+real Jest and Stryker on a toy project (§5) and records nothing. A repository with Jest tests
+installs Node and runs `npm ci` in its workflow before `redline ci`, so the suite can run them.
 
 On a pull request, `redline ci pr --base main` works out the step from the `Redline-Step`
 trailers of the PR's own commits (`main..HEAD`), which `pr` added. It refuses if they name more
@@ -969,7 +977,7 @@ Otherwise it runs the gates that hold for any PR, and prints every failure:
 - **check-lock** on every change the lock names, without `--base`. The PR can't touch the lock,
   so a locked test or (at critical) what it reaches can't change outside a step at all. A
   `Redline-Departure` trailer doesn't help: a departure is a step's, and re-locks the test.
-- **The test suite.**
+- **The test suite**: each runner's the repository uses (§5).
 
 It doesn't run check-links (on `main` an S step's scenarios have no tests yet, by design),
 check-ledger or check-defects (they are a change's, and the PR can't touch a change).
@@ -1161,9 +1169,10 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    (O-CLOSE4); part 5 a closed change's lock entry when a later change edits its test (O-CLOSE5).
 8. **More runners**, once Jest is complete and verified: JUnit 5 and PIT (O-RUN2); the critical
    `reach` of Jest and JUnit tests (O-RUN3); runner configuration that can weaken tests outside
-   a step (O-RUN4).
+   a step (O-RUN4); Jest tests outside the root `package.json` (O-RUN9).
 9. **Fixes from the review of 2026-10-20**: text encoding on Windows (O-ENC1). The review's other
    code items join this step, each with its own O-ID, as they are taken.
+10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
 ## 12. Open problems
 
@@ -1256,8 +1265,19 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
 - O-RUN1 [closed, build 5 part 8]: check-break failed a scenario with a Jest test instead of
   running it, and check-track counted a Jest test file as code. Now check-break runs each runner
   of a scenario, adding up its tools' kills, and check-track exempts every runner's test files (§5).
-- O-RUN8 [build 5 part 9]: `redline ci` runs pytest's suite alone, so a Jest test that fails isn't
-  seen, and a repository with Jest tests alone fails on a pytest that collected nothing.
+- O-RUN8 [closed, build 5 part 9]: `redline ci` ran pytest's suite alone, so a Jest test that
+  failed wasn't seen, and a repository with Jest tests alone failed on a pytest that collected
+  nothing. Now the suite runs each runner the repository uses, and fails when Jest is listed but
+  can't run, or when no runner is used (§5).
+- O-RUN9 [build 8]: the suite runs Jest only when the root `package.json` lists it, so Jest tests in
+  a subproject, a workspace or a repository with Jest installed elsewhere never run, yet check-links
+  and check-order count them. Taking Jest from tracked `*.spec.ts` files instead would fail every
+  repository whose `.spec` files are another tool's, Redline's own toy among them. It is O-RUN6's
+  problem, a linked test that never runs, and belongs with the runner configuration of O-RUN4.
+- O-PROG1 [build 10]: `merged` doesn't show how far the work has come. It should print, as a text
+  bar from what git holds, the change's steps merged on `main` out of its `steps.md`, and the next
+  step; in an initiative, the phase's changes complete and the plan's phases complete; and the open
+  items later steps still own. It prints and judges nothing, as `merged` does (§6).
 - O-RUN7 [closed, build 5 part 8]: a `Redline-Departure` trailer's test was read up to its first
   space, so a locked Jest test named by a sentence couldn't be edited with an approved departure.
 - O-ENC1 [build 9]: on Windows, Python decodes text as cp1252. `git()`, `load_config` and the
