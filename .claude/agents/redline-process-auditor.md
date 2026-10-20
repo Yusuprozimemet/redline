@@ -36,7 +36,9 @@ relabeller's (docs/design.md §4). Check each claim against the files where you 
 test in the lock, a track claim against its step's `Track:` line, a rigor claim against the
 plan's or proposal's level); whose label approved it, and whether that was a maintainer (`admin`
 or `maintain`) and, for a departure, the approver its trailer names; and where claims cluster.
-Cite one by its commit, e.g. `claims: 4d5e6f1`.
+It includes the steps of every change any version of the plan listed: `Left the plan:` names
+those the plan no longer lists and the commit where each left, so weigh why each left, and
+which of its steps came after. Cite one by its commit, e.g. `claims: 4d5e6f1`.
 If you were not given the text `redline claims` prints, open a finding saying so: the record's
 claims are out of your sight.
 

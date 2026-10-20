@@ -407,15 +407,25 @@ arguments, as it gives `redline blind`'s text to the relabeller:
 ```markdown
 # Claims: 2fa-rollout
 From main: 1 claim on 9 commits: the steps of add-2fa, add-recovery-codes, enforce-admin-2fa,
-and every commit that touches redline/initiatives/2fa-rollout/ or redline/config.yaml.
+add-sms-codes, and every commit that touches redline/initiatives/2fa-rollout/ or redline/config.yaml.
+Left the plan: add-sms-codes in 9c0d1e2.
 
 ## 4d5e6f1 add-2fa/G2 (PR #12): Lock out after five wrong codes
 Redline-Departure: tests/test_login.py::test_lockout approved-by @maintainer: five, not three
 Label at the merge: redline:departure, applied by @alice, admin (CI note on 7a8b9c0)
 ```
 
+- **The changes** are every change any version of the plan on `main` listed: the plan at each
+  commit on `main`'s first-parent line that changed it, oldest first, in the order each change
+  first appears. A change taken out of the plan, under an approved rigor claim (above), stays in,
+  so its claims stay in the record. `Left the plan:` names each change the plan on `main` no
+  longer lists, and the commit on that line where it last left: the merge of the PR that took it
+  out, or the commit itself after a squash. A change put back isn't named. A deleted plan is a
+  version that lists nothing, so `claims` still prints a deleted initiative, every change named
+  as left, and says `The plan was deleted from main in <commit>.` It fails only on an initiative
+  no commit on that line ever had a plan for.
 - **The commits** are every non-merge commit reachable from `main` whose `Redline-Step` names a
-  step of a change the plan on `main` lists, or that touches the initiative's directory (plan
+  step of one of those changes, or that touches the initiative's directory (plan
   edits, audits, a `Rigor:` line) or `redline/config.yaml` (its `rigor:`), oldest first. Only
   those with a claim trailer get a heading; with none, the text says `No claims.`
 - **The PR** of a commit is the merged PR GitHub associates with it
@@ -450,10 +460,15 @@ What it still doesn't prove:
 - **A claim that should have been made**: a PR merged over a gate, without CI or with it failing,
   has no trailer to print. It shows only that the record holds no claim there.
 - **PR text**: descriptions and review comments aren't printed.
-- **The claims of a change taken out of the plan**: the commit that took it out is printed, with
-  its `Redline-Rigor` claim, but the change's own steps no longer are, since the plan on `main`
-  doesn't list it (O-PLAN7). A deleted plan has no `claims` at all; its initiative is gone, and
-  the deletion's claim is in `main`'s history only.
+- **Which of a left change's steps were the initiative's**: every step of a change any version
+  listed is printed, those merged after it left too, since a step doesn't say which initiative it
+  was for. The commits are oldest first and `Left the plan:` names where it left, so the auditor
+  can tell them apart. A change moved to another plan is printed in both initiatives' claims.
+- **A version only inside a PR**: the plan is read where `main`'s first-parent line changed it,
+  so a change listed and taken out again among one PR's own commits, under a merge commit, isn't
+  read. It was never in the plan on `main`, and the rigor check (§7) compared no version with it.
+- **A plan renamed**: it is a plan deleted (§4), so the old name's `claims` prints its history up
+  to the rename and the new name's from it; neither names the other.
 
 The defect log, `redline/changes/add-2fa/defects.md`, records what went wrong in the change's
 own work after it was committed: a wrong premise found at G2, a test that couldn't fail, a fix
@@ -995,7 +1010,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   merged PR, its label, who applied it last and their role, under `claims:` in the CI note on the
   merged commit (§7), and `claims` reads that record, saying when a commit has no note or no
   record (§4).
-- O-PLAN7 [open, build 6 part 12]: `redline claims` prints the steps of the changes the plan on
-  `main` lists, so a change taken out of the plan, under an approved rigor claim, takes its own
-  claims out of the record the process auditor reads. The fix is for `claims` to take the
-  changes every version of the plan on `main` listed.
+- O-PLAN7 [closed, build 6 part 12]: `redline claims` printed the steps of the changes the plan on
+  `main` lists, so a change taken out of the plan, under an approved rigor claim, took its own
+  claims out of the record the process auditor reads, and a deleted plan had no `claims` at all.
+  Now `claims` takes the changes every version of the plan on `main`'s first-parent line listed,
+  names each that has left the plan and where, and prints a deleted plan's initiative too (§4).
