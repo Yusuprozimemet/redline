@@ -114,6 +114,7 @@ Steps, in order, with the scenarios each owns and the deferred items each step o
 ```markdown
 ## G1: Reject a wrong 2FA code
 Owns: AUTH.2FA.S1
+Track: auth/login.py, auth/codes/*.py
 
 ## Open items
 - O1 [G2]: rate-limit repeated wrong codes
@@ -309,7 +310,7 @@ It checks the log's form, never that it is complete: a defect nobody writes down
 |---|---|---|
 | **S: Spec** | Proposal and delta spec, with audit findings resolved | Structure is valid, every premise citation resolves, IDs are unique, every finding is closed or waived |
 | **R: Red** | Linked tests: `new` as strict expected failures (`xfail(strict=True)`, Jest `test.failing`); `hold` added to the lock | Every `new` test fails on today's code; every `hold` test passes, then fails under mutation |
-| **G1…Gn: Green** | Code that turns expected failures into passes | Owned scenarios pass with their markers removed, the lock is unchanged, nothing else regressed |
+| **G1…Gn: Green** | Code that turns expected failures into passes | Owned scenarios pass with their markers removed, the lock is unchanged, the code stays in the step's track, nothing else regressed |
 | **C: Close** | Verify report, delta merged into `specs/`, defect log, deferred items with owners | Every `new` scenario has red and green results from merged commits, the red commit an ancestor of the green one; every `hold` scenario has a break result; the defect log exists (standard, critical) and is well formed |
 
 Red tests can merge onto `main` while CI stays green, because CI expects them to fail. A `new` test
@@ -407,6 +408,29 @@ missing `approved-by @person: <reason>` doesn't count. The trailer stays in `mai
 the departure is recorded with its approver (§2.7). The trailer is only a claim, so in CI it also
 needs a maintainer's `redline:departure` label on the PR (§7).
 
+**One track per Green PR.** A G step's **track** is the code it may change: the `Track:` line
+under its heading in `steps.md`, a comma-separated list of globs, matched as `generated:` globs
+are (§2.3). It is written at S, so the auditor sees what each G step will touch before any code
+exists, and the step's brief prints it for the implementer. A Green PR then changes one track:
+its own.
+
+At a G step, `pr` and `redline ci pr` run check-track. It fails on:
+
+- **No `Track:` line**, or an empty one, at critical. Below critical the line is optional; if it
+  is there, it is checked.
+- **A file outside the track**: a file the step's diff (from the merge-base with `main`, renames
+  as a delete and an add) adds, edits or deletes that matches none of the track's globs. Not
+  counted: anything under `redline/` (the lock, the ledger, the defect log), test files
+  (`test_*.py`, `*_test.py`, `conftest.py`, and `support:` files, §4), and `generated:` files.
+
+The track is read from `steps.md` at the merge-base, as the auditor saw it, not from the PR: a
+step that widened its own `Track:` line would pass any diff. A file outside the track is a
+claim, like `Oversized`: a `Redline-Track: <reason>` trailer among the step's commits and a
+maintainer's `redline:track` label (§7). Without the trailer, it fails.
+
+Two G steps' tracks may overlap: G2 often builds on code G1 wrote, and keeping them apart would
+force splits that make no sense. The check is that a Green PR stays where it said it would.
+
 At **lite** rigor, S and R may share one PR, so the smallest change is two sessions.
 
 ## 6. Session protocol
@@ -428,8 +452,8 @@ the changes are independent, each with its own sessions.
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
 which have no red by design), check-break at the R step only, check-lock from R on (G steps
-with `--base main`, §5), and check-defects at every step on the step's change (a log is
-required only at C). A departure or an `Oversized` trailer doesn't refuse: the PR and its
+with `--base main`, §5), check-track at G steps (§5), check-defects at every step on the step's
+change (a log is required only at C), and the rigor check at every step (§7). A departure or an `Oversized` trailer doesn't refuse: the PR and its
 labels don't exist yet, so `pr` prints that CI will need the label (§7). Only when every gate
 passes does it put the `Redline-Step` trailer on each of the step's commits (once), push, and open
 the PR with `gh`.
@@ -481,6 +505,7 @@ Otherwise it runs the gates that hold for any PR, and prints every failure:
 - **check-lines**, with the `Oversized` rule (§7, Approvals): over 400 lines needs the trailer and
   a maintainer's `redline:oversized` label.
 - **check-plan** on every initiative.
+- **The rigor check**: a changed `rigor:` needs `Redline-Rigor` and its label (Approvals, below).
 - **check-lock** on every change the lock names, without `--base`. The PR can't touch the lock,
   so a locked test or (at critical) what it reaches can't change outside a step at all. A
   `Redline-Departure` trailer doesn't help: a departure is a step's, and re-locks the test.
@@ -498,12 +523,19 @@ the next PR's `check-ledger` picks it up.
 
 A person's approval is a label on the PR, applied by a maintainer. A commit trailer in the PR's
 own commits (`base..HEAD`) says what is approved and why, and stays in `main`'s history. The label
-says a maintainer agreed. Two claims need one:
+says a maintainer agreed. Four claims need one:
 
 | Trailer | Allows | Label |
 |---|---|---|
 | `Redline-Departure: <test> approved-by @person: <reason>` | a frozen test's lock entry to change (§5) | `redline:departure` |
 | `Oversized: <reason>` | more than 400 changed lines (§2.3) | `redline:oversized` |
+| `Redline-Track: <reason>` | a G step changing files outside its track (§5) | `redline:track` |
+| `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml` | `redline:rigor` |
+
+`rigor:` sets the level of every change whose proposal names none, and so what all their gates
+require, so changing it, up or down, is a claim on any PR, in a step or outside one (§7). The
+rigor check compares the config's `rigor:` at the merge-base with `main` to its value now, and
+fails on a difference without the trailer, or, in CI, without the label.
 
 A trailer without its reason (or, for a departure, without `approved-by @person:`) allows nothing.
 One label covers every claim of its kind in the PR. The labels are separate, so approving the size
@@ -629,6 +661,7 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   pr` refused it, as it refused Redline's own PRs. Now a PR outside any step runs check-lines
   (with `Oversized`), check-plan, check-lock on every locked change and the suite, and is refused
   if it touches a change, the lock or the living specs (§7).
-- O-CI1 [build 6, the part on one track per Green PR]: a PR outside any step may still change
-  `rigor:` in `redline/config.yaml`, which sets the level of every change whose proposal declares
-  none, and so what its gates require. Decide whether that needs a label, like `Oversized`.
+- O-CI1 [closed, build 6 part 4]: a PR outside any step could change `rigor:` in
+  `redline/config.yaml`, which sets the level of every change whose proposal declares none. Now
+  any PR that changes it needs a `Redline-Rigor` trailer and a maintainer's `redline:rigor` label
+  (§7).

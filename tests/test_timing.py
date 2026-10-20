@@ -7,7 +7,7 @@ from redline.cli import main
 from test_check_break import holds  # noqa: F401 (a fixture)
 from test_lock import H1, LOCK, check_lock, lock
 from test_pr import RED_TESTS, github, pr  # noqa: F401 (github is a fixture)
-from test_start import CHANGE, change, fresh_branch, merge_step, start  # noqa: F401 (change is a fixture)
+from test_start import CHANGE, STEPS, change, fresh_branch, merge_step, start  # noqa: F401 (change is a fixture)
 
 TIMED = """import pytest
 from greet import placeholder
@@ -129,6 +129,7 @@ def test_the_level_comes_from_the_proposal_then_the_config(holds, capsys):
 
 
 def test_a_green_step_changes_what_a_test_reaches_only_with_an_approved_departure(critical, capsys, github):
+    critical.commit("track", {f"{CHANGE}/steps.md": STEPS.replace("Owns: GREET.S1\n", "Owns: GREET.S1\nTrack: greet.py\n")})
     merge_step(critical, "S")
     critical.commit("R\n\nRedline-Step: add-greet/R", {"tests/test_greet.py": RED_TESTS})
     lock(critical, capsys)
