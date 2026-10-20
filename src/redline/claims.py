@@ -1,10 +1,12 @@
 """`redline claims <initiative>`: the claims main's history holds, for the process auditor. See docs/design.md §4, §7, §9.
 
-The commits are main's non-merge commits whose `Redline-Step` names a step of a change the plan on main
-lists, or that touch the initiative's directory or redline/config.yaml, oldest first. Each with a claim
-trailer (approval.py) is printed with its merged PR and, per claim, its label, who applied it last and
-their role at the merge, from the record `redline ci push` left in the CI note on the commit where it
-merged (`record`). Without a note or a record it says so, and reads them now through the `GitHub` seam
+The changes are every change any version of the plan on main's first-parent line listed (`listed`), so a
+change taken out of the plan keeps its claims; those it no longer lists are named, with where they left.
+The commits are main's non-merge commits whose `Redline-Step` names a step of one of those, or that
+touch the initiative's directory or redline/config.yaml, oldest first. Each with a claim trailer
+(approval.py) is printed with its merged PR and, per claim, its label, who applied it last and their
+role at the merge, from the record `redline ci push` left in the CI note on the commit where it merged
+(`record`). Without a note or a record it says so, and reads them now through the `GitHub` seam
 (pr.py). It writes nothing and judges nothing.
 """
 
@@ -57,6 +59,23 @@ def record(repo: Path, rev: str, github) -> list[dict]:
     return entries
 
 
+def listed(repo: Path, name: str) -> tuple[list[str], dict[str, str], str | None]:
+    """Every change a version of the plan on main's first-parent line listed, in the order each first appears;
+    the commit where each the plan now doesn't list last left it; and the commit that deleted the plan, if it is gone."""
+    path = f"{ROOT}/{name}/plan.md"
+    versions = git(repo, "log", "--first-parent", "--reverse", "--format=%H", "main", "--", path).stdout.split()
+    if not versions:
+        raise RuntimeError(f"no plan {path} on main")
+    changes, left, now, deleted = [], {}, [], None
+    for sha in versions:
+        shown = git(repo, "show", f"{sha}:{path}")
+        before, now = now, [] if shown.returncode else [c for phase in parse_plan(name, shown.stdout).phases for c in phase.changes]
+        deleted = sha if shown.returncode else None
+        changes += [c for c in now if c not in changes]
+        left |= {c: sha for c in before if c not in now}
+    return changes, {c: sha for c, sha in left.items() if c not in now}, deleted
+
+
 def at_merge(entry: dict, merged: str) -> str:
     where = f"(CI note on {merged[:7]})"
     if entry.get("pr") is None:
@@ -77,10 +96,7 @@ def label(github, applied: dict[int, dict[str, str]], number: int | None, name: 
 
 
 def claims(repo: Path, name: str) -> str:
-    shown = git(repo, "show", f"main:{ROOT}/{name}/plan.md")
-    if shown.returncode:
-        raise RuntimeError(f"no plan {ROOT}/{name}/plan.md on main")
-    changes = [c for phase in parse_plan(name, shown.stdout).phases for c in phase.changes]
+    changes, left, deleted = listed(repo, name)
     touching = set(git(repo, "log", "main", "--no-merges", "--full-history", "--format=%H",
                        "--", f"{ROOT}/{name}", CONFIG).stdout.split())
     line = git(repo, "rev-list", "--first-parent", "--reverse", "main").stdout.split()
@@ -112,4 +128,11 @@ def claims(repo: Path, name: str) -> str:
     head = (f"# Claims: {name}\nFrom main: {made} claim{'' if made == 1 else 's'} on {count} "
             f"commit{'' if count == 1 else 's'}: the steps of {', '.join(changes)}, and every commit "
             f"that touches {ROOT}/{name}/ or {CONFIG}.\n")
+    gone = {}
+    for c in (c for c in changes if c in left):
+        gone.setdefault(left[c], []).append(c)
+    if gone:
+        head += "Left the plan: " + "; ".join(f"{', '.join(cs)} in {sha[:7]}" for sha, cs in gone.items()) + ".\n"
+    if deleted:
+        head += f"The plan was deleted from main in {deleted[:7]}.\n"
     return head + (said or "\nNo claims.\n")
