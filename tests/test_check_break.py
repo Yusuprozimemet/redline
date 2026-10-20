@@ -1,6 +1,7 @@
 import pytest
 import yaml
 
+from redline import breaks
 from redline.cli import main
 from test_ci import RUN, ci, remote  # noqa: F401 (remote is a fixture)
 from test_ledger import LEDGER, note
@@ -38,7 +39,7 @@ UNRELATED = "def test_unrelated():\n    assert False\n"
 
 
 class FakeMutator:
-    """Stands in for mutmut: `made` mutants per scenario, of which its tests kill `killed`."""
+    """Stands in for every runner's mutation tool: `made` mutants per scenario, of which its tests kill `killed`."""
 
     def __init__(self):
         self.unavailable_reason = None
@@ -58,8 +59,8 @@ class FakeMutator:
 
 @pytest.fixture
 def mutator(monkeypatch) -> FakeMutator:
-    fake = FakeMutator()
-    monkeypatch.setattr("redline.breaks.Mutator", fake, raising=False)
+    fake = FakeMutator()  # the whole registry, from its own keys, so a runner added later is replaced too
+    monkeypatch.setattr(breaks, "MUTATORS", {name: fake for name in breaks.MUTATORS})
     return fake
 
 
