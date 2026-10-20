@@ -7,7 +7,7 @@ import yaml
 from redline.cli import main
 from test_ledger import LEDGER, RED, land
 from test_pr import RED_TESTS
-from test_start import change, fresh_branch, merge_step  # noqa: F401 (change is a fixture)
+from test_start import DELTA, STEPS, change, fresh_branch, merge_step  # noqa: F401 (change is a fixture)
 
 RUN = "https://github.com/toy/toy/actions/runs/7"
 WORKFLOW = Path(__file__).parent.parent / ".github/workflows/redline.yml"
@@ -69,6 +69,55 @@ def test_a_pr_is_at_most_one_step(change, capsys):  # no step at all: test_outsi
     assert code == 1
     assert "refused: more than one step in main..HEAD: add-greet/G1, add-greet/R" in out
     assert "check-" not in out
+
+
+def step_pr(repo, capsys, trailer: str, merged: tuple[str, ...] = (), files: dict[str, str] | None = None) -> str:
+    """A branch whose one commit carries `trailer`, with `merged` steps landed on main first; CI's output."""
+    for step in merged:
+        merge_step(repo, step)
+    fresh_branch(repo, "step")
+    repo.commit(f"work\n\nRedline-Step: {trailer}", files or {"redline/specs/greet/spec.md": "# Greet\n"})
+    code, out = ci(repo, capsys, "pr", "--base", "main")
+    assert code == 1
+    return out
+
+
+@pytest.mark.parametrize(("trailer", "files"), [
+    ("add-greet/X", None),
+    ("add-greet/G3", {"redline/changes/add-greet/steps.md": STEPS.replace("## C:", "## G3: More\n\n## C:")}),
+], ids=["unknown", "added-by-the-pr"])
+def test_a_step_that_steps_md_lacks_at_the_merge_base_is_refused_before_any_gate(change, capsys, trailer, files):
+    out = step_pr(change, capsys, trailer, ("S", "R", "G1", "G2"), files)
+    step = trailer.partition("/")[2]
+    assert f"refused: {trailer}: redline/changes/add-greet/steps.md at the merge-base has no step {step}" in out
+    assert "check-" not in out and "suite:" not in out
+
+
+@pytest.mark.parametrize(("merged", "missing"), [
+    (("S",), "add-greet/R"),
+    ((), "add-greet/S, add-greet/R"),  # invariant 1: the spec before the code
+], ids=["R", "S-and-R"])
+def test_a_step_whose_earlier_steps_arent_merged_is_refused(change, capsys, merged, missing):
+    out = step_pr(change, capsys, "add-greet/G1", merged)
+    assert f"refused: add-greet/G1 isn't next; not merged on main: {missing}" in out
+    assert "check-" not in out
+
+
+def test_a_step_already_merged_is_refused(change, capsys):
+    out = step_pr(change, capsys, "add-greet/R", ("S", "R"))
+    assert "refused: add-greet/R is already merged on main: a step is one PR" in out
+    assert "check-" not in out
+
+
+def test_a_change_with_no_steps_md_at_the_merge_base_can_only_be_at_its_s_step(change, capsys):
+    wave = {"redline/changes/add-wave/steps.md": STEPS, "redline/changes/add-wave/specs/wave/delta.md": DELTA.replace("GREET", "WAVE")}
+    out = step_pr(change, capsys, "add-wave/G1", files=wave)
+    assert ("refused: add-wave/G1: redline/changes/add-wave has no steps.md at the merge-base, "
+            "so it can only be at its S step, which writes it") in out
+    change.git("commit", "-q", "--amend", "-m", "the spec\n\nRedline-Step: add-wave/S")
+    code, out = ci(change, capsys, "pr", "--base", "main")
+    assert "refused" not in out
+    assert "check-audit:" in out  # S's own gates ran
 
 
 def test_a_pr_prints_every_failure(change, capsys):
