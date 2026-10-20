@@ -5,7 +5,7 @@ only, the blind relabel at C at critical only. check-premises and check-audit ru
 change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
-check-lock runs at R, and at G steps against main's lock too. check-track runs at G steps (track.py). check-close runs at C (close.py).
+check-lock runs at R, and at G steps against main's lock too. check-track runs at G steps (track.py). check-close and check-specs run at C (close.py, specs.py).
 A changed `rigor:` in the config or `Rigor:` line in a plan, a deleted plan, or a change taken out of
 one, needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
 <reason>` trailer needs a maintainer's label, as a departure does (approval.py); locally, where
@@ -33,6 +33,7 @@ from redline.plan import ROOT, check_plan, parse_plan
 from redline.planaudit import check_plan_audits
 from redline.premises import check_premises
 from redline.relabel import check_relabel
+from redline.specs import check_specs
 from redline.start import TRAILER, Refused, open_step_file, read_steps
 from redline.track import check_track
 
@@ -140,10 +141,11 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
     if step.startswith("G"):
         failures += check_track(repo, change, step, approvals)
     if step == "C":  # earlier, a scenario a later step owns has no green yet by design
-        try:
-            failures += [f"check-close: {bad}" for bad in check_close(repo, change)]
-        except RuntimeError as error:
-            failures.append(f"check-close: {error}")
+        for name, check in (("check-close", check_close), ("check-specs", lambda r, c: check_specs(r, c)[0])):
+            try:
+                failures += [f"{name}: {bad}" for bad in check(repo, change)]
+            except RuntimeError as error:
+                failures.append(f"{name}: {error}")
     return failures
 
 

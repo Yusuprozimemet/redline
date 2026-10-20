@@ -24,7 +24,7 @@ of being taken on the agent's word.
 | Gaps where work is handed between steps | Engine | Every deferred item gets an ID and an owning step; CI fails on any item without one |
 | Safety-net tests weakened quietly | Engine | Frozen tests locked by hash; an edit needs a departure a person approves |
 | Specs drift away from the code | OpenSpec | Every scenario is linked to a test, checked both ways |
-| Verify can be ignored | OpenSpec | Verify blocks archiving and merging |
+| Verify can be ignored | OpenSpec | The close is checked, not reported: check-close against CI's evidence, check-specs against the living specs, and the C step can't merge without both |
 
 ## 2. Seven invariants (always on, at every rigor level)
 
@@ -83,6 +83,30 @@ A scenario:
 - WHEN they submit an incorrect code
 - THEN login fails AND no session is created
 ```
+
+A delta's scenarios sit under its `## ` sections, which say what the C step does to the living
+spec of the same domain, `redline/specs/<domain>/spec.md`:
+
+```markdown
+## ADDED Requirements
+### Requirement: Second factor
+#### Scenario AUTH.2FA.S1 [new]: wrong code is rejected
+- …
+
+## MODIFIED Requirements
+### Requirement: Login
+#### Scenario AUTH.LOGIN.S2 [new]: the whole scenario, as it will read
+- …
+
+## REMOVED Requirements
+- AUTH.LOGIN.S3: the password-only login is gone
+```
+
+An ADDED scenario is new to the living spec; a MODIFIED one restates, whole and under the same
+ID, a scenario it already has; each is copied there, heading to last line, under the same
+`### Requirement:`. A REMOVED entry is an `- <ID>: <reason>` line directly under its section, not
+a heading, so it needs no test and no evidence: once it leaves `specs/`, a test still linked to it
+fails check-links as an unknown scenario. Deleting that test, if it is frozen, is a departure (§5).
 
 Premises:
 
@@ -569,7 +593,7 @@ It checks the log's form, never that it is complete: a defect nobody writes down
 | **S: Spec** | Proposal and delta spec, with audit findings resolved | Structure is valid, every premise citation resolves, IDs are unique, every finding is closed or waived |
 | **R: Red** | Linked tests: `new` as strict expected failures (`xfail(strict=True)`, Jest `test.failing`); `hold` added to the lock | Every `new` test fails on today's code; every `hold` test passes, then fails under mutation |
 | **G1…Gn: Green** | Code that turns expected failures into passes | Owned scenarios pass with their markers removed, the lock is unchanged, the code stays in the step's track, nothing else regressed |
-| **C: Close** | Verify report, delta merged into `specs/`, defect log, deferred items with owners | Every `new` scenario has red and green results from merged commits, the red commit an ancestor of the green one; every `hold` scenario has a break result; the defect log exists (standard, critical) and is well formed; at critical, each defect has a blind second label and each disagreement a decision |
+| **C: Close** | Delta merged into `specs/`, ledger, defect log, deferred items with owners | Every `new` scenario has red and green results from merged commits, the red commit an ancestor of the green one; every `hold` scenario has a break result; the delta's ADDED, MODIFIED and REMOVED are in `specs/`, and nothing else there changed; the defect log exists (standard, critical) and is well formed; at critical, each defect has a blind second label and each disagreement a decision |
 
 Red tests can merge onto `main` while CI stays green, because CI expects them to fail. A `new` test
 that passes before the code exists turns CI red under strict expected-failure, so a check that
@@ -712,6 +736,30 @@ must then say `pass` too, or check-ledger fails. Nothing else in the PR needs to
 What it doesn't prove: that the scenario's own test ran. A result is the whole suite's on the
 merged commit, and a test skipped there passes with it.
 
+There is no verify report. The ledger, which CI rebuilds, already holds the evidence, and
+check-close reads it. A report the agent wrote would either repeat the ledger or be the agent
+certifying its own work (§2.6).
+
+**The delta reaches the living specs.** At C, `pr` and `redline ci pr` also run `redline
+check-specs <change>`. It compares each scenario of `redline/specs/**/spec.md` at the merge-base
+with `main` to the same scenario now (a scenario is its heading line up to the next heading,
+trailing blank lines dropped, and the `### Requirement:` it sits under), and fails, naming the
+scenario, on:
+
+- **A scenario heading in no section**: not under ADDED or MODIFIED, or a heading under REMOVED.
+- **ADDED**: the domain's living spec already had it at the merge-base, or doesn't have it now with
+  the delta's text under the delta's requirement.
+- **MODIFIED**: the living spec didn't have it at the merge-base, or doesn't have it now as above.
+- **REMOVED**: the living spec didn't have it at the merge-base, or still has it.
+- **A change the delta doesn't name**: a scenario anywhere under `specs/` added, changed or removed
+  since the merge-base that none of the change's deltas names. A C step changes only what its
+  deltas say.
+
+It compares with the merge-base, so it is the C PR's gate; run on its own it takes `--base`
+(default `main`), and run on `main` after the merge it has no diff to read and fails. What it
+doesn't prove: anything outside the scenarios. A requirement's own prose, a `### Requirement:`
+heading with no scenario under it, or text before the first requirement, can change unseen.
+
 At **lite** rigor, S and R may share one PR, so the smallest change is two sessions.
 
 ## 6. Session protocol
@@ -735,7 +783,7 @@ on `main` (§4, plan audits).
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
 which have no red by design), check-break at the R step only, check-lock from R on (G steps
-with `--base main`, §5), check-track at G steps (§5), check-close at the C step (§5), check-defects and check-relabel at every step on the
+with `--base main`, §5), check-track at G steps (§5), check-close and check-specs at the C step (§5), check-defects and check-relabel at every step on the
 step's change (the log is required only at C, the relabel only at C and critical), and the rigor
 check at every step (§7). A departure or an `Oversized` trailer doesn't refuse: the PR and its
 labels don't exist yet, so `pr` prints that CI will need the label (§7). Only when every gate
@@ -980,7 +1028,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    10 a deleted plan (O-PLAN5); part 11 labels recorded at the merge (O-PLAN6); part 12 the
    claims of a change taken out of its plan (O-PLAN7).
 7. **The close**: part 1 checks the C step against the ledger's evidence (O-CLOSE1); part 2
-   checks that the delta reached `specs/` (O-CLOSE2).
+   checks that the delta reached `specs/` (O-CLOSE2); part 3 lets a closed change's delta stop
+   counting as a declaration (O-CLOSE3).
 
 ## 12. Open problems
 
@@ -1044,7 +1093,12 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   one rebuilt from history, so a change could close with a `new` scenario that never turned green,
   a result CI never noted or a failed break. Now `check-close` runs at the C step and fails on any
   scenario whose red and green, or break, isn't on `main` with `result: pass` (§5).
-- O-CLOSE2 [build 7 part 2]: §5 says the C step merges the delta into `specs/` and adds a verify
-  report, but nothing checks that the delta's ADDED, MODIFIED and REMOVED reached the living
-  specs, and the verify report has no form. Part 2 defines both and checks them at C, or drops the
-  verify report from §5.
+- O-CLOSE2 [closed, build 7 part 2]: §5 said the C step merges the delta into `specs/` and adds a
+  verify report, but nothing checked that the delta's ADDED, MODIFIED and REMOVED reached the
+  living specs, and the verify report had no form. Now the delta's sections have a form (§4),
+  `check-specs` runs at C and fails on a declared change missing from `specs/` or an undeclared
+  one in it, and the verify report is dropped: the ledger and check-close are the verify (§5).
+- O-CLOSE3 [build 7 part 3]: a closed change keeps its delta, so when a later change MODIFIES a
+  scenario an earlier one ADDED, check-links finds the ID in the living spec and two changes'
+  deltas and fails it as a duplicate. A change whose C step is merged on `main` should stop
+  counting as a declaration.

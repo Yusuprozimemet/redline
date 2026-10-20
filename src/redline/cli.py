@@ -19,6 +19,7 @@ from redline.planaudit import check_plan_audits
 from redline.pr import pr
 from redline.premises import check_premises
 from redline.relabel import blind, check_relabel
+from redline.specs import check_specs
 from redline.start import Refused, start
 
 
@@ -52,6 +53,10 @@ def main(argv: list[str] | None = None) -> int:
     closed = commands.add_parser("check-close", help="fail unless main's evidence closes the change, as at the C step")
     closed.add_argument("change", help="the change, e.g. add-greet")
     closed.add_argument("--repo", type=Path, default=Path.cwd())
+    merging = commands.add_parser("check-specs", help="fail unless the deltas, and only they, reached redline/specs")
+    merging.add_argument("change", help="the change, e.g. add-greet")
+    merging.add_argument("--repo", type=Path, default=Path.cwd())
+    merging.add_argument("--base", default="main", help="compare with the merge-base with this ref")
     claimed = commands.add_parser("claims", help="print the claims main's history holds for an initiative")
     claimed.add_argument("initiative", help="the initiative, e.g. 2fa-rollout")
     claimed.add_argument("--repo", type=Path, default=Path.cwd())
@@ -113,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_retro(args.repo, args.initiative, claims)
     if args.command == "check-close":
         return run_check_close(args.repo, args.change)
+    if args.command == "check-specs":
+        return run_check_specs(args.repo, args.change, args.base)
     if args.command == "check-relabel":
         return run_check_relabel(args.repo, args.change)
     if args.command in ("lock", "check-lock"):
@@ -277,6 +284,21 @@ def run_check_close(repo: Path, change: str) -> int:
     if bad:
         return 1
     print(f"ok: {count} scenario{'' if count == 1 else 's'}, each with its evidence on main")
+    return 0
+
+
+def run_check_specs(repo: Path, change: str, base: str) -> int:
+    try:
+        bad, counts = check_specs(repo, change, base)
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for line in bad:
+        print(line)
+    if bad:
+        return 1
+    print(f"ok: {counts['ADDED']} added, {counts['MODIFIED']} modified, {counts['REMOVED']} removed, "
+          "as the deltas say; nothing else in redline/specs changed")
     return 0
 
 
