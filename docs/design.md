@@ -179,9 +179,27 @@ is the commit CI ran on after the merge. `result` is that run's outcome: `pass`,
 `unverified` when no result is recorded. `break` is the mutation evidence (§5) and is `null` for a
 `new` scenario. A `hold` scenario is the other way round: its test carries no `new=True`, so it
 has no red and no green, and both stay `null`. Its `break` is `{commit, merged, result}`:
-`commit` is the first commit on `main` whose tests link the scenario without `new=True`, `merged`
-is found as for red, and `result` is the scenario's entry in the `break:` map of the CI note on
-`merged` (`pass` or `fail`). It is `unverified` when that note, or its entry, is missing.
+`commit` is the first commit of the change's R step (one on `main` carrying `Redline-Step:
+<change>/R`) whose tests link the scenario without `new=True`, `merged` is found as for red, and
+`result` is the scenario's entry in the `break:` map of the CI note on `merged` (`pass` or
+`fail`). It is `unverified` when that note, or its entry, is missing. The R step's merge is the
+only one whose note has a `break:` map (§5), so a break is never read from another change's.
+
+**A change's evidence is its own.** A scenario ID outlives the change that added it: a later
+change may MODIFY it, and its tests are the same tests. So a change's red, green and break count
+only from its **window**: the commits merged by the PR of its S step or after it, and, once the
+change is closed, by the PR of its C step or before it. In git terms, the commits of `S₀..E`,
+where `S₀` is the first parent of the merged commit of the change's first S commit (so the S
+PR's own commits count, as at lite, where S and R may share a PR, §5), and `E` is the merged
+commit of its first C commit, or `main` while it is open. A green counts only when it turns the
+scenario green inside the window and is paired with a red inside it. So a later change that
+MODIFIES a `new` scenario and never makes it red again has no red and no green, not the earlier
+change's, and check-close refuses it (§5); one that does is paired with its own red. A MODIFIED
+`hold` scenario's break is the later change's R step's, which CI already notes. The window's end
+keeps a closed change's ledger as it was: a later change's commits are outside it. A change whose
+S step isn't on `main` (its own S PR, where check-close never runs, or a history without
+trailers) is read over all of `main`'s history, as before; R needs S merged, so no change reaches
+C that way.
 
 `redline ledger <change>` rebuilds the ledger from `main`'s history and writes it.
 `redline check-ledger <change>` rebuilds it and fails if the committed file is missing or
@@ -735,7 +753,9 @@ on:
   failed strictly, as it should.
 - **A `hold` scenario without a break**, or one whose `result` isn't `pass`.
 
-A scenario is `new` or `hold` by its tag in the delta. It runs at C only, since at G a scenario
+A scenario is `new` or `hold` by its tag in the delta, and its evidence is only what its own
+steps made (§4, a change's window): a scenario a closed change proved doesn't close a later
+change that MODIFIES it. It runs at C only, since at G a scenario
 owned by a later step has no green yet by design; run on its own, it checks as at C.
 
 `unverified` refuses: until CI has run on the merged commit, there is no evidence (§7). A C PR
@@ -1041,7 +1061,7 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
 7. **The close**: part 1 checks the C step against the ledger's evidence (O-CLOSE1); part 2
    checks that the delta reached `specs/` (O-CLOSE2); part 3 lets a closed change's delta stop
    counting as a declaration (O-CLOSE3); part 4 takes a change's evidence from its own steps only
-   (O-CLOSE4).
+   (O-CLOSE4); part 5 a closed change's lock entry when a later change edits its test (O-CLOSE5).
 
 ## 12. Open problems
 
@@ -1117,10 +1137,14 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   a change whose C step is merged on `main` is closed, and check-links, the `hold` scenarios
   check-order leaves out, and `check-premises` without a change skip its delta (§4). Its own
   checks still read it.
-- O-CLOSE4 [build 7 part 4]: evidence is found by scenario ID across all of `main`'s history, not
-  by change. When a later change MODIFIES a `new` scenario an earlier one closed, check-order pairs
-  the later green with the first red among its ancestors, the earlier change's, and if the later
-  change never makes it red again, its ledger holds the earlier change's red and green. A `hold`
-  scenario's break is the first commit whose tests link it, again the earlier change's. Either way
-  check-close passes the later change on evidence it didn't make. A change's red, green and break
-  should count only from commits after its own S step merged.
+- O-CLOSE4 [closed, build 7 part 4]: evidence was found by scenario ID across all of `main`'s
+  history, not by change. When a later change MODIFIED a `new` scenario an earlier one closed, its
+  ledger took the earlier change's red, and its red and green if it never made the scenario red
+  again; a `hold` scenario's break was the earlier change's commit. Either way check-close passed
+  the later change on evidence it didn't make, and the earlier change's rebuilt ledger took the
+  later green. Now a change's red and green count only from its window, the PRs from its S step to
+  its C step, and a `hold` scenario's break is its own R step's (§4).
+- O-CLOSE5 [build 7 part 5]: a later change that MODIFIES a `hold` scenario may edit its test at
+  its R step, where `redline lock` rewrites only its own entry and check-lock checks only its own
+  change. The closed change's lock entry for the same test goes stale, so the edit of a frozen
+  test needs no departure, and every PR outside a step then fails check-lock on the closed change.
