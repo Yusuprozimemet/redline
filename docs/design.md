@@ -198,9 +198,29 @@ add-2fa:
 - **Settings**: the root pytest configuration section (`pytest.ini`, `[tool.pytest.ini_options]`
   in `pyproject.toml`, `tox.ini`, `[tool:pytest]` in `setup.cfg`, first found), where pytest-timeout's
   `timeout` and `addopts` such as `--timeout` or `--reruns` live.
+- **Support**: a name a reached statement reads that its file imports from a **support file**,
+  `from m import name` (aliases too) or `import m` then `m.name`. The name's statement in that
+  file is reached as a helper is, and so on through the support file's own names and imports. A
+  fixture imported into the test's file or a `conftest.py` from a support file is a fixture
+  there, as in pytest.
 
-Only the test's file and its `conftest.py` files are searched. An imported name isn't followed,
-because the code under test is imported too, and hashing it would make every G step a departure.
+A support file is one whose path matches a glob under `support:` in `redline/config.yaml`,
+matched as `generated:` globs are (§2.3):
+
+```yaml
+support:
+  - "tests/helpers.py"
+  - "tests/support/*.py"
+```
+
+A module is found as `m.py` or `m/__init__.py` from the importing file's directory, then each
+parent up to the root (relative imports from the directory their dots name). Any other import
+isn't followed, because the code under test is imported too, and hashing it would make every G
+step a departure. Without `support:`, only the test's file and its `conftest.py` files are
+searched, and every `reach` is what it was before. Adding a file to `support:` changes the
+`reach` of each critical test that imports from it, so for a locked test that is a departure,
+as editing a fixture is (§5); outside a step it can't be done at all (§7). Name support files
+before the R step that locks tests using them.
 
 An entry that is a plain hash, as every lock written before this was, still reads: it is
 `{test: <hash>}` with no `reach`. Below critical, `redline lock` keeps writing plain hashes.
@@ -350,7 +370,7 @@ something else with every value unedited. In Python and pytest, timing is any of
 |---|---|---|
 | `time.sleep`, `asyncio.sleep`; a poll loop and its bound (`range(50)`, a deadline); a `timeout=` argument | the test's body | the function hash, every level |
 | `@pytest.mark.timeout(n)`, `@pytest.mark.flaky(reruns=n)`, Hypothesis `@settings(deadline=…)` | the test's decorators | the function hash, every level |
-| any of the above in a fixture or helper; a constant such as `TIMEOUT = 5` | the test's file, its `conftest.py` files | `reach`, critical |
+| any of the above in a fixture or helper; a constant such as `TIMEOUT = 5` | the test's file, its `conftest.py` files, the support files it imports from | `reach`, critical |
 | `pytestmark = pytest.mark.timeout(n)`; a class decorator | the module, the test's class | `reach`, critical |
 | `timeout`, `--timeout`, `--reruns` in the pytest configuration | the root config file | `reach`, critical |
 
@@ -365,9 +385,11 @@ What the lock still doesn't prove:
 - **Timing from outside the files it reads**: an environment variable (`PYTEST_TIMEOUT`,
   `PYTEST_ADDOPTS`, a value the test reads with `os.environ`), a command-line flag in the CI
   workflow, or a value read from a data file.
-- **What it can't find statically**: helpers imported from another module (a shared
-  `tests/helpers.py`), fixtures from plugins, `request.getfixturevalue`, a fixture renamed with
-  `@pytest.fixture(name=…)`, or names reached through attributes (O-LOCK3, §12).
+- **What it doesn't follow**: an import from a file `support:` doesn't name; `from m import *`;
+  an import inside a function; a name deeper than `m.name` (`m.sub.name`, `obj.attr`); fixtures
+  from installed plugins or `pytest_plugins` modules; `request.getfixturevalue`; a fixture
+  renamed with `@pytest.fixture(name=…)`; a module found through `sys.path` edits or an import
+  mode other than the default `prepend`.
 - **That the code under test still meets the bound.** The lock freezes what the test expects,
   not what the API shows while it waits. The migration engine pins that with a second test
   outside the frozen set, which the departure's spec names. Redline doesn't check that it exists.
@@ -599,10 +621,10 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   `range(50)` poll bound and a renamed helper, and a weakened assert in a fixture is the same
   quiet weakening. The cost is a departure for every critical test a shared fixture edit reaches.
   Every level keeps the function hash, which already holds the test's own timing.
-- O-LOCK3 [build 5, a part after the critical tracks]: `reach` stops at the test's file and its
-  `conftest.py` files, so helpers imported from shared test modules, plugin fixtures and dynamic
-  lookups aren't locked (§5). Decide whether to follow imports into files `redline/config.yaml`
-  names as test support.
+- O-LOCK3 [closed, build 5 part 5]: `reach` stopped at the test's file and its `conftest.py`
+  files, so helpers imported from shared test modules weren't locked. Now it follows imports into
+  the support files `support:` in `redline/config.yaml` names, and only those, so the code under
+  test stays out (§4). §5 lists what it still doesn't follow.
 - O-RETRO1 [closed, build 6 part 3]: a rule PR from `retro` belongs to no step, so `redline ci
   pr` refused it, as it refused Redline's own PRs. Now a PR outside any step runs check-lines
   (with `Oversized`), check-plan, check-lock on every locked change and the suite, and is refused

@@ -1,5 +1,6 @@
-"""What a frozen test reaches (fixtures, same-file helpers, marks, pytest settings), which the
-critical contract lock hashes as its `reach`. Imported names aren't followed. See docs/design.md, §4."""
+"""What a frozen test reaches (fixtures, same-file helpers, marks, pytest settings, and names
+imported from the support files `support:` in redline/config.yaml names), which the critical
+contract lock hashes as its `reach`. Other imports aren't followed. See docs/design.md, §4."""
 
 import ast
 import configparser
@@ -8,6 +9,8 @@ import tomllib
 from pathlib import Path, PurePosixPath
 
 from redline.breaks import source
+from redline.config import load_config
+from redline.lines import is_generated
 
 FUNCS = (ast.FunctionDef, ast.AsyncFunctionDef)
 CONFIGS = (("pytest.ini", "pytest"), ("pyproject.toml", None), ("tox.ini", "pytest"), ("setup.cfg", "tool:pytest"))
@@ -24,6 +27,26 @@ class Module:
             targets = getattr(node, "targets", None) or [getattr(node, "target", node)]
             for name in filter(None, [getattr(node, "name", None)] + [getattr(t, "id", None) for t in targets]):
                 self.defs.setdefault(name, node)
+        self.imports: dict[str, tuple[int, str, str | None]] = {}  # name -> (level, module, its name or None)
+        for node in self.tree.body:
+            for a in getattr(node, "names", []) if isinstance(node, (ast.Import, ast.ImportFrom)) else []:
+                if isinstance(node, ast.ImportFrom):
+                    self.imports.setdefault(a.asname or a.name, (node.level, node.module or "", a.name))
+                elif a.asname or "." not in a.name:  # `import a.b` binds `a`; `a.b.name` isn't followed
+                    self.imports.setdefault(a.asname or a.name, (0, a.name, None))
+
+
+def find(repo: Path, importer: str, level: int, module: str, globs: list[str]) -> str | None:
+    """The support file `module` names from `importer`, or None if the first file found isn't one."""
+    here = PurePosixPath(importer).parent
+    for _ in range(max(level - 1, 0)):
+        here = here.parent
+    rel = module.replace(".", "/")
+    for root in [here] if level else [here, *here.parents]:
+        for path in (root / f"{rel}.py", root / rel / "__init__.py"):
+            if (repo / path).is_file():
+                return str(path) if is_generated(str(path), globs) else None
+    return None
 
 
 def mark(decorator: ast.expr, name: str) -> ast.expr | None:
@@ -66,13 +89,36 @@ def reach(repo: Path, test: str) -> str:
     parent = PurePosixPath(path).parent
     conftests = [str(d / "conftest.py") for d in (parent, *parent.parents) if (repo / d / "conftest.py").is_file()]
     module, *others = [Module(repo, p) for p in [path, *conftests]]
+    support = load_config(repo).support
+    loaded = {m.path: m for m in (module, *others)}
+
+    def load(owner: Module, level: int, name: str) -> Module | None:
+        found = find(repo, owner.path, level, name, support) if support else None
+        if found and found not in loaded:
+            loaded[found] = Module(repo, found)
+        return loaded.get(found) if found else None
+
+    def resolve(owner: Module, name: str, attr: str | None = None, seen: frozenset = frozenset()) -> tuple | None:
+        """Where `name` (or `name.attr`, for a module) is defined: here, or in a support file."""
+        if attr is None and name in owner.defs:
+            return owner, owner.defs[name]
+        if name not in owner.imports or (owner.path, name) in seen:
+            return None
+        level, mod, imported = owner.imports[name]
+        target = load(owner, level, mod)
+        wanted = imported if attr is None else attr if imported is None else None
+        return resolve(target, wanted, None, seen | {(owner.path, name)}) if target and wanted else None
+
     cls = module.defs[names[0]] if len(names) > 1 else None
     node = next(n for n in (cls.body if cls else module.tree.body) if getattr(n, "name", None) == names[-1])
     fixtures: dict[str, tuple[Module, ast.stmt]] = {}
     for owner, body in ([(module, cls.body)] if cls else []) + [(m, m.tree.body) for m in (module, *others)]:
-        for n in body:
+        named = [(n.name, (owner, n)) for n in body if isinstance(n, FUNCS)]
+        if body is owner.tree.body:  # a fixture imported into the module is one there, as in pytest
+            named += [(name, found) for name in owner.imports if (found := resolve(owner, name))]
+        for name, (o, n) in named:
             if isinstance(n, FUNCS) and any(mark(d, "fixture") for d in n.decorator_list):
-                fixtures.setdefault(n.name, (owner, n))
+                fixtures.setdefault(name, (o, n))
     reached: dict[tuple[str, int, int], str] = {}
 
     def visit(owner: Module, n: ast.AST) -> None:
@@ -84,8 +130,11 @@ def reach(repo: Path, test: str) -> str:
             if name in fixtures:
                 visit(*fixtures[name])
         for sub in ast.walk(n):
-            if isinstance(sub, ast.Name) and sub.id in owner.defs:
-                visit(owner, owner.defs[sub.id])
+            if isinstance(sub, ast.Name) and (found := resolve(owner, sub.id)):
+                visit(*found)
+            elif isinstance(sub, ast.Attribute) and isinstance(sub.value, ast.Name) and (
+                    found := resolve(owner, sub.value.id, sub.attr)):
+                visit(*found)
 
     visit(module, node)
     for owner, n in fixtures.values():

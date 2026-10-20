@@ -16,13 +16,15 @@ class Config:
     generated: list[str] = field(default_factory=list)  # globs for lockfiles and generated files
     rigor: str = "standard"  # the level of a change whose proposal declares none
     rules: dict[str, list[str]] = field(default_factory=dict)  # cause -> lines every brief prints (§10)
+    support: list[str] = field(default_factory=list)  # globs for test-support files a critical reach follows (§4)
 
 
 def load_config(repo: Path) -> Config:
     path = repo / PATH
     data = (yaml.safe_load(path.read_text()) if path.is_file() else None) or {}
     rules = {str(cause): [str(r) for r in lines or []] for cause, lines in (data.get("rules") or {}).items()}
-    return Config(list(data.get("generated") or []), str(data.get("rigor") or "standard"), rules)
+    return Config(list(data.get("generated") or []), str(data.get("rigor") or "standard"), rules,
+                  list(data.get("support") or []))
 
 
 def rigor(repo: Path, change: str) -> str:
