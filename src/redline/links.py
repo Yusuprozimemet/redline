@@ -12,10 +12,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from redline.order import git
+from redline.runner import RUNNERS
 
 SPEC_PATHS = [":(glob)redline/specs/**/spec.md", ":(glob)redline/changes/*/specs/**/delta.md"]
 HEADING = re.compile(r"^#### Scenario (\S+) \[(?:new|hold)\]:")
-MARKER = re.compile(r"""mark\.spec\(\s*["']([^"']+)["']""")
 
 
 @dataclass
@@ -55,9 +55,10 @@ def check_links(repo: Path) -> LinkReport:
         if heading := HEADING.match(text):
             declared.setdefault(heading[1], []).append((path, line))
     markers: dict[str, list[tuple[str, int]]] = {}
-    for path, line, text in grep(repo, r"mark\.spec\(", "*.py"):
-        for sid in MARKER.findall(text):
-            markers.setdefault(sid, []).append((path, line))
+    for runner in RUNNERS:
+        for path, line, text in grep(repo, runner.grep, *runner.paths):
+            for sid in runner.ids.findall(text):
+                markers.setdefault(sid, []).append((path, line))
 
     report = LinkReport(len(declared))
     for sid, places in sorted(declared.items()):

@@ -23,6 +23,7 @@ from redline.config import rigor
 from redline.links import closed
 from redline.order import git
 from redline.reach import reach
+from redline.runner import PYTEST, runner_for
 from redline.specs import parse
 
 LOCK = "redline/contracts/lock.yaml"
@@ -74,7 +75,7 @@ def write_lock(repo: Path, change: str) -> int:
         if not lock[other]:
             del lock[other]
     lock[change] = {
-        sid: {test: {"test": digest, "reach": reach(repo, test)} if critical or test in kept else digest
+        sid: {test: {"test": digest, "reach": reach(repo, test)} if (critical or test in kept) and runner_for(test) is PYTEST else digest
               for test, digest in tests.items()}
         for sid, tests in hold_tests(repo, change).items() if tests
     }
@@ -102,7 +103,8 @@ def check_lock(repo: Path, change: str, base: str | None = None, approvals: Appr
             if locked[sid, test]["reach"] != reach(repo, test):
                 report.bad.append(f"{sid}: {test}: a fixture, helper, mark or setting it reaches changed since it was locked")
         elif critical:
-            report.bad.append(f"{sid}: {test} is locked without what it reaches; the change is critical, so re-run `redline lock`")
+            why = "the change is critical, so re-run `redline lock`" if runner_for(test) is PYTEST else "a Jest test has no reach yet (O-RUN3)"
+            report.bad.append(f"{sid}: {test} is locked without what it reaches; {why}")
     if base:
         report.bad += check_frozen(repo, base, approvals, change)
     return report

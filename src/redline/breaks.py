@@ -5,7 +5,6 @@ of the Python files the change's premises cite. mutmut sits behind `Mutator`, wh
 it doesn't run on Windows, so there the mutation is skipped (CI runs it). See docs/design.md, §5.
 """
 
-import ast
 import configparser
 import hashlib
 import os
@@ -18,8 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from redline.links import SPEC_PATHS, declarations, grep
-from redline.order import MARKER
 from redline.premises import CITATION, premise_lines
+from redline.runner import PYTEST, RUNNERS, runner_for
 
 HOLD = re.compile(r"^#### Scenario (\S+) \[hold\]:")
 
@@ -74,37 +73,15 @@ def holds(repo: Path, change: str | None = None) -> list[str]:
     return ids
 
 
-def functions(tree: ast.AST, prefix: str = ""):
-    """(test id within its file, node) for each function, methods as `Class::name`."""
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, ast.ClassDef):
-            yield from functions(node, f"{prefix}{node.name}::")
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            yield prefix + node.name, node
-
-
-def source(lines: list[str], node: ast.AST) -> str:
-    """A node's lines, from its first decorator (if it has any) to its last line."""
-    decorators = getattr(node, "decorator_list", None)
-    return "\n".join(lines[(decorators[0] if decorators else node).lineno - 1:node.end_lineno])
-
-
 def hold_tests(repo: Path, change: str) -> dict[str, dict[str, str]]:
     """Each `hold` scenario of the change -> {`path::name`: SHA-256 of the test's source} for the
     tests whose marker names it without `new=True`. check-break proves them; the lock freezes them."""
     found: dict[str, dict[str, str]] = {sid: {} for sid in holds(repo, change)}
-    paths = sorted({path for path, _, _ in grep(repo, r"mark\.spec\(", "*.py")}) if found else []
-    for path in paths:
-        text = (repo / path).read_text(encoding="utf-8")
-        try:
-            tree = ast.parse(text, path)
-        except SyntaxError as error:
-            raise RuntimeError(f"{path}: {error}") from None
-        lines = text.split("\n")
-        for name, node in functions(tree):
-            digest = hashlib.sha256((source(lines, node) + "\n").encode()).hexdigest()
-            for decorator in node.decorator_list:
-                for sid, new in MARKER.findall(ast.get_source_segment(text, decorator) or ""):
+    for runner in RUNNERS if found else ():
+        for path in sorted({path for path, _, _ in grep(repo, runner.grep, *runner.paths)}):
+            for name, text, marks in runner.tests(path, (repo / path).read_text(encoding="utf-8")):
+                digest = hashlib.sha256((text + "\n").encode()).hexdigest()
+                for sid, new in runner.marker.findall(marks):
                     if not new and sid in found:
                         found[sid][f"{path}::{name}"] = digest
     return found
@@ -136,6 +113,8 @@ def check_break(repo: Path, change: str) -> BreakReport:
     for sid in tests:
         if not tests[sid]:
             report.results[sid] = "no test links it without new=True"
+        elif any(runner_for(test) is not PYTEST for test in tests[sid]):
+            report.results[sid] = "its tests include Jest tests, which check-break can't run yet (O-RUN1)"
         elif not passes(repo, sid):
             report.results[sid] = "its tests fail on unmutated code"
         elif report.skipped:
