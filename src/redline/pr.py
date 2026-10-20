@@ -66,6 +66,12 @@ class GitHub:
                 applied.pop(label, None)
         return applied
 
+    def pulls(self, sha: str) -> list[int]:
+        """The merged PRs GitHub associates with the commit."""
+        found = self.run("gh", "api", f"repos/{{owner}}/{{repo}}/commits/{sha}/pulls", "--jq",
+                         ".[] | select(.merged_at != null) | .number")
+        return [int(number) for number in found.split()]
+
     def role(self, login: str) -> str:
         return self.run("gh", "api", f"repos/{{owner}}/{{repo}}/collaborators/{login}/permission", "--jq", ".role_name")
 
