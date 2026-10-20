@@ -2,7 +2,8 @@
 
 A trailer in the PR's own commits makes a claim: `Redline-Departure` lets a frozen test's lock
 entry change, `Oversized` lets the PR pass 400 lines, `Redline-Track` lets a G step change files
-outside its track, `Redline-Rigor` lets the config's default level change. In CI the claim needs its label, read
+outside its track, `Redline-Rigor` lets the config's default level or a plan's level change, a plan be deleted or a change
+be taken out of one. In CI the claim needs its label, read
 through the `GitHub` seam. Locally there is no PR yet, so the claim is noted as pending instead.
 """
 
