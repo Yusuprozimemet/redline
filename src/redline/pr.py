@@ -27,7 +27,7 @@ from redline.lines import LIMIT, check_lines
 from redline.links import check_links
 from redline.lock import check_lock
 from redline.order import check_order, git
-from redline.plan import check_plan
+from redline.plan import ROOT, check_plan, parse_plan
 from redline.planaudit import check_plan_audits
 from redline.premises import check_premises
 from redline.relabel import check_relabel
@@ -83,17 +83,21 @@ def size(repo: Path, approvals: Approvals) -> list[str]:
 
 
 def rigor_claim(repo: Path, approvals: Approvals) -> list[str]:
-    """A changed `rigor:` in the config needs an approved `Redline-Rigor` claim, on any PR."""
+    """A changed `rigor:` in the config, or a plan's changed `Rigor:` line, needs an approved `Redline-Rigor` claim."""
     fork = git(repo, "merge-base", "main", "HEAD").stdout.strip()
     shown = git(repo, "show", f"{fork}:redline/config.yaml")
     old = str(((yaml.safe_load(shown.stdout) if shown.returncode == 0 else None) or {}).get("rigor") or "standard")
-    if old == (new := load_config(repo).rigor):
-        return []
-    what = f"rigor: `rigor:` in redline/config.yaml changed from {old} to {new}"
-    if not claims(repo, fork, "Redline-Rigor"):
-        return [f"{what}, with no Redline-Rigor trailer"]
-    why = approvals.approve(RIGOR, what)
-    return [why] if why else []
+    changed = [] if old == (new := load_config(repo).rigor) else [
+        f"rigor: `rigor:` in redline/config.yaml changed from {old} to {new}"]
+    listed = git(repo, "ls-tree", "-r", "--name-only", fork, "--", ROOT).stdout.split()
+    for path in (p for p in listed if p.endswith("/plan.md") and p.count("/") == 3):  # a new plan isn't a change
+        before = parse_plan("", git(repo, "show", f"{fork}:{path}").stdout).rigor
+        now = parse_plan("", (repo / path).read_text(encoding="utf-8")).rigor if (repo / path).is_file() else ""
+        if before != now:
+            changed.append(f"rigor: the `Rigor:` line of {path} changed from {before or 'none'} to {now or 'none'}")
+    if changed and not claims(repo, fork, "Redline-Rigor"):
+        return [f"{what}, with no Redline-Rigor trailer" for what in changed]
+    return [why for what in changed if (why := approvals.approve(RIGOR, what))]
 
 
 def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None) -> list[str]:

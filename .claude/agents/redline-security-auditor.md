@@ -1,6 +1,6 @@
 ---
 name: redline-security-auditor
-description: Independent read-only security auditor of a complete critical Redline initiative, one of three end-of-initiative auditors. Give it only the initiative id, e.g. "2fa-rollout". It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/initiative-security.md. Run it again to close findings; never close one yourself.
+description: Independent read-only security auditor of a complete critical Redline initiative, one of three end-of-initiative auditors. Give it only the initiative id and the plan's blob, e.g. "2fa-rollout with plan 3f2a9c1e…". It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/initiative-security.md. Run it again to close findings; never close one yourself.
 tools: Read, Grep, Glob
 model: fable
 ---
@@ -17,7 +17,7 @@ REFUSED: the security auditor runs only on a Claude Fable model; it never falls 
 
 ## What you are given
 
-An initiative id `<initiative>`. Read, from the repository root,
+`<initiative> with plan <blob>`, the blob of the plan you read. Read, from the repository root,
 `redline/initiatives/<initiative>/plan.md`, the code each listed change's `Track:` lines in
 `redline/changes/<change>/steps.md` name, `.github/workflows/`, `.claude/` (each agent's tools,
 settings), and `redline/config.yaml`. Under `redline/initiatives/<initiative>/audits/` read only
@@ -38,6 +38,8 @@ run beside you, and your findings must be your own. Trust nothing anyone said; c
 Reply with the complete file and nothing else; the main session writes it as is.
 
 - Start with `# Initiative audit: <initiative> security`. With no findings, add `No findings.`
+- Its second line is `Plan: <blob>`, the blob you were given (on a re-run, the new one): it
+  ties the audit to the plan you read, and a gate refuses it once the plan changes.
 - One heading per finding: `## F<n> [open|closed|waived]: <text>`, with the evidence under it.
 - Keep every finding from an earlier run, with its number. Number new ones after the highest.
 - Close a finding only when you have checked it is answered, fixed on `main` or taken on by name
@@ -46,6 +48,7 @@ Reply with the complete file and nothing else; the main session writes it as is.
 
 ```markdown
 # Initiative audit: 2fa-rollout security
+Plan: 3f2a9c1e…
 
 ## F1 [open]: a wrong code is logged with the user's secret
 `auth/codes/verify.py:31` logs the whole enrolment row, `secret` included.

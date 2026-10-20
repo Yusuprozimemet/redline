@@ -17,6 +17,12 @@ CLEAN = "# Plan audit: greetings phase 1 start\n\n## F1 [closed]: the stop names
 NONE = "# Plan audit: greetings phase 1 end\n\nNo findings.\n"
 
 
+def stamped(repo, text: str) -> str:
+    """The audit as the auditor writes it: its `Plan:` line, the second, the blob of the plan it read."""
+    title, rest = text.split("\n", 1)
+    return f"{title}\nPlan: {repo.git('hash-object', PLAN)}\n" + re.sub(r"\APlan: .*\n", "", rest)
+
+
 @pytest.fixture
 def critical(change):
     change.commit("a critical initiative", {PLAN: VALID, **FAREWELL, **WAVE, f"{CHANGE}/proposal.md": "Rigor: critical\n"})
@@ -43,8 +49,9 @@ def test_the_plan_auditor_is_read_only_on_the_strongest_model():
 def test_the_documented_output_is_an_audit_check_plan_reads(critical, capsys):
     example = re.search(r"```markdown\n(# Plan audit: .+?)```", AGENT.read_text(encoding="utf-8"), re.S)
     assert example, "the definition shows an example audit in a ```markdown block"
+    assert re.match(r".+\nPlan: ", example[1]), "the example's second line records the plan it read"
     phase_one_complete(critical)
-    critical.commit("end audit", {f"{AUDITS}/phase-1-end.md": example[1]})
+    critical.commit("end audit", {f"{AUDITS}/phase-1-end.md": stamped(critical, example[1])})
     code, out = check_plan(critical, capsys)
     assert code == 1
     assert len(out.splitlines()) == 1 and ": F1 is open: " in out, out
@@ -63,7 +70,7 @@ def test_start_refuses_a_phase_with_no_start_audit(critical, capsys):
     (CLEAN.replace("Resolution: it names GREET.S1\n", ""), False),
 ], ids=["resolved", "open", "closed-without-resolution"])
 def test_start_needs_the_start_audit_resolved_on_main(critical, capsys, audit, passes):
-    critical.commit("start audit", {f"{AUDITS}/phase-1-start.md": audit})
+    critical.commit("start audit", {f"{AUDITS}/phase-1-start.md": stamped(critical, audit)})
     fresh_branch(critical, "spec")
     code, out = start(critical, capsys, "add-greet/S")
     assert (code == 0) == passes, out
@@ -89,13 +96,13 @@ def test_check_plan_fails_on_a_complete_phase_with_no_end_audit(critical, capsys
     code, out = check_plan(critical, capsys)
     assert code == 1
     assert f"greetings: {AUDITS}/phase-1-end.md: missing; run the plan-auditor on `greetings phase 1 end`" in out
-    critical.commit("end audit", {f"{AUDITS}/phase-1-end.md": NONE})
+    critical.commit("end audit", {f"{AUDITS}/phase-1-end.md": stamped(critical, NONE)})
     assert check_plan(critical, capsys)[0] == 0
 
 
 def test_the_next_phase_waits_for_the_end_audit(critical, capsys):
     phase_one_complete(critical)
-    critical.commit("phase 2 start audit", {f"{AUDITS}/phase-2-start.md": CLEAN})
+    critical.commit("phase 2 start audit", {f"{AUDITS}/phase-2-start.md": stamped(critical, CLEAN)})
     fresh_branch(critical, "farewell")
     code, out = start(critical, capsys, "add-farewell/S")
     assert code == 1
@@ -109,11 +116,11 @@ def test_the_next_phase_waits_for_the_end_audit(critical, capsys):
 def test_every_pr_fails_until_the_end_audit_lands(critical):
     phase_one_complete(critical)
     failures = gates(critical.path, "add-farewell", "S")
-    assert f"check-plan: greetings: {AUDITS}/phase-1-end.md: missing; run the plan-auditor on `greetings phase 1 end`" in failures
+    assert f"check-plan: greetings: {AUDITS}/phase-1-end.md: missing; run the plan-auditor on `greetings phase 1 end` with plan {critical.git('rev-parse', f'main:{PLAN}')}" in failures
 
 
 def test_merged_at_a_critical_stopping_point_says_which_audits_are_due(critical, capsys, remote):
-    critical.commit("start audit", {f"{AUDITS}/phase-1-start.md": CLEAN})
+    critical.commit("start audit", {f"{AUDITS}/phase-1-start.md": stamped(critical, CLEAN)})
     complete(critical, "add-wave", ("S", "C"))
     for step in ("S", "R", "G1", "G2"):
         merge_step(critical, step)
@@ -125,3 +132,4 @@ def test_merged_at_a_critical_stopping_point_says_which_audits_are_due(critical,
     assert f"redline-plan-auditor on `greetings phase 1 end`; write its reply unedited to {AUDITS}/phase-1-end.md" in out
     assert "Until it lands with every finding resolved, check-plan fails on every PR." in out
     assert f"`greetings phase 2 start` ({AUDITS}/phase-2-start.md)" in out
+    assert f"Give each auditor `with plan {critical.git('rev-parse', f'main:{PLAN}')}`" in out
