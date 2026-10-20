@@ -58,7 +58,7 @@ one initiative. Most changes belong to none.
 
 ```
 redline/
-├── config.yaml                     # rigor default, generated-file globs, runner, rules (§10)
+├── config.yaml                     # rigor default, generated-file globs, support files, rules (§10)
 ├── specs/<domain>/spec.md          # living behaviour; each scenario carries its ID
 ├── contracts/lock.yaml             # hashes of frozen `hold` tests
 ├── initiatives/<id>/plan.md        # goal, phases, the changes of each, stopping points
@@ -667,6 +667,39 @@ in CI on Linux, and the tests always use the fake. On Windows, check-break still
 scenario's tests and their unmutated run. It reports the mutation as skipped, not failed, because
 CI runs it.
 
+**Runners.** A test file's extension decides its runner, and nothing in `redline/config.yaml`
+changes that: a switch there could hide tests from check-links and the lock, and a configurable
+command could make a suite pass by running nothing. Each runner sits behind the `Runner` seam in
+`redline/runner.py`. It knows its test files, how its marker reads, where each test starts and
+ends, and, from build 5 part 7, how to run a scenario's tests and its mutation tool (O-RUN1).
+
+| Runner | Test files | Marker | `new` | Mutation |
+|---|---|---|---|---|
+| pytest | `*.py` | `@pytest.mark.spec("ID")` | `spec("ID", new=True)`: `xfail(strict=True)` | mutmut |
+| Jest | `*.js`, `*.jsx`, `*.mjs`, `*.cjs`, `*.ts`, `*.tsx` | `spec("ID").test("name", fn)` | `spec("ID", { new: true }).test(…)`: `test.failing` | Stryker (O-RUN1) |
+
+check-links, check-order, check-break and the lock read every runner's markers, so a scenario may
+be linked from either language. A marker is read from one line, as pytest's is.
+
+Jest has no marker, so Redline ships one. `redline install jest` writes `redline/runners/spec.js`,
+which tests import. `spec(id)` returns an object whose `test` is Jest's `test`, or `test.failing`
+for `{ new: true }` (Jest 28.1 or later, with jest-circus; without it the helper throws), so a
+`new` test that passes fails the run. Under `REDLINE_SPEC=<ID>` it skips every test that isn't
+linked to that ID without `new`, which is how a scenario's tests alone are run. A weakened helper
+would undo all of that, so every gate, at every step and outside one, runs check-helpers: it fails
+if `redline/runners/spec.js` exists and differs from the copy in the installed Redline.
+
+A Jest test is `path::name`, where the name is the first argument of its `test` call, a string
+literal. Two tests in one file with the same name are an error, since a `describe` around them
+isn't part of the name. Its hash covers its source from `spec(` to the `)` that closes its `test(`
+call. A scanner finds that `)`, skipping strings, template literals (with `${…}`) and comments. A
+regex literal with an unbalanced bracket misreads it. Brackets that don't balance by the end of
+the file are an error, never a shorter hash.
+
+Until part 7, check-break fails a scenario that has a Jest test, saying its tests can't be run yet,
+rather than skipping it. At critical, a Jest entry has no `reach` (O-RUN3), so check-lock reports
+it as a critical entry without one: a critical change can't lock a Jest test yet.
+
 The R step also writes the lock (§4). `redline lock <change>` rewrites that change's entry from the
 tests as they are now. `redline check-lock <change>` prints each difference between the lock and
 the code:
@@ -1071,7 +1104,9 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
 2. 400-line gate; scenario-to-test linking both ways; `start`/`pr`/`merged` and the brief.
 3. Premise citations and the auditor agent.
 4. Ledger rebuilt by CI; GitHub Action.
-5. Mutation (mutmut, then Stryker, PIT); contract lock; critical level.
+5. Mutation (mutmut, then Stryker); contract lock; critical level. Part 6 is the `Runner`
+   seam and Jest's markers in the links, the order and the lock; part 7 runs Jest tests and
+   Stryker (O-RUN1).
 6. Initiatives and plans (part 1); the defect log and `retro` (part 2). The rest of the
    critical level builds on phases: a plan-auditor at each phase's start and end,
    end-of-initiative auditors, one track per Green PR, blind relabelling. Part 6 is the
@@ -1083,6 +1118,9 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    checks that the delta reached `specs/` (O-CLOSE2); part 3 lets a closed change's delta stop
    counting as a declaration (O-CLOSE3); part 4 takes a change's evidence from its own steps only
    (O-CLOSE4); part 5 a closed change's lock entry when a later change edits its test (O-CLOSE5).
+8. **More runners**, once Jest is complete and verified: JUnit 5 and PIT (O-RUN2); the critical
+   `reach` of Jest and JUnit tests (O-RUN3); runner configuration that can weaken tests outside
+   a step (O-RUN4).
 
 ## 12. Open problems
 
@@ -1172,3 +1210,14 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   step. Now `redline lock` moves a scenario from a closed change's entry to the later change that
   declares it, keeping `reach` (§4), and every step's gate checks the whole lock, and compares it
   by test with `main`'s, so editing any frozen test is a departure at any step (§5).
+- O-RUN1 [build 5 part 7]: Jest tests are linked, ordered and locked, but not run. check-break
+  fails a scenario with a Jest test instead of running it unmutated and under Stryker; `redline
+  ci` runs no Jest suite; check-track counts a Jest test file as code outside the track; and no CI
+  job runs the real Jest and Stryker on a toy project.
+- O-RUN2 [build 8]: tests in Java: a JUnit 5 `@Spec` annotation with an extension for `new`, a
+  scanner for Java sources, and PIT behind the `Mutator` seam.
+- O-RUN3 [build 8]: a critical entry's `reach` follows pytest fixtures only, so a critical change
+  can't lock a Jest test (§5).
+- O-RUN4 [build 8]: a runner's own configuration (`jest.config`, Stryker's config, `package.json`)
+  can skip or weaken tests in a PR outside any step. For pytest, only a critical `reach` covers
+  its settings.
