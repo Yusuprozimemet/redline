@@ -2,13 +2,16 @@
 
 A plan has a `Goal:` line, then `## Phase <n>: <name>` headings numbered 1, 2, … in order, each
 with a `Changes: a, b` line and a `Stop:` line, its stopping point. The plan is the only place
-that puts a change in an initiative, and a change may be listed once across every plan.
+that puts a change in an initiative, and a change may be listed once across every plan. An
+optional `Rigor:` line before the first phase is the initiative's own level (planaudit.py).
 """
 
 import re
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from redline.config import LEVELS, RIGOR
 
 ROOT = "redline/initiatives"
 PHASE = re.compile(r"^## Phase (\d+): (.+)$")
@@ -30,6 +33,7 @@ class Plan:
     name: str
     goal: str = ""
     phases: list[Phase] = field(default_factory=list)
+    rigor: str = ""  # its `Rigor:` line; "" when it has none
 
 
 @dataclass
@@ -47,12 +51,18 @@ def read_plan(repo: Path, name: str) -> Plan:
     path = f"{ROOT}/{name}/plan.md"
     if not (repo / path).is_file():
         raise RuntimeError(f"no plan {path}")
+    return parse_plan(name, (repo / path).read_text(encoding="utf-8"))
+
+
+def parse_plan(name: str, text: str) -> Plan:
     plan = Plan(name)
-    for line in (repo / path).read_text(encoding="utf-8").splitlines():
+    for line in text.splitlines():
         if heading := PHASE.match(line):
             plan.phases.append(Phase(int(heading[1]), heading[2].strip()))
         elif not plan.phases and (goal := GOAL.match(line)):
             plan.goal = goal[1].strip()
+        elif not plan.phases and (level := RIGOR.match(line)):
+            plan.rigor = level[1]
         elif plan.phases and (listed := CHANGES.match(line)):
             plan.phases[-1].changes += [c.strip() for c in listed[1].split(",") if c.strip()]
         elif plan.phases and (stop := STOP.match(line)):
@@ -77,6 +87,7 @@ def check_plan(repo: Path, name: str | None = None) -> Report:
     bad = []
     for plan in plans:
         why = [] if plan.goal else ["no Goal: line"]
+        why += [f"unknown rigor level `{plan.rigor}`"] if plan.rigor and plan.rigor not in LEVELS else []
         why += [] if plan.phases else ["no phases"]
         for number, phase in enumerate(plan.phases, 1):
             if phase.number != number:

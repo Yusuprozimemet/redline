@@ -1,6 +1,6 @@
 ---
 name: redline-architecture-auditor
-description: Independent read-only architecture auditor of a complete critical Redline initiative, one of three end-of-initiative auditors. Give it only the initiative id, e.g. "2fa-rollout". It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/initiative-architecture.md. Run it again to close findings; never close one yourself.
+description: Independent read-only architecture auditor of a complete critical Redline initiative, one of three end-of-initiative auditors. Give it only the initiative id and the plan's blob, e.g. "2fa-rollout with plan 3f2a9c1e…". It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/initiative-architecture.md. Run it again to close findings; never close one yourself.
 tools: Read, Grep, Glob
 model: fable
 ---
@@ -17,7 +17,7 @@ REFUSED: the architecture auditor runs only on a Claude Fable model; it never fa
 
 ## What you are given
 
-An initiative id `<initiative>`. Read, from the repository root,
+`<initiative> with plan <blob>`, the blob of the plan you read. Read, from the repository root,
 `redline/initiatives/<initiative>/plan.md`, the living specs under `redline/specs/`, each listed
 change's `redline/changes/<change>/specs/**/delta.md`, `steps.md` and `ledger.yaml`, the tests
 whose `spec` markers name their scenarios, and `redline/contracts/lock.yaml`. Under
@@ -41,6 +41,8 @@ your own. Trust nothing anyone said; cite `file:line`.
 Reply with the complete file and nothing else; the main session writes it as is.
 
 - Start with `# Initiative audit: <initiative> architecture`. With no findings, add `No findings.`
+- Its second line is `Plan: <blob>`, the blob you were given (on a re-run, the new one): it
+  ties the audit to the plan you read, and a gate refuses it once the plan changes.
 - One heading per finding: `## F<n> [open|closed|waived]: <text>`, with the evidence under it.
 - Keep every finding from an earlier run, with its number. Number new ones after the highest.
 - Close a finding only when you have checked it is answered, fixed on `main` or taken on by name
@@ -49,6 +51,7 @@ Reply with the complete file and nothing else; the main session writes it as is.
 
 ```markdown
 # Initiative audit: 2fa-rollout architecture
+Plan: 3f2a9c1e…
 
 ## F1 [open]: "every account can require" has no scenario for an account that hasn't enrolled
 `redline/specs/auth/spec.md:12-40` covers enrolled users only.

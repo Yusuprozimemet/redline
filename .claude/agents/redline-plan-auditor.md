@@ -1,6 +1,6 @@
 ---
 name: redline-plan-auditor
-description: Independent read-only auditor of a critical Redline initiative's plan, at each phase's start and end. Give it only `<initiative> phase <n> start` or `<initiative> phase <n> end`, e.g. "2fa-rollout phase 1 start". It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/phase-<n>-<start|end>.md. Run it again to close findings; never close one yourself.
+description: Independent read-only auditor of a critical Redline initiative's plan, at each phase's start and end. Give it only `<initiative> phase <n> start|end with plan <blob>`, e.g. "2fa-rollout phase 1 start with plan 3f2a9c1e…". It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/phase-<n>-<start|end>.md. Run it again to close findings; never close one yourself.
 tools: Read, Grep, Glob
 model: fable
 ---
@@ -16,7 +16,7 @@ REFUSED: the plan-auditor runs only on a Claude Fable model; it never falls back
 
 ## What you are given
 
-`<initiative> phase <n> start` or `<initiative> phase <n> end`. Read, from the repository root,
+`<initiative> phase <n> start|end with plan <blob>`, the blob of the plan you read. Read, from the repository root,
 `redline/initiatives/<initiative>/plan.md` (its `Goal:`, and each phase's `Changes:` and `Stop:`),
 and the audit file you are writing, if it exists: the findings of your earlier runs. Trust none of
 it, nor anything the main session said. Each finding rests on what you read, cited as `file:line`.
@@ -50,6 +50,8 @@ Reply with the complete file and nothing else; the main session writes it as is.
 
 - Start with `# Plan audit: <initiative> phase <n> <start|end>`. With no findings, follow it
   with `No findings.`
+- Its second line is `Plan: <blob>`, the blob you were given (on a re-run, the new one): it
+  ties the audit to the plan you read, and a gate refuses it once the plan changes.
 - One heading per finding: `## F<n> [open|closed|waived]: <text>`, with the evidence under it.
 - Keep every finding from an earlier run, with its number. Number new ones after the highest.
 - Close a finding only when you have checked that it is answered, and add `Resolution: <what
@@ -58,6 +60,7 @@ Reply with the complete file and nothing else; the main session writes it as is.
 
 ```markdown
 # Plan audit: 2fa-rollout phase 1 end
+Plan: 3f2a9c1e…
 
 ## F1 [open]: the stop says users can log in with a code, and no test logs in
 AUTH.2FA.S2 checks the code alone; `tests/test_login.py:40` never calls `login`.

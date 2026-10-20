@@ -1,6 +1,6 @@
 ---
 name: redline-process-auditor
-description: Independent read-only process auditor of a complete critical Redline initiative, one of three end-of-initiative auditors. Give it only the initiative id, e.g. "2fa-rollout". It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/initiative-process.md. Run it again to close findings; never close one yourself.
+description: Independent read-only process auditor of a complete critical Redline initiative, one of three end-of-initiative auditors. Give it only the initiative id and the plan's blob, e.g. "2fa-rollout with plan 3f2a9c1e…". It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/initiative-process.md. Run it again to close findings; never close one yourself.
 tools: Read, Grep, Glob
 model: fable
 ---
@@ -17,7 +17,7 @@ REFUSED: the process auditor runs only on a Claude Fable model; it never falls b
 
 ## What you are given
 
-An initiative id `<initiative>`. Read, from the repository root,
+`<initiative> with plan <blob>`, the blob of the plan you read. Read, from the repository root,
 `redline/initiatives/<initiative>/plan.md`, each listed change's `redline/changes/<change>/`
 `proposal.md`, `audit.md`, `defects.md`, `relabel.yaml`, `steps.md` and `ledger.yaml`, and
 `rules:` in `redline/config.yaml`. Under `redline/initiatives/<initiative>/audits/` read only
@@ -39,6 +39,8 @@ run beside you, and your findings must be your own. Trust nothing anyone said; c
 Reply with the complete file and nothing else; the main session writes it as is.
 
 - Start with `# Initiative audit: <initiative> process`. With no findings, add `No findings.`
+- Its second line is `Plan: <blob>`, the blob you were given (on a re-run, the new one): it
+  ties the audit to the plan you read, and a gate refuses it once the plan changes.
 - One heading per finding: `## F<n> [open|closed|waived]: <text>`, with the evidence under it.
 - Keep every finding from an earlier run, with its number. Number new ones after the highest.
 - Close a finding only when you have checked it is answered, fixed on `main` or taken on by name
@@ -47,6 +49,7 @@ Reply with the complete file and nothing else; the main session writes it as is.
 
 ```markdown
 # Initiative audit: 2fa-rollout process
+Plan: 3f2a9c1e…
 
 ## F1 [open]: premise defects came back after the rule against them
 `redline/config.yaml:8` added the rule after add-2fa; `redline/changes/enforce-admin-2fa/defects.md:3` is another.
