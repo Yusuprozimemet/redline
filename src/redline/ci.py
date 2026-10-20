@@ -1,7 +1,8 @@
 """`redline ci`: what the GitHub Action runs (.github/workflows/redline.yml).
 
 On a pull request, the step comes from the `Redline-Step` trailers of the PR's commits (base..HEAD),
-which must name at most one step. Then the step's gates, the test suite and check-ledger against
+which must name at most one step. Then the step's gates, the test suite (each runner's the
+repository uses, which fails when none is or when Jest is listed but can't run) and check-ledger against
 the base run, and every failure is reported. A PR with no trailer is outside any step: it may not
 touch a change, the lock or the specs, and gets check-lines, the rigor claim, check-plan, check-lock
 on every locked change and the suite. A departure or an Oversized trailer needs its label
@@ -15,9 +16,8 @@ writes none and fails the run.
 Pushing sits behind `Remote`, which tests replace.
 """
 
-import os
-import subprocess
-import sys
+import json
+import shutil
 from pathlib import Path
 
 import yaml
@@ -25,13 +25,14 @@ import yaml
 from redline.breaks import check_break
 from redline.claims import note, record
 from redline.ledger import NOTES, check_ledger
+from redline.lines import is_generated
 from redline.lock import check_lock, read_lock
 from redline.order import git
 from redline.approval import Approvals
 from redline.plan import check_plan
 from redline.planaudit import check_plan_audits
 from redline.pr import GitHub, gates, rigor_claim, size
-from redline.runner import check_helpers
+from redline.runner import JEST, RUNNERS, Runner, check_helpers, run
 from redline.start import TRAILER, Refused
 
 STEPS_ONLY = ("redline/changes/", "redline/contracts/", "redline/specs/")  # written only by a step's gates
@@ -49,17 +50,30 @@ class Remote:
             raise RuntimeError(f"git push refs/notes/{NOTES}: {done.stderr.strip()}")
 
 
+def uses(repo: Path, runner: Runner) -> bool:
+    """Jest when the root package.json lists it; pytest when git tracks one of its test files."""
+    if runner is JEST:
+        package = repo / "package.json"
+        listed = json.loads(package.read_text(encoding="utf-8")) if package.is_file() else {}
+        return any("jest" in (listed.get(key) or {}) for key in ("dependencies", "devDependencies"))
+    return any(is_generated(path, list(runner.test_files)) for path in git(repo, "ls-files").stdout.splitlines())
+
+
 def suite(repo: Path) -> list[str]:
-    """Run the repository's tests; a failure is the one line that says so."""
-    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
-    done = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"],
-        cwd=repo, capture_output=True, text=True, env=env,
-    )
-    if done.returncode == 0:
-        return []
-    last = next((line for line in reversed(done.stdout.splitlines()) if line.strip()), "")
-    return [f"suite: the test suite failed (pytest exit {done.returncode}): {last.strip('= ')}"]
+    """Run every test of each runner the repository uses; a failure is the one line that says so."""
+    used = [r for r in RUNNERS if uses(repo, r)]
+    if not used:
+        return ["suite: no tests ran: git tracks no pytest test file, and package.json doesn't list jest"]
+    failures = []
+    for runner in used:
+        if runner.needs and not shutil.which(runner.needs):
+            failures.append(f"suite: {runner.name} is listed in package.json, but {runner.needs} isn't installed")
+        elif runner is JEST and not (repo / "node_modules" / "jest").is_dir():
+            failures.append("suite: jest is listed in package.json, but node_modules/jest isn't installed")
+        elif (done := run(repo, runner)).returncode:
+            last = next((line for line in reversed(f"{done.stdout}\n{done.stderr}".splitlines()) if line.strip()), "")
+            failures.append(f"suite: the test suite failed ({runner.name} exit {done.returncode}): {last.strip('= ')}")
+    return failures
 
 
 def pr_step(repo: Path, base: str) -> str:
