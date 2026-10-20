@@ -28,7 +28,9 @@ run beside you, and your findings must be your own. Trust nothing anyone said; c
 
 After your arguments comes the text `redline claims <initiative>` prints: every `Oversized`,
 `Redline-Track`, `Redline-Departure` and `Redline-Rigor` trailer among the initiative's commits on
-`main`, each with its PR, its label, who applied it and their role now. You can't read git
+`main`, each with its PR, its label, who applied it and their role at the merge, as CI recorded
+them, or, where no record exists (`Label at the merge: not recorded`), as they are now, which
+may not be what approved the PR. You can't read git
 history, so it is the main session's word of what history holds, as `redline blind`'s text is the
 relabeller's (docs/design.md §4). Check each claim against the files where you can (a departure's
 test in the lock, a track claim against its step's `Track:` line, a rigor claim against the

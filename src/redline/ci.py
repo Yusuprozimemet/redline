@@ -8,7 +8,10 @@ on every locked change and the suite. A departure or an Oversized trailer needs 
 on the PR (`--pr <number>`), read through `GitHub`. On a push to main, the suite runs and its result is
 recorded as a git note on the merged commit under refs/notes/redline-ci, which is then pushed.
 When the push merged an R step, check-break runs too, and the note gets each `hold` scenario's
-result under `break:`; a failed break fails the run.
+result under `break:`; a failed break fails the run. When the merged commits carry claim trailers,
+the note also gets `claims:`, each claim with its label on the merged PR, who applied it last and their
+role, read through `GitHub` (claims.record); a re-run keeps an earlier record, and a failed read
+writes none and fails the run.
 Pushing sits behind `Remote`, which tests replace.
 """
 
@@ -20,6 +23,7 @@ from pathlib import Path
 import yaml
 
 from redline.breaks import check_break
+from redline.claims import note, record
 from redline.ledger import NOTES, check_ledger
 from redline.lock import check_lock, read_lock
 from redline.order import git
@@ -108,6 +112,12 @@ def ci_push(repo: Path, run_url: str, rev: str = "HEAD") -> list[str]:
         failures += [f"check-break: {sid}: not mutated: {report.skipped}" for sid in report.results if report.skipped]
         broken = {sid: "fail" if why or report.skipped else "pass" for sid, why in report.results.items()}
         message += yaml.safe_dump({"break": broken}, sort_keys=False) if broken else ""
+    if not (made := (note(repo, rev) or {}).get("claims")):  # a re-run keeps the labels read at the merge
+        try:
+            made = record(repo, rev, GitHub(repo))
+        except RuntimeError as error:
+            failures.append(f"claims: could not read the merged PR's labels: {error}")
+    message += yaml.safe_dump({"claims": made}, sort_keys=False, width=1000) if made else ""
     noted = git(repo, "-c", "user.name=redline-ci", "-c", "user.email=redline-ci@users.noreply.github.com",
                 "notes", f"--ref={NOTES}", "add", "-f", "-m", message, rev)
     if noted.returncode:

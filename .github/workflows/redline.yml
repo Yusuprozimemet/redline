@@ -39,3 +39,5 @@ jobs:
       - name: Run the suite and note the result on the merged commit
         if: github.event_name == 'push'
         run: redline ci push --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          GH_TOKEN: ${{ github.token }}  # the merged PR's claim labels, recorded in the note
