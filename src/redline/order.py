@@ -25,6 +25,14 @@ def git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
 
 
+def shown(repo: Path, path: str, rev: str | None = None) -> str | None:
+    """The file's text at `rev`, else in the working tree; None when it isn't there."""
+    if rev is None:
+        return (repo / path).read_text(encoding="utf-8") if (repo / path).is_file() else None
+    done = git(repo, "show", f"{rev}:{path}")
+    return done.stdout if done.returncode == 0 else None
+
+
 def scan(repo: Path, commit: str) -> dict[str, str]:
     """Scenario ID -> "red" or "green" for the test files at `commit`."""
     states: dict[str, str] = {}

@@ -9,7 +9,8 @@ A step is merged on main when a commit reachable from main carries the trailer
 `Redline-Step: <change>/<step>`. The open step is kept in the git directory, and stops being open
 once it is merged. A change is complete once its last step is merged. A change in an
 initiative's phase waits until every change of the earlier phases is complete (plan.py), and, in
-a critical initiative, until its plan audits are on main (planaudit.py).
+a critical initiative, until its plan audits are on main (planaudit.py). `may_begin` makes both
+refusals from one tree: `start` reads main, and `redline ci pr` the merge-base.
 """
 
 import re
@@ -17,7 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from redline.config import load_config
-from redline.order import git
+from redline.order import git, shown
 from redline.plan import placed
 from redline.premises import premise_lines
 
@@ -42,11 +43,11 @@ class Step:
     track: list[str] | None = None  # None: no Track: line
 
 
-def read_steps(repo: Path, change: str) -> list[Step]:
+def read_steps(repo: Path, change: str, rev: str | None = None) -> list[Step]:
     path = f"redline/changes/{change}/steps.md"
-    if not (repo / path).is_file():
+    if (text := shown(repo, path, rev)) is None:
         raise RuntimeError(f"no steps file {path}")
-    return parse_steps((repo / path).read_text(encoding="utf-8"))
+    return parse_steps(text)
 
 
 def parse_steps(text: str) -> list[Step]:
@@ -113,25 +114,36 @@ def brief(repo: Path, change: str, step: Step) -> str:
     return "\n".join(parts) + "\n"
 
 
-def complete(repo: Path, change: str, done: set[str]) -> bool:
-    """Whether the last step of the change is merged; a change with no steps yet isn't."""
+def complete(repo: Path, change: str, done: set[str], rev: str | None = None) -> bool:
+    """Whether the last step of the change's steps.md (at `rev`) is merged; a change with no steps yet isn't."""
     try:
-        steps = read_steps(repo, change)
+        steps = read_steps(repo, change, rev)
     except RuntimeError:
         return False
     return bool(steps) and f"{change}/{steps[-1].name}" in done
 
 
-def waiting(repo: Path, change: str, done: set[str]) -> str:
-    """Why the change's phase can't begin yet, or nothing."""
-    if not (found := placed(repo, change)):
+def waiting(repo: Path, change: str, done: set[str], rev: str | None = None) -> str:
+    """Why the change's phase can't begin yet, or nothing; the plan and steps.md read at `rev`."""
+    if not (found := placed(repo, change, rev)):
         return ""
     plan, index = found
     for phase in plan.phases[:index]:
-        if behind := [c for c in phase.changes if not complete(repo, c, done)]:
+        if behind := [c for c in phase.changes if not complete(repo, c, done, rev)]:
             return (f"phase {plan.phases[index].number} of {plan.name} waits for phase {phase.number}: "
                     f"{', '.join(behind)} not complete")
     return ""
+
+
+def may_begin(repo: Path, change: str, merged: set[str], rev: str) -> None:
+    """Refuse a step of the change while an earlier phase isn't complete or, at critical, its plan audits aren't
+    there; every file read at `rev` (main for `start`, the merge-base in CI), what is `merged` passed in."""
+    if why := waiting(repo, change, merged, rev):
+        raise Refused(why)
+    if found := placed(repo, change, rev):
+        from redline.planaudit import before_start  # planaudit imports this module
+        if bad := before_start(repo, *found, rev):
+            raise Refused(f"{found[0].name} needs its plan audits on main first:\n" + "\n".join(bad))
 
 
 def merged_steps(repo: Path, ref: str = "main") -> set[str]:
@@ -141,19 +153,21 @@ def merged_steps(repo: Path, ref: str = "main") -> set[str]:
     return {line.strip() for line in log.stdout.splitlines() if line.strip()}
 
 
-def next_step(repo: Path, name: str, base: str) -> None:
+def next_step(repo: Path, name: str, base: str) -> str:
     """Refuse unless `<change>/<step>` is in steps.md at the merge-base with `base`, every step before it
-    there is merged on `base`, and it isn't; with no steps.md there, only S, which writes it, may be open."""
+    there is merged on `base`, and it isn't; with no steps.md there, only S, which writes it, may be open.
+    Return the merge-base."""
     change, _, step = name.partition("/")
-    fork = git(repo, "merge-base", base, "HEAD")
-    if fork.returncode:
-        raise RuntimeError(f"no merge-base with {base}: {fork.stderr.strip()}")
+    found = git(repo, "merge-base", base, "HEAD")
+    if found.returncode:
+        raise RuntimeError(f"no merge-base with {base}: {found.stderr.strip()}")
+    fork = found.stdout.strip()
     path = f"redline/changes/{change}/steps.md"
-    shown = git(repo, "show", f"{fork.stdout.strip()}:{path}")
-    if shown.returncode and step != "S":
+    text = shown(repo, path, fork)
+    if text is None and step != "S":
         raise Refused(f"{name}: redline/changes/{change} has no steps.md at the merge-base, "
                       "so it can only be at its S step, which writes it")
-    names = [s.name for s in parse_steps(shown.stdout)] if shown.returncode == 0 else ["S"]
+    names = [s.name for s in parse_steps(text)] if text is not None else ["S"]
     if step not in names:
         raise Refused(f"{name}: {path} at the merge-base has no step {step}")
     merged = merged_steps(repo, base)
@@ -161,6 +175,7 @@ def next_step(repo: Path, name: str, base: str) -> None:
         raise Refused(f"{name} is already merged on {base}: a step is one PR")
     if behind := [f"{change}/{s}" for s in names[:names.index(step)] if f"{change}/{s}" not in merged]:
         raise Refused(f"{name} isn't next; not merged on {base}: {', '.join(behind)}")
+    return fork
 
 
 def open_step_file(repo: Path) -> Path:
@@ -189,12 +204,7 @@ def start(repo: Path, name: str) -> str:
     current = state.read_text().strip() if state.is_file() else ""
     if current and current != name and current not in merged:
         raise Refused(f"step {current} is still open; finish it with `redline pr` first")
-    if why := waiting(repo, change, merged):
-        raise Refused(why)
-    if found := placed(repo, change):
-        from redline.planaudit import before_start  # planaudit imports this module
-        if bad := before_start(repo, *found):
-            raise Refused(f"{found[0].name} needs its plan audits on main first:\n" + "\n".join(bad))
+    may_begin(repo, change, merged, "main")  # the tree too: the branch must be fresh from main, below
     if index and (previous := f"{change}/{steps[index - 1].name}") not in merged:
         raise Refused(f"previous step {previous} is not merged on main")
     head = git(repo, "rev-parse", "HEAD", "main").stdout.split()
