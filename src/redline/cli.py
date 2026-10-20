@@ -13,6 +13,7 @@ from redline.approval import Approvals
 from redline.lock import check_lock, write_lock
 from redline.order import check_order
 from redline.plan import check_plan
+from redline.planaudit import check_plan_audits
 from redline.pr import pr
 from redline.premises import check_premises
 from redline.relabel import blind, check_relabel
@@ -210,6 +211,7 @@ def run_check_premises(repo: Path, change: str | None) -> int:
 def run_check_plan(repo: Path, initiative: str | None) -> int:
     try:
         report = check_plan(repo, initiative)
+        report.bad += check_plan_audits(repo, initiative)
     except RuntimeError as error:
         print(f"redline: {error}")
         return 2

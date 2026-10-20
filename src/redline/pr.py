@@ -1,6 +1,6 @@
 """`redline pr`: run the local gates for the open step, then open its pull request.
 
-check-lines, check-plan, check-defects and check-relabel always run; the defect log is required at C
+check-lines, check-plan (with a critical initiative's plan audits), check-defects and check-relabel always run; the defect log is required at C
 only, the blind relabel at C at critical only. check-premises and check-audit run at the S step, on the step's own
 change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
@@ -28,6 +28,7 @@ from redline.links import check_links
 from redline.lock import check_lock
 from redline.order import check_order, git
 from redline.plan import check_plan
+from redline.planaudit import check_plan_audits
 from redline.premises import check_premises
 from redline.relabel import check_relabel
 from redline.start import TRAILER, Refused, open_step_file, read_steps
@@ -98,7 +99,7 @@ def rigor_claim(repo: Path, approvals: Approvals) -> list[str]:
 def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None) -> list[str]:
     approvals = approvals or Approvals()
     failures = size(repo, approvals) + rigor_claim(repo, approvals)
-    failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad]
+    failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad + check_plan_audits(repo)]
     failures += [f"check-defects: {bad}" for bad in check_defects(repo, change, step == "C").bad]
     failures += [f"check-relabel: {bad}" for bad in check_relabel(repo, change, step == "C").bad]
     if step == "S":

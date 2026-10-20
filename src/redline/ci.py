@@ -25,6 +25,7 @@ from redline.lock import check_lock, read_lock
 from redline.order import git
 from redline.approval import Approvals
 from redline.plan import check_plan
+from redline.planaudit import check_plan_audits
 from redline.pr import GitHub, gates, rigor_claim, size
 from redline.start import TRAILER, Refused
 
@@ -80,7 +81,7 @@ def outside(repo: Path, base: str, approvals: Approvals) -> list[str]:
     if touched := [p for p in diff.stdout.splitlines() if p.startswith(STEPS_ONLY)]:
         raise Refused(f"outside any step a PR can't touch a change, the lock or the specs: {', '.join(touched)}")
     failures = size(repo, approvals) + rigor_claim(repo, approvals)
-    failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad]
+    failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad + check_plan_audits(repo)]
     for change in sorted(read_lock(repo)):  # no Redline-Step, so no departure: the lock can't change here
         failures += [f"check-lock: {change}: {bad}" for bad in check_lock(repo, change).bad]
     return failures + suite(repo)
