@@ -10,9 +10,11 @@ import pytest
 import yaml
 
 from redline import breaks
+from redline.ci import suite
 from redline.cli import main
 from redline.order import check_order
 from redline.pr import gates
+from test_ci import RUN, ci, remote  # noqa: F401 (remote is a fixture)
 from test_check_break import HOLD_TESTS, HOLDS, FakeMutator, check_break, delta, holds, mutator  # noqa: F401 (fixtures)
 from test_lock import LOCK, check_lock, lock
 from test_start import CHANGE, change, fresh_branch  # noqa: F401 (change is a fixture)
@@ -191,3 +193,46 @@ def test_a_departure_can_name_a_jest_test_whose_name_has_spaces(holds, capsys):
     code, out = check_lock(holds, capsys, "--base", "main")
     assert code == 0, out
     assert "CI will need the `redline:departure` label from a maintainer" in out
+
+
+PACKAGE = '{"devDependencies": {"jest": "29.7.0"}}\n'
+NOTHING_RAN = "suite: no tests ran: git tracks no pytest test file, and package.json doesn't list jest"
+
+
+def test_the_suite_runs_jest_when_package_json_lists_it_and_pytest_only_with_its_test_files(repo, jest):
+    repo.commit("jest only", {"package.json": PACKAGE, "greet.test.js": ""})
+    (repo.path / "node_modules" / "jest").mkdir(parents=True)
+    assert suite(repo.path) == []  # no pytest test file, so no pytest run that collects nothing
+    assert jest.runs == [None]
+    jest.failing.add(None)
+    assert suite(repo.path) == ["suite: the test suite failed (jest exit 1): Tests:       1 failed, 1 total"]
+    repo.commit("pytest too", {"test_ok.py": "def test_ok():\n    assert False\n", "package.json": '{"dependencies": {}}\n'})
+    jest.runs = []
+    assert suite(repo.path)[0].startswith("suite: the test suite failed (pytest exit 1)")
+    assert jest.runs == []
+
+
+def test_jest_listed_but_not_installed_fails_the_suite(repo, jest):
+    repo.commit("jest listed", {"package.json": PACKAGE})
+    assert suite(repo.path) == ["suite: jest is listed in package.json, but node_modules/jest isn't installed"]
+    jest.npx = False
+    assert suite(repo.path) == ["suite: jest is listed in package.json, but npx isn't installed"]
+    assert jest.runs == []
+
+
+def test_a_repository_that_uses_no_runner_fails_the_suite(repo, jest):
+    repo.commit("no tests", {"greet.js": "", "package.json": '{"devDependencies": {"eslint": "9.0.0"}}\n'})
+    assert suite(repo.path) == [NOTHING_RAN]
+    assert jest.runs == []
+
+
+def test_a_push_notes_a_failed_jest_suite(repo, capsys, jest, remote):
+    repo.commit("start")
+    merge = repo.commit("jest", {"package.json": PACKAGE, "greet.test.js": ""})
+    (repo.path / "node_modules" / "jest").mkdir(parents=True)
+    jest.failing.add(None)
+    code, out = ci(repo, capsys, "push", "--run-url", RUN)
+    assert code == 1
+    assert "suite: the test suite failed (jest exit 1)" in out
+    assert remote.pushed == [f"result: fail\nrun: {RUN}"]
+    assert repo.git("notes", "--ref=redline-ci", "show", merge) == f"result: fail\nrun: {RUN}"
