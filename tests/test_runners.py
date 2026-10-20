@@ -28,7 +28,8 @@ def jest(toy, *paths, sid=None) -> subprocess.CompletedProcess:
     assert npx, "npx isn't installed"
     env = {key: value for key, value in os.environ.items() if key != "REDLINE_SPEC"}
     env |= {"REDLINE_SPEC": sid} if sid else {}
-    return subprocess.run([npx, "--no-install", "jest", "--ci", *paths], cwd=toy, capture_output=True, text=True, env=env)
+    return subprocess.run([npx, "--no-install", "jest", "--ci", *paths], cwd=toy, capture_output=True,
+                          encoding="utf-8", errors="replace", env=env)
 
 
 def test_jest_runs_every_test_and_doesnt_take_the_helper_for_a_test_file(toy):
