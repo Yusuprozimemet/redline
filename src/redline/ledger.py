@@ -6,6 +6,8 @@ line that contains it (the commit CI ran on), and `result`, which only CI knows:
 git note CI left on `merged` under refs/notes/redline-ci, and is `unverified` without one. Commits
 not reachable from main aren't evidence. A `hold` scenario has no red or green; its `break` is the
 commit where its test landed, with the result CI noted for it under `break:` (see redline.breaks).
+A change's evidence is its own (§4): red and green count only from its window, the PRs from its
+S step to its C step, and a break is its R step's. Without its S step on main, all of main counts.
 """
 
 from pathlib import Path
@@ -13,8 +15,8 @@ from pathlib import Path
 import yaml
 
 from redline.breaks import holds
-from redline.order import check_order, git, is_ancestor
-from redline.start import HEADING
+from redline.order import check_order, git, is_ancestor, scan
+from redline.start import HEADING, TRAILER
 
 NOTES = "redline-ci"
 HEADER = (
@@ -54,26 +56,44 @@ def ci_result(repo: Path, commit: str, broken: str | None = None) -> str:
     return result if result in ("pass", "fail") else "unverified"
 
 
+def stamped(repo: Path, name: str, main: str) -> list[str]:
+    """The commits reachable from main whose Redline-Step trailer names the step `name`, oldest first."""
+    log = git(repo, "log", "--reverse", "--topo-order", f"--format=%H|%(trailers:key={TRAILER},valueonly,separator=|)", main)
+    return [commit for commit, *steps in (row.split("|") for row in log.stdout.splitlines())
+            if name in (step.strip() for step in steps)]
+
+
 def rebuild(repo: Path, change: str, main: str = "main") -> dict:
     ids = declared(repo, change)
     listing = git(repo, "rev-list", "--first-parent", "--reverse", main)
     if listing.returncode:
         raise RuntimeError(listing.stderr.strip())
     line = listing.stdout.split()
-    found = {r.scenario: r for r in check_order(repo, main)}
+
+    def merge(commit: str) -> str:
+        return next(c for c in line if is_ancestor(repo, commit, c))
+
+    since = until = None
+    reds = []
+    if spec := stamped(repo, f"{change}/S", main):  # the window: from the S step's PR to the C step's
+        since = git(repo, "rev-parse", "-q", "--verify", f"{merge(spec[0])}^1").stdout.strip() or None
+        until = merge(close[0]) if (close := stamped(repo, f"{change}/C", main)) else None
+        reds = stamped(repo, f"{change}/R", main)
+    found = {r.scenario: r for r in check_order(repo, until or main, since)}
 
     def evidence(commit: str | None, broken: str | None = None) -> dict | None:
         if commit is None:
             return None
-        merged = next(c for c in line if is_ancestor(repo, commit, c))
+        merged = merge(commit)
         return {"commit": commit, "merged": merged, "result": ci_result(repo, merged, broken)}
 
     held = set(holds(repo, change))
     scenarios = {}
     for sid in ids:
         result = found.get(sid)
-        if sid in held:  # check-order calls the commit where a hold test landed its green
-            scenarios[sid] = {"red": None, "green": None, "break": evidence(result and result.green, sid)}
+        if sid in held:  # its R step's first commit that links it; without an S step, where it landed
+            landed = next((c for c in reds if scan(repo, c).get(sid) == "green"), None) if spec else result and result.green
+            scenarios[sid] = {"red": None, "green": None, "break": evidence(landed, sid)}
             continue
         scenarios[sid] = {
             "red": evidence(result and result.red),

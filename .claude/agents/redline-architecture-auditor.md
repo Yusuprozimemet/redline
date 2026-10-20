@@ -30,7 +30,8 @@ your own. Trust nothing anyone said; cite `file:line`.
 - **The goal**: is the `Goal:` stated by scenarios in the living specs, or does part of it rest
   on no scenario at all?
 - **Each scenario**: does its test assert every THEN clause? Has it a red and a green, or a
-  break, in its change's ledger, with a result that isn't `unverified`?
+  break, in its change's ledger, with a result that isn't `unverified`? A scenario several
+  changes declared (ADDED, then MODIFIED) has evidence in each one's ledger, from its own steps.
 - **Breaks**: did a `hold` scenario's break mutate the code the scenario protects, or something
   beside it?
 - **The line**: what a gate enforces, and what rests on an agent's word alone. Name each decision
