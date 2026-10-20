@@ -907,8 +907,11 @@ A change in an initiative waits for its phase: `start` also refuses any step of 
 phase N while a change of an earlier phase isn't complete, and names that change. Within a phase
 the changes are independent, each with its own sessions. In a critical initiative, it also
 refuses while the phase's start audit, or an earlier phase's end audit, is missing or unresolved
-on `main` (§4, plan audits). `start` runs on the agent's machine, so `redline ci pr` repeats its
-first refusal on every step's PR: the step must be the change's next (§7).
+on `main` (§4, plan audits). Both refusals read `main`: its plans, the `steps.md` of each change
+they list, the levels that make an initiative critical (each proposal's `Rigor:`, else the config's
+`rigor:`), and the audits. That is the working tree too, since `start` refuses a branch that isn't
+fresh from `main`. `start` runs on the agent's machine, so `redline ci pr` repeats all three on
+every step's PR: the step must be the change's next, and its phase must be ready (§7).
 
 `pr` runs check-lines and check-plan always, check-premises and check-audit at S (on the step's own change: an
 older change's premises may go stale as the code moves on), and check-links and check-order from
@@ -964,9 +967,24 @@ exist, which `gates` gives the fewest checks, or one already merged, such as a c
 whose gates don't run check-specs, while the PR still counts as in a step and may touch
 `redline/changes/`, `redline/contracts/` and `redline/specs/`; and a G1 PR could pass CI before its
 S step merged, against invariant 1. `steps.md` is read at the merge-base, as check-track reads
-`Track:` lines (§5), so a PR can't add itself a step. `start`'s other refusals, a change whose
-earlier phase isn't complete and a critical initiative's missing plan audits, aren't repeated in
-CI yet (O-CI3).
+`Track:` lines (§5), so a PR can't add itself a step.
+
+Then, still before anything runs, `start`'s other two refusals (§6), by the same function: a change
+whose earlier phase isn't complete, and, in a critical initiative, a step while an earlier phase's
+end audit, or its own phase's start audit, is missing or unresolved, or that start audit isn't
+current. Everything they read comes from the merge-base: the plans, the `steps.md` of every change
+they list, the proposals' `Rigor:` lines and the config's `rigor:`, the audits and the plan's blob.
+Only what is merged is read from `main`, as above. A step's PR may edit any of those files, so a
+PR read from its own tree could move its change to an earlier phase (a plan edit, not a claim),
+trim an earlier change's `steps.md` to the steps already merged, lower a proposal's `Rigor:` so no
+audit is asked for, or add the audit it lacks. At `start` the branch is fresh from `main`, so the
+merge-base is the tree `start` read, and CI asks the same question of the same files. The plan,
+its blob and its audits come from one tree, so an audit is current against the plan beside it.
+
+What it doesn't prove: a plan edited on `main` after the step's branch forked, which makes its
+start audit stale. The step's PR is read at the fork, where the audit was current, as `start` read
+it. That is by design: the step began under an audited plan, and a later edit is read by the next
+step's `start` and, through the end audit, by check-plan on every PR (§4).
 
 It then runs that step's gates (the same ones `pr` runs
 locally), the test suite, and `check-ledger <change> --main main`, and prints every failure. This
@@ -1185,8 +1203,9 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
 8. **More runners**, once Jest is complete and verified: JUnit 5 and PIT (O-RUN2); the critical
    `reach` of Jest and JUnit tests (O-RUN3); runner configuration that can weaken tests outside
    a step (O-RUN4); Jest tests outside the root `package.json` (O-RUN9).
-9. **Fixes from the review of 2026-10-20**: a step's PR must be the change's next step (O-CI2);
-   `start`'s phase and plan-audit refusals in CI (O-CI3); text encoding on Windows (O-ENC1). The
+9. **Fixes from the review of 2026-10-20**: part 1, a step's PR must be the change's next step
+   (O-CI2); part 2, `start`'s phase and plan-audit refusals in CI (O-CI3); text encoding on
+   Windows (O-ENC1). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1223,10 +1242,12 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   check-specs; and a G1 PR passed CI before its S step merged. Only the local `start` checked the
   order. Now CI refuses, before anything runs, a step that isn't in `steps.md` at the merge-base,
   one with an earlier step not merged on `main`, and one already merged (§7).
-- O-CI3 [build 9]: `start` also refuses a change whose earlier phase isn't complete, and a critical
-  initiative's step while its plan audits on `main` are missing, unresolved or stale (§6); CI
-  repeats neither. `placed` reads the plan from the working tree, so doing it in CI means reading
-  the plan at the merge-base, as `steps.md` is read for O-CI2.
+- O-CI3 [closed, build 9 part 2]: `start` also refused a change whose earlier phase wasn't
+  complete, and a critical initiative's step while its plan audits on `main` were missing,
+  unresolved or stale (§6); CI repeated neither, and both read the plan, the changes' `steps.md`
+  and their levels from the working tree, which a step's PR may edit. Now one function makes both
+  refusals, `start` reading `main` and `redline ci pr` the merge-base, before any gate (§7). A plan
+  edited on `main` after a step's branch forked isn't read by that step's PR, by design (§7).
 - O-PLAN1 [closed, build 6 part 8]: an initiative was critical only through its changes' levels,
   and a change with no proposal yet takes the config's, so an initiative whose first S step
   declared `Rigor: critical` skipped that phase's start audit. Now the plan has its own `Rigor:`
