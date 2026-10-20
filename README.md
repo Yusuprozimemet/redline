@@ -3,7 +3,7 @@
 A spec-driven, test-first development tool for working with AI agents. A requirement isn't real
 until a test has proved it can fail.
 
-Status: design only. See [docs/design.md](docs/design.md).
+Status: being built, in the order of [docs/design.md](docs/design.md) §11; steps 1–6 are on `main`.
 
 ## Rules that hold from the first commit
 
