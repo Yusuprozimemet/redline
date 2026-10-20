@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from redline.config import LEVELS, RIGOR
+from redline.order import git, shown
 
 ROOT = "redline/initiatives"
 PHASE = re.compile(r"^## Phase (\d+): (.+)$")
@@ -43,15 +44,19 @@ class Report:
     bad: list[str]
 
 
-def initiatives(repo: Path) -> list[str]:
-    return sorted(path.parent.name for path in (repo / ROOT).glob("*/plan.md"))
+def initiatives(repo: Path, rev: str | None = None) -> list[str]:
+    """The initiatives with a plan in the working tree, or at `rev`."""
+    if rev is None:
+        return sorted(path.parent.name for path in (repo / ROOT).glob("*/plan.md"))
+    listed = git(repo, "ls-tree", "-r", "--name-only", rev, "--", ROOT).stdout.split()
+    return sorted(p.split("/")[2] for p in listed if p.endswith("/plan.md") and p.count("/") == 3)
 
 
-def read_plan(repo: Path, name: str) -> Plan:
+def read_plan(repo: Path, name: str, rev: str | None = None) -> Plan:
     path = f"{ROOT}/{name}/plan.md"
-    if not (repo / path).is_file():
+    if (text := shown(repo, path, rev)) is None:
         raise RuntimeError(f"no plan {path}")
-    return parse_plan(name, (repo / path).read_text(encoding="utf-8"))
+    return parse_plan(name, text)
 
 
 def parse_plan(name: str, text: str) -> Plan:
@@ -70,10 +75,10 @@ def parse_plan(name: str, text: str) -> Plan:
     return plan
 
 
-def placed(repo: Path, change: str) -> tuple[Plan, int] | None:
-    """The plan that lists the change, and the index of its phase there."""
-    for name in initiatives(repo):
-        plan = read_plan(repo, name)
+def placed(repo: Path, change: str, rev: str | None = None) -> tuple[Plan, int] | None:
+    """The plan that lists the change, and the index of its phase there, in the working tree or at `rev`."""
+    for name in initiatives(repo, rev):
+        plan = read_plan(repo, name, rev)
         for index, phase in enumerate(plan.phases):
             if change in phase.changes:
                 return plan, index

@@ -29,8 +29,9 @@ def audit_path(plan: Plan, number: int, when: str) -> str:
     return f"{ROOT}/{plan.name}/audits/phase-{number}-{when}.md"
 
 
-def critical(repo: Path, plan: Plan) -> bool:
-    return plan.rigor == "critical" or any(rigor(repo, c) == "critical" for phase in plan.phases for c in phase.changes)
+def critical(repo: Path, plan: Plan, rev: str | None = None) -> bool:
+    """Whether the plan's line or any change it lists, read at `rev`, else in the working tree, is critical."""
+    return plan.rigor == "critical" or any(rigor(repo, c, rev) == "critical" for phase in plan.phases for c in phase.changes)
 
 
 def blob(repo: Path, plan: Plan, rev: str | None = None) -> str:
@@ -66,12 +67,12 @@ def unresolved_at(repo: Path, plan: Plan, where: str, run: str, rev: str | None 
     return bad
 
 
-def before_start(repo: Path, plan: Plan, index: int) -> list[str]:
-    """What `start` needs on main before a step of the phase at `index`."""
-    if not critical(repo, plan):
+def before_start(repo: Path, plan: Plan, index: int, rev: str = "main") -> list[str]:
+    """What a step of the phase at `index` needs at `rev`: main for `start`, the merge-base in CI."""
+    if not critical(repo, plan, rev):
         return []
     wanted = [(phase.number, "end", False) for phase in plan.phases[:index]] + [(plan.phases[index].number, "start", True)]
-    return [bad for number, when, now in wanted for bad in unresolved(repo, plan, number, when, "main", now)]
+    return [bad for number, when, now in wanted for bad in unresolved(repo, plan, number, when, rev, now)]
 
 
 def check_plan_audits(repo: Path, name: str | None = None) -> list[str]:
