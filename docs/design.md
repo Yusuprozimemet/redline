@@ -411,7 +411,7 @@ and every commit that touches redline/initiatives/2fa-rollout/ or redline/config
 
 ## 4d5e6f1 add-2fa/G2 (PR #12): Lock out after five wrong codes
 Redline-Departure: tests/test_login.py::test_lockout approved-by @maintainer: five, not three
-Label: redline:departure, applied by @alice, now admin
+Label at the merge: redline:departure, applied by @alice, admin (CI note on 7a8b9c0)
 ```
 
 - **The commits** are every non-merge commit reachable from `main` whose `Redline-Step` names a
@@ -420,8 +420,12 @@ Label: redline:departure, applied by @alice, now admin
   those with a claim trailer get a heading; with none, the text says `No claims.`
 - **The PR** of a commit is the merged PR GitHub associates with it
   (`gh api repos/{owner}/{repo}/commits/<sha>/pulls`), through the `GitHub` seam (§7).
-- **The label** is the claim's label on that PR, who applied it last and their role, read as CI
-  reads them; or that it isn't on the PR, or that no merged PR was found.
+- **The label** is what `redline ci push` recorded (§7) in the CI note on the commit where the
+  claim merged, the first commit on `main`'s first-parent line that contains it, as for the
+  ledger: the claim's label on the PR, who applied it last and their role, when CI ran on the
+  merge; or that it wasn't on the PR, or that no merged PR was found. When that commit has no
+  note, or its note has no record of the claim, `claims` says so (`Label at the merge: not
+  recorded: …`) and then reads the label as CI reads it, now (`Label now: …`).
 
 It prints every claim and judges none: a claim of a PR that didn't need it, a label applied by
 someone who isn't a maintainer, or a departure approved by someone other than the person its
@@ -430,9 +434,19 @@ trailer names, is for the auditor to weigh. It writes nothing, and its text is n
 What it still doesn't prove:
 
 - **That the auditor saw that text, unedited**: it is the main session's word, as `blind`'s is.
-- **The labels when the PR merged**: they and the roles are read when `claims` runs. A label
-  removed after the merge reads as missing; one added after it, as present (O-PLAN6). §7's limits
-  hold too: who pressed the button, and what they saw.
+- **The labels at the button**: the record is read when CI runs on the merged commit, moments
+  after the merge, not when it was pressed. §7's limits hold too: who pressed the button, and
+  what they saw.
+- **That a record is CI's**: a note is only as trustworthy as the people who can push
+  `refs/notes/redline-ci`, which branch protection doesn't cover. Whoever can push it can write
+  or rewrite a record.
+- **The labels of a claim with no record**: commits merged before build 6 part 11 have none, nor
+  does a merge whose push run couldn't read GitHub until a re-run adds it. For those, `claims`
+  reads labels and roles now, so a label removed after the merge reads as missing, one added
+  after it as present, and a re-run's record reads them as late as it runs.
+- **A PR merged by rebase**: the push run reads the claims of the merged commit and its first
+  parent's range only, as it reads the step (§7), so a claim in an earlier commit of the PR gets
+  no record.
 - **A claim that should have been made**: a PR merged over a gate, without CI or with it failing,
   has no trailer to print. It shows only that the record holds no claim there.
 - **PR text**: descriptions and review comments aren't printed.
@@ -755,6 +769,32 @@ On a push to `main`, `redline ci push` runs the suite on the merged commit and w
 failed suite is still recorded, and the run fails. This is the only evidence Redline writes, and
 the next PR's `check-ledger` picks it up.
 
+When the merged commits (`<merged>^..<merged>`: the PR's own commits under a merge commit, the
+commit itself after a squash) carry claim trailers (Approvals, below), it also records the
+approvals as they stand at the merge, for `redline claims` (§4). Through the `GitHub` seam it
+reads the merged PR of the first commit with a claim, the PR's labels with who applied each last,
+and that person's role, and adds one entry per claim under `claims:`:
+
+```
+result: pass
+run: https://github.com/acme/app/actions/runs/7
+claims:
+- commit: 4d5e6f1…
+  claim: 'Redline-Departure: tests/test_login.py::test_lockout approved-by @maintainer: five, not three'
+  pr: 12
+  label: redline:departure
+  by: alice
+  role: admin
+```
+
+`pr` is null when GitHub associates no merged PR with the commit; `by` and `role` are null when
+the label isn't on the PR. The record judges nothing: a label applied by someone who isn't a
+maintainer is recorded as it is. A merge without claims gets no `claims:`, and `result:`, `run:`
+and `break:` are as before, so the ledger reads the note as it did. If GitHub can't be read, the
+note is written without the record and the run fails, so the result is kept and the gap is seen.
+A re-run of the push job keeps a record an earlier run wrote: labels read later are what the
+record exists to avoid. The workflow gives the push run the same read-only token as a PR run.
+
 ### Approvals
 
 A person's approval is a label on the PR, applied by a maintainer. A commit trailer in the PR's
@@ -949,11 +989,12 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   `Rigor:` line. Its changes left the initiative, and check-plan stopped asking for its audits.
   Now deleting a plan, or taking a change out of one, is the rigor claim: a `Redline-Rigor`
   trailer and a maintainer's `redline:rigor` label, checked by `pr` and `redline ci pr` (§4, §7).
-- O-PLAN6 [open, build 6 part 11]: `redline claims` reads each claim's label and its applier's
-  role when it runs, which may be long after the merge, so a label removed or added since, or a
-  role changed, misreports what approved the PR. The fix is for `redline ci push` to record each
-  claim of the merged PR, its label, who applied it and their role, in the CI note on the merged
-  commit, and for `claims` to read the note.
+- O-PLAN6 [closed, build 6 part 11]: `redline claims` read each claim's label and its applier's
+  role when it ran, which may be long after the merge, so a label removed or added since, or a
+  role changed, misreported what approved the PR. Now `redline ci push` records each claim of the
+  merged PR, its label, who applied it last and their role, under `claims:` in the CI note on the
+  merged commit (§7), and `claims` reads that record, saying when a commit has no note or no
+  record (§4).
 - O-PLAN7 [open, build 6 part 12]: `redline claims` prints the steps of the changes the plan on
   `main` lists, so a change taken out of the plan, under an approved rigor claim, takes its own
   claims out of the record the process auditor reads. The fix is for `claims` to take the
