@@ -168,6 +168,8 @@ def test_a_scenario_with_tests_in_both_runners_adds_up_their_kills(jest_holds, c
     code, out = check_break(jest_holds, capsys)
     assert code == 1
     assert "GREET.H1: its tests survive every mutant (0 of 7 killed, in greet.py, greet.js)" in out
+    jest.failing.add("GREET.H1")  # pytest's run passes, Jest's doesn't
+    assert "GREET.H1: its jest tests fail on unmutated code" in check_break(jest_holds, capsys)[1]
 
 
 def test_a_scenario_whose_runners_have_no_cited_file_has_nothing_to_mutate(jest_holds, capsys, mutator, jest):
