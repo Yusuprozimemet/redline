@@ -17,7 +17,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from redline.links import SPEC_PATHS, grep
+from redline.links import SPEC_PATHS, declarations, grep
 from redline.order import MARKER
 from redline.premises import CITATION, premise_lines
 
@@ -64,9 +64,10 @@ class BreakReport:
 
 
 def holds(repo: Path, change: str | None = None) -> list[str]:
-    """The `hold` scenarios of one change's deltas, or of every spec and delta."""
+    """The `hold` scenarios of one change's deltas, or of every spec and delta of a change not closed."""
     ids = []
-    for path, _, text in grep(repo, r"^#### Scenario ", *SPEC_PATHS):
+    found = grep(repo, r"^#### Scenario ", *SPEC_PATHS) if change else declarations(repo)
+    for path, _, text in found:
         if (hold := HOLD.match(text)) and hold[1] not in ids:
             if change is None or path.startswith(f"redline/changes/{change}/"):
                 ids.append(hold[1])

@@ -3,6 +3,7 @@
 Every scenario declared in a living spec or a change delta needs a test with a matching spec
 marker, and every spec marker must name a declared scenario. An ID declared twice in specs/, or
 in more than one change, is a duplicate; a change may restate a living scenario (MODIFIED).
+A closed change's delta doesn't count: its C step is merged on main, so specs/ holds what it said.
 Tracked and untracked files count; ignored ones don't.
 """
 
@@ -35,9 +36,22 @@ def grep(repo: Path, pattern: str, *paths: str) -> list[tuple[str, int, str]]:
     return sorted(hits)
 
 
+def closed(repo: Path) -> set[str]:
+    """The changes whose C step is merged on main: their deltas are a record, not declarations (§4)."""
+    log = git(repo, "log", "main", "--format=%(trailers:key=Redline-Step,valueonly)")
+    return {step[:-2] for line in log.stdout.splitlines() if (step := line.strip()).endswith("/C")}
+
+
+def declarations(repo: Path) -> list[tuple[str, int, str]]:
+    """Each scenario heading line in the living specs and the deltas of changes not closed."""
+    done = closed(repo)
+    return [hit for hit in grep(repo, r"^#### Scenario ", *SPEC_PATHS)
+            if not (hit[0].startswith("redline/changes/") and hit[0].split("/")[2] in done)]
+
+
 def check_links(repo: Path) -> LinkReport:
     declared: dict[str, list[tuple[str, int]]] = {}
-    for path, line, text in grep(repo, r"^#### Scenario ", *SPEC_PATHS):
+    for path, line, text in declarations(repo):
         if heading := HEADING.match(text):
             declared.setdefault(heading[1], []).append((path, line))
     markers: dict[str, list[tuple[str, int]]] = {}
