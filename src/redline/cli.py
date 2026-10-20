@@ -5,6 +5,7 @@ from redline.audit import check_audit
 from redline.breaks import check_break
 from redline.ci import ci_pr, ci_push
 from redline.claims import claims
+from redline.close import check_close
 from redline.defects import check_defects, retro
 from redline.ledger import check_ledger, declared, write_ledger
 from redline.lines import LIMIT, check_lines
@@ -48,6 +49,9 @@ def main(argv: list[str] | None = None) -> int:
         logged = commands.add_parser(name, help=help)
         logged.add_argument("change", help="the change, e.g. add-greet")
         logged.add_argument("--repo", type=Path, default=Path.cwd())
+    closed = commands.add_parser("check-close", help="fail unless main's evidence closes the change, as at the C step")
+    closed.add_argument("change", help="the change, e.g. add-greet")
+    closed.add_argument("--repo", type=Path, default=Path.cwd())
     claimed = commands.add_parser("claims", help="print the claims main's history holds for an initiative")
     claimed.add_argument("initiative", help="the initiative, e.g. 2fa-rollout")
     claimed.add_argument("--repo", type=Path, default=Path.cwd())
@@ -107,6 +111,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_retro(args.repo, args.change, retro if args.command == "retro" else blind)
     if args.command == "claims":
         return run_retro(args.repo, args.initiative, claims)
+    if args.command == "check-close":
+        return run_check_close(args.repo, args.change)
     if args.command == "check-relabel":
         return run_check_relabel(args.repo, args.change)
     if args.command in ("lock", "check-lock"):
@@ -256,6 +262,21 @@ def run_check_defects(repo: Path, change: str) -> int:
         return 1
     n = len(report.defects)
     print(f"ok: {n} defect{'' if n == 1 else 's'}, each with a cause and what found it")
+    return 0
+
+
+def run_check_close(repo: Path, change: str) -> int:
+    try:
+        bad = check_close(repo, change)
+        count = len(declared(repo, change))
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for line in bad:
+        print(line)
+    if bad:
+        return 1
+    print(f"ok: {count} scenario{'' if count == 1 else 's'}, each with its evidence on main")
     return 0
 
 

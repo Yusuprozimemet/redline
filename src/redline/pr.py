@@ -5,7 +5,7 @@ only, the blind relabel at C at critical only. check-premises and check-audit ru
 change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
-check-lock runs at R, and at G steps against main's lock too. check-track runs at G steps (track.py).
+check-lock runs at R, and at G steps against main's lock too. check-track runs at G steps (track.py). check-close runs at C (close.py).
 A changed `rigor:` in the config or `Rigor:` line in a plan, a deleted plan, or a change taken out of
 one, needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
 <reason>` trailer needs a maintainer's label, as a departure does (approval.py); locally, where
@@ -22,6 +22,7 @@ import yaml
 from redline.approval import OVERSIZED, RIGOR, Approvals, claims
 from redline.audit import check_audit
 from redline.breaks import check_break, holds
+from redline.close import check_close
 from redline.config import load_config
 from redline.defects import check_defects
 from redline.lines import LIMIT, check_lines
@@ -138,6 +139,11 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
         failures += [f"check-lock: {bad}" for bad in check_lock(repo, change, base, approvals).bad]
     if step.startswith("G"):
         failures += check_track(repo, change, step, approvals)
+    if step == "C":  # earlier, a scenario a later step owns has no green yet by design
+        try:
+            failures += [f"check-close: {bad}" for bad in check_close(repo, change)]
+        except RuntimeError as error:
+            failures.append(f"check-close: {error}")
     return failures
 
 
