@@ -63,15 +63,11 @@ def test_a_pr_that_passes_the_gates_the_suite_and_check_ledger(change, capsys):
     assert "ok: add-greet/R passes the gates, the test suite and check-ledger" in out
 
 
-@pytest.mark.parametrize(("trailers", "message"), [
-    (("",), "no commit in main..HEAD carries a Redline-Step trailer"),
-    (("add-greet/R", "add-greet/G1"), "more than one step in main..HEAD: add-greet/G1, add-greet/R"),
-])
-def test_a_pr_needs_exactly_one_step_in_its_trailers(change, capsys, trailers, message):
-    red_pr(change, capsys, {"tests/test_greet.py": RED_TESTS}, trailers)
+def test_a_pr_is_at_most_one_step(change, capsys):  # no step at all: test_outside.py
+    red_pr(change, capsys, {"tests/test_greet.py": RED_TESTS}, ("add-greet/R", "add-greet/G1"))
     code, out = ci(change, capsys, "pr", "--base", "main")
     assert code == 1
-    assert f"refused: {message}" in out
+    assert "refused: more than one step in main..HEAD: add-greet/G1, add-greet/R" in out
     assert "check-" not in out
 
 
