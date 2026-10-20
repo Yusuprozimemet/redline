@@ -233,6 +233,18 @@ those, removing `new=True` and fixing the tests, and a whole-file hash would mak
 those edits a departure. The cost is that the hash doesn't cover helpers and fixtures the test
 calls.
 
+**A scenario's entry is the change's that declared it last.** A later change may MODIFY a `hold`
+scenario a closed change added, and its tests are the same tests. So `redline lock <change>` takes
+each scenario the change's deltas name (ADDED, MODIFIED or REMOVED) out of every closed change's
+entry, dropping an entry left empty, and locks it under the change if it is still `hold` there. A
+test it moves keeps its `reach`: the change writes one for any test whose entry has one, so a move
+never checks less. Moved unedited, a test keeps its hash and needs no departure; edited, made
+`new` or deleted, it needs one at that step (§5). A closed change's entry is never rewritten with
+a later change's hashes; its earlier hashes are in lock.yaml's history. Closed, a change's
+check-lock checks the entries it still has against the code and never asks for a test to be
+locked, since its delta declares nothing (above). Its entries still count: closed or not, a frozen
+test stays frozen.
+
 At **critical** rigor (§8) each entry also hashes what the test reaches, and is a map:
 
 ```yaml
@@ -513,6 +525,9 @@ What it still doesn't prove:
 - **A claim that should have been made**: a PR merged over a gate, without CI or with it failing,
   has no trailer to print. It shows only that the record holds no claim there.
 - **PR text**: descriptions and review comments aren't printed.
+- **Whose test a departure edited**: a departure on a test another change locked is a claim of
+  the step that made it, printed in that step's initiative, not in the initiative of the change
+  that locked the test.
 - **Which of a left change's steps were the initiative's**: every step of a change any version
   listed is printed, those merged after it left too, since a step doesn't say which initiative it
   was for. The commits are oldest first and `Left the plan:` names where it left, so the auditor
@@ -667,12 +682,17 @@ lock` writes and whether a missing `reach` is a difference. So lowering the leve
 proposal checks nothing less, unless the lock is rewritten, and at G that is a change since
 `main`, below.
 
-At R, the gate runs exactly that check, so every hold test is in the lock and current. At G1…Gn
-the gate adds a fourth difference, `--base main`: the change's lock entries differ from the lock
-at the merge-base with `main`. Without it, a G step could edit a frozen test and re-run `redline
-lock`. An entry has changed when a hash it had at the merge-base differs, or it was added or
-removed. A `reach` added where the merge-base had none hasn't changed it: the frozen source is
-the same, and it is now checked further. `pr` and `redline ci pr` run both checks.
+A frozen test is frozen whichever change locked it. At every step, S, R, G and C, the gate runs
+that check on every change the lock names, as a PR outside a step does (§7), and on the step's own
+change at R and G, so every hold test is in the lock and current. It also compares the lock **by
+test** with the lock at the merge-base with `main`: a test frozen there, in any change's entry,
+has changed when a hash it had differs now, in whichever entry holds it, or it is in no entry.
+Without that, a step could edit a frozen test, its own change's or another's, and re-run `redline
+lock`. A `reach` added where the merge-base had none hasn't changed it: the frozen source is the
+same, and it is now checked further. At R, the step's new tests weren't frozen at the merge-base,
+so locking them changes nothing. At G1…Gn the gate adds, with `--base main`, an entry of the
+step's change added since the merge-base: tests are locked at R. `pr` and `redline ci pr` run
+every check.
 
 **Timing is part of what a frozen test expects** (`../migration-engine`, "The safety net is
 frozen"). A test that asserted an effect at once and now waits for it, or waits longer, expects
@@ -706,7 +726,8 @@ What the lock still doesn't prove:
   not what the API shows while it waits. The migration engine pins that with a second test
   outside the frozen set, which the departure's spec names. Redline doesn't check that it exists.
 
-Editing a frozen test after R is a **departure**. The step re-runs `redline lock`, and one of its
+Editing a frozen test is a **departure**, at any step: an R step too, when another change froze
+the test before it. The step re-runs `redline lock`, and one of its
 commits carries a trailer naming the test, the person and the reason:
 
 ```
@@ -813,8 +834,8 @@ on `main` (§4, plan audits).
 `pr` runs check-lines and check-plan always, check-premises and check-audit at S (on the step's own change: an
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
-which have no red by design), check-break at the R step only, check-lock from R on (G steps
-with `--base main`, §5), check-track at G steps (§5), check-close and check-specs at the C step (§5), check-defects and check-relabel at every step on the
+which have no red by design), check-break at the R step only, check-lock at every step (on the
+whole lock, by test, against `main`'s; G steps with `--base main`, §5), check-track at G steps (§5), check-close and check-specs at the C step (§5), check-defects and check-relabel at every step on the
 step's change (the log is required only at C, the relabel only at C and critical), and the rigor
 check at every step (§7). A departure or an `Oversized` trailer doesn't refuse: the PR and its
 labels don't exist yet, so `pr` prints that CI will need the label (§7). Only when every gate
@@ -1144,7 +1165,10 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   the later change on evidence it didn't make, and the earlier change's rebuilt ledger took the
   later green. Now a change's red and green count only from its window, the PRs from its S step to
   its C step, and a `hold` scenario's break is its own R step's (§4).
-- O-CLOSE5 [build 7 part 5]: a later change that MODIFIES a `hold` scenario may edit its test at
-  its R step, where `redline lock` rewrites only its own entry and check-lock checks only its own
-  change. The closed change's lock entry for the same test goes stale, so the edit of a frozen
-  test needs no departure, and every PR outside a step then fails check-lock on the closed change.
+- O-CLOSE5 [closed, build 7 part 5]: a later change that MODIFIED a `hold` scenario could edit its
+  test at its R step, where `redline lock` rewrote only its own entry and check-lock checked only
+  its own change; and at S and C nothing checked the lock, nor at G another change's entries. The
+  edit of a frozen test needed no departure, and the stale entry then failed every PR outside a
+  step. Now `redline lock` moves a scenario from a closed change's entry to the later change that
+  declares it, keeping `reach` (§4), and every step's gate checks the whole lock, and compares it
+  by test with `main`'s, so editing any frozen test is a departure at any step (§5).

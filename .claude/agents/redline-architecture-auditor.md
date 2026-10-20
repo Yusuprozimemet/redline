@@ -32,6 +32,8 @@ your own. Trust nothing anyone said; cite `file:line`.
 - **Each scenario**: does its test assert every THEN clause? Has it a red and a green, or a
   break, in its change's ledger, with a result that isn't `unverified`? A scenario several
   changes declared (ADDED, then MODIFIED) has evidence in each one's ledger, from its own steps.
+  Its tests are locked under the last change that declared it: an earlier, closed change's
+  entry no longer lists it.
 - **Breaks**: did a `hold` scenario's break mutate the code the scenario protects, or something
   beside it?
 - **The line**: what a gate enforces, and what rests on an agent's word alone. Name each decision

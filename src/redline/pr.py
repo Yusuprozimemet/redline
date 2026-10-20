@@ -5,7 +5,8 @@ only, the blind relabel at C at critical only. check-premises and check-audit ru
 change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
-check-lock runs at R, and at G steps against main's lock too. check-track runs at G steps (track.py). check-close and check-specs run at C (close.py, specs.py).
+check-lock runs on every change the lock names at every step, and on the step's change at R and G (against main's lock at G);
+at every step the whole lock is compared by test with main's (lock.check_frozen). check-track runs at G steps (track.py). check-close and check-specs run at C (close.py, specs.py).
 A changed `rigor:` in the config or `Rigor:` line in a plan, a deleted plan, or a change taken out of
 one, needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
 <reason>` trailer needs a maintainer's label, as a departure does (approval.py); locally, where
@@ -27,7 +28,7 @@ from redline.config import load_config
 from redline.defects import check_defects
 from redline.lines import LIMIT, check_lines
 from redline.links import check_links
-from redline.lock import check_lock
+from redline.lock import check_frozen, check_lock, read_lock
 from redline.order import check_order, git
 from redline.plan import ROOT, check_plan, parse_plan
 from redline.planaudit import check_plan_audits
@@ -135,9 +136,14 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
         ]
     if step == "R":
         failures += [f"check-break: {sid}: {why}" for sid, why in check_break(repo, change).bad.items()]
-    if step == "R" or step.startswith("G"):  # at G the lock must also be main's, bar approved departures
+    own = step == "R" or step.startswith("G")
+    if own:  # at G its new entries need approved departures too
         base = None if step == "R" else "main"
         failures += [f"check-lock: {bad}" for bad in check_lock(repo, change, base, approvals).bad]
+    if not step.startswith("G"):  # a frozen test is frozen whichever change locked it, at every step
+        failures += [f"check-lock: {bad}" for bad in check_frozen(repo, "main", approvals)]
+    for other in sorted(set(read_lock(repo)) - ({change} if own else set())):
+        failures += [f"check-lock: {other}: {bad}" for bad in check_lock(repo, other).bad]
     if step.startswith("G"):
         failures += check_track(repo, change, step, approvals)
     if step == "C":  # earlier, a scenario a later step owns has no green yet by design
