@@ -27,7 +27,7 @@ from redline.runner import PYTEST, runner_for
 from redline.specs import parse
 
 LOCK = "redline/contracts/lock.yaml"
-CLAIM = re.compile(r"^(\S+) approved-by @\S+: \S")
+CLAIM = re.compile(r"^(.+) approved-by @\S+: \S")  # the test is all before the last approved-by (O-RUN7)
 
 
 @dataclass

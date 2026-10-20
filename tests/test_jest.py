@@ -1,16 +1,21 @@
-"""Jest beside pytest: the spec helper, and its markers in the links, the order and the lock. See docs/design.md, §5."""
+"""Jest beside pytest: the spec helper, its markers in the links, the order and the lock, and its runs in
+check-break, with Jest's run faked. See docs/design.md, §5."""
 
 import hashlib
+import shutil
+import subprocess
 from importlib.resources import files
 
+import pytest
 import yaml
 
+from redline import breaks
 from redline.cli import main
 from redline.order import check_order
 from redline.pr import gates
-from test_check_break import check_break, holds, mutator  # noqa: F401 (fixtures)
+from test_check_break import HOLD_TESTS, HOLDS, FakeMutator, check_break, delta, holds, mutator  # noqa: F401 (fixtures)
 from test_lock import LOCK, check_lock, lock
-from test_start import CHANGE, change  # noqa: F401 (change is a fixture)
+from test_start import CHANGE, change, fresh_branch  # noqa: F401 (change is a fixture)
 
 HELPER = "redline/runners/jest.js"
 H1 = """spec("GREET.H1").test('returns nothing (or ")")', () => {
@@ -93,9 +98,96 @@ def test_at_critical_a_jest_test_is_locked_without_reach_and_check_lock_says_so(
     assert f"GREET.H1: {NAME} is locked without what it reaches; a Jest test has no reach yet (O-RUN3)" in out
 
 
-def test_check_break_fails_a_scenario_with_a_jest_test_until_jest_runs(holds, capsys, mutator):
-    holds.commit("jest", {"greet.test.ts": JEST})
-    code, out = check_break(holds, capsys)
+class FakeJest:
+    """Stands in for `npx --no-install jest --ci`: the run fails for each REDLINE_SPEC in `failing` (None for
+    a run of every test); any other command runs for real. Without `npx`, shutil.which finds none."""
+
+    def __init__(self, run):
+        self.real, self.failing, self.runs, self.npx = run, set(), [], True
+
+    def __call__(self, argv, *args, **kwargs):
+        if list(argv[1:3]) != ["--no-install", "jest"]:
+            return self.real(argv, *args, **kwargs)
+        self.runs.append((kwargs.get("env") or {}).get("REDLINE_SPEC"))
+        failed = self.runs[-1] in self.failing
+        return subprocess.CompletedProcess(argv, int(failed), "", "Tests:       1 failed, 1 total" if failed else "")
+
+
+@pytest.fixture
+def jest(monkeypatch) -> FakeJest:
+    fake, which = FakeJest(subprocess.run), shutil.which
+    monkeypatch.setattr(subprocess, "run", fake)
+    monkeypatch.setattr(shutil, "which", lambda name, *a, **k: (fake.npx and "/bin/npx") if name == "npx" else which(name, *a, **k))
+    monkeypatch.delenv("REDLINE_SPEC", raising=False)
+    return fake
+
+
+H1_ONLY = HOLDS.split("#### Scenario GREET.H2")[0]
+JS_PREMISE = "- P3: The placeholder in JavaScript — `greet.js:1`\n"
+
+
+@pytest.fixture
+def jest_holds(holds):
+    holds.commit("jest", {f"{CHANGE}/specs/greet/delta.md": delta(H1_ONLY) + JS_PREMISE, "greet.test.ts": JEST,
+                          "greet.js": "function placeholder() {}\nmodule.exports = { placeholder };\n"})
+    return holds
+
+
+def test_check_break_runs_a_scenarios_jest_tests_alone_then_mutates_the_cited_javascript(jest_holds, capsys, mutator, jest):
+    code, out = check_break(jest_holds, capsys)
+    assert code == 0, out
+    assert "ok: 1 hold scenario(s): tests pass unmutated and fail under a mutant" in out
+    assert jest.runs == ["GREET.H1"]
+    assert mutator.calls == [(["greet.js"], "GREET.H1")]  # greet.py is pytest's, and no pytest test links GREET.H1
+
+
+def test_jest_tests_that_fail_or_cant_start_unmutated_fail_the_scenario(jest_holds, capsys, mutator, jest):
+    jest.failing.add("GREET.H1")
+    assert "GREET.H1: its jest tests fail on unmutated code" in check_break(jest_holds, capsys)[1]
+    jest.npx = False
+    code, out = check_break(jest_holds, capsys)
     assert code == 1
-    assert "GREET.H1: its tests include Jest tests, which check-break can't run yet (O-RUN1)" in out
+    assert "GREET.H1: its jest tests can't run: npx isn't installed" in out
+    assert mutator.calls == [] and jest.runs == ["GREET.H1"]
+
+
+def test_a_scenario_with_tests_in_both_runners_adds_up_their_kills(jest_holds, capsys, mutator, jest):
+    jest_holds.commit("pytest too", {"test_hold.py": HOLD_TESTS.split('@pytest.mark.spec("GREET.H2"')[0]})
+    mutmut = breaks.MUTATORS["pytest"] = FakeMutator()
+    mutmut.unavailable_reason = "mutmut doesn't run on Windows"
+    code, out = check_break(jest_holds, capsys)
+    assert code == 0 and "skipped" not in out, out  # Stryker killed one, so mutmut's absence changes nothing
+    mutator.outcomes["GREET.H1"] = (4, 0)
+    code, out = check_break(jest_holds, capsys)
+    assert code == 0, out
+    assert "skipped GREET.H1: mutmut doesn't run on Windows; CI runs the mutation" in out
+    mutmut.unavailable_reason, mutator.calls = None, []
+    assert check_break(jest_holds, capsys)[0] == 0
+    assert mutmut.calls == [(["greet.py"], "GREET.H1")] and mutator.calls == []  # the first kill is enough
+    mutmut.outcomes["GREET.H1"] = (3, 0)
+    code, out = check_break(jest_holds, capsys)
+    assert code == 1
+    assert "GREET.H1: its tests survive every mutant (0 of 7 killed, in greet.py, greet.js)" in out
+    jest.failing.add("GREET.H1")  # pytest's run passes, Jest's doesn't
+    assert "GREET.H1: its jest tests fail on unmutated code" in check_break(jest_holds, capsys)[1]
+
+
+def test_a_scenario_whose_runners_have_no_cited_file_has_nothing_to_mutate(jest_holds, capsys, mutator, jest):
+    jest_holds.commit("no JS premise", {f"{CHANGE}/specs/greet/delta.md": delta(H1_ONLY)})
+    code, out = check_break(jest_holds, capsys)
+    assert code == 1
+    assert "GREET.H1: nothing to mutate: the change's premises cite no file its tests' runners mutate" in out
     assert mutator.calls == []
+
+
+def test_a_departure_can_name_a_jest_test_whose_name_has_spaces(holds, capsys):
+    holds.commit("jest", {"greet.test.ts": JEST})
+    lock(holds, capsys)
+    holds.commit("locked")
+    fresh_branch(holds, "g1")
+    holds.commit("edit", {"greet.test.ts": JEST.replace('toBe("undefined {")', 'toBe("undefined {") ')})
+    lock(holds, capsys)
+    holds.commit(f"relock\n\nRedline-Departure: {NAME} approved-by @maintainer: a space after the assertion")
+    code, out = check_lock(holds, capsys, "--base", "main")
+    assert code == 0, out
+    assert "CI will need the `redline:departure` label from a maintainer" in out

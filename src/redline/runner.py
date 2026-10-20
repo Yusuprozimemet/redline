@@ -2,12 +2,17 @@
 
 Each knows its test files, its spec marker (the scenario ID, and whether it is `new`) and where each
 of its tests starts and ends: pytest's from Python's own parser, Jest's from a scanner that skips
-strings, template literals and comments. `redline install jest` writes the Jest helper tests import;
-`check_helpers`, run by every gate, fails on one that differs from the copy Redline ships.
+strings, template literals and comments; and the command that runs them. `redline install jest`
+writes the Jest helper tests import; `check_helpers`, run by every gate, fails on one that differs
+from the copy Redline ships.
 """
 
 import ast
+import os
 import re
+import shutil
+import subprocess
+import sys
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from fnmatch import fnmatch
@@ -26,6 +31,9 @@ class Runner:
     call: str  # a Python pattern for the marker's opening, up to its `(`
     new: str  # a Python pattern for the `new` argument after the ID
     tests: Callable[[str, str], Iterator[tuple[str, str, str]]]  # (path, text) -> (name, source, marker text)
+    test_files: tuple[str, ...]  # globs of its test files, which check-track doesn't count as code
+    needs: str  # the program its command needs on PATH, or ""
+    command: Callable[[str | None], tuple[list[str], dict[str, str]]]  # scenario or all -> (argv, env it adds)
 
     @property
     def ids(self) -> re.Pattern:
@@ -112,10 +120,29 @@ def jest_tests(path: str, text: str) -> Iterator[tuple[str, str, str]]:
         yield call[2], text[found.start():closing(text, text.index("(", found.end()), path) + 1], found[0]
 
 
-PYTEST = Runner("pytest", ("*.py",), r"mark\.spec\(", r"mark\.spec\(", r",\s*new\s*=\s*True\s*", python_tests)
-JEST = Runner("jest", tuple(f"*.{ext}" for ext in ("js", "jsx", "mjs", "cjs", "ts", "tsx")),
-              r"(^|[^[:alnum:]_.$])spec\(", r"(?<![\w.$])spec\(", r",\s*\{\s*new\s*:\s*true\s*\}\s*", jest_tests)
+def pytest_command(sid: str | None) -> tuple[list[str], dict[str, str]]:
+    spec = [f"--redline-spec={sid}"] if sid else []
+    return [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *spec], {"PYTHONDONTWRITEBYTECODE": "1"}
+
+
+def jest_command(sid: str | None) -> tuple[list[str], dict[str, str]]:
+    return [shutil.which("npx") or "npx", "--no-install", "jest", "--ci"], {"REDLINE_SPEC": sid} if sid else {}
+
+
+JS = ("js", "jsx", "mjs", "cjs", "ts", "tsx")
+PYTEST = Runner("pytest", ("*.py",), r"mark\.spec\(", r"mark\.spec\(", r",\s*new\s*=\s*True\s*", python_tests,
+                ("test_*.py", "*_test.py", "conftest.py"), "", pytest_command)
+JEST = Runner("jest", tuple(f"*.{ext}" for ext in JS),
+              r"(^|[^[:alnum:]_.$])spec\(", r"(?<![\w.$])spec\(", r",\s*\{\s*new\s*:\s*true\s*\}\s*", jest_tests,
+              tuple(f"*.{kind}.{ext}" for kind in ("test", "spec") for ext in JS) + tuple(f"*__tests__/*.{ext}" for ext in JS),
+              "npx", jest_command)
 RUNNERS = (PYTEST, JEST)
+
+
+def run(repo: Path, runner: Runner, sid: str | None = None) -> subprocess.CompletedProcess:
+    """Run the runner's tests, or one scenario's alone; its output is decoded as UTF-8 (O-ENC1)."""
+    argv, env = runner.command(sid)
+    return subprocess.run(argv, cwd=repo, capture_output=True, encoding="utf-8", errors="replace", env={**os.environ, **env})
 
 
 def runner_for(test: str) -> Runner | None:

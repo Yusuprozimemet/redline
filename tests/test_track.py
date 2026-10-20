@@ -42,6 +42,11 @@ def test_a_green_pr_may_change_its_track_tests_redline_files_and_generated_files
     assert track(tracked) == []
 
 
+def test_every_runners_test_files_are_tests_and_a_spec_file_of_another_kind_is_code(tracked):
+    tracked.commit("tests", {"greet.test.ts": "", "web/greet.spec.jsx": "", "web/__tests__/app.js": "", "openapi.spec.json": "{}\n"})
+    assert track(tracked) == ["check-track: openapi.spec.json is outside add-greet/G1's track (greet.py, lib/*.py)"]
+
+
 def test_a_file_outside_the_track_fails_even_if_the_pr_widens_its_track(tracked):
     tracked.commit("code", {"greet.py": "x = 1\n", "web/app.py": "app = None\n"})
     assert track(tracked) == [OUTSIDE_G1]

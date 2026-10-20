@@ -95,7 +95,7 @@ def test_check_break_prints_each_hold_scenario_that_isnt_proved(holds, capsys, m
     assert code == 1
     assert "GREET.H1: its tests survive every mutant (0 of 4 killed, in greet.py)" in out
     assert "GREET.H2: no test links it without new=True" in out
-    assert "GREET.H3: its tests fail on unmutated code" in out
+    assert "GREET.H3: its pytest tests fail on unmutated code" in out
     assert [sid for _, sid in mutator.calls] == ["GREET.H1"]
     assert "ok:" not in out
 
@@ -105,8 +105,18 @@ def test_where_mutmut_cannot_run_the_mutation_is_skipped_not_failed(holds, capsy
     holds.commit("hold tests", {"test_hold.py": PASSING})
     code, out = check_break(holds, capsys)
     assert code == 0, out
-    assert "skipped: mutmut doesn't run on Windows; CI runs the mutation" in out
+    assert "skipped GREET.H1: mutmut doesn't run on Windows; CI runs the mutation" in out
+    assert "skipped GREET.H3: mutmut doesn't run on Windows" in out
     assert mutator.calls == []
+
+
+def test_in_ci_a_skipped_mutation_fails_the_scenario(holds, capsys, mutator, remote):
+    mutator.unavailable_reason = "mutmut isn't installed"
+    hold = holds.commit("R\n\nRedline-Step: add-greet/R", {"tests/test_greet.py": RED_TESTS, "test_hold.py": PASSING})
+    code, out = ci(holds, capsys, "push", "--run-url", RUN)
+    assert code == 1
+    assert "check-break: GREET.H1: not mutated: mutmut isn't installed" in out
+    assert yaml.safe_load(holds.git("notes", "--ref=redline-ci", "show", hold))["break"]["GREET.H1"] == "fail"
 
 
 def test_the_red_step_gates_run_check_break_and_skip_check_order_for_hold(holds, capsys, mutator, github):

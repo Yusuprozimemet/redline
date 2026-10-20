@@ -649,12 +649,19 @@ declare:
 
 - **Its tests** are the tests whose marker names the scenario without `new=True`. A `new=True`
   marker on a `hold` scenario doesn't count. No such test is a failure.
-- **Unmutated**, those tests alone (`pytest --redline-spec <ID>`) must pass on today's code.
+- **Unmutated**, those tests alone must pass on today's code, run by each runner that has one of
+  them (`pytest --redline-spec <ID>`; Jest with `REDLINE_SPEC=<ID>`, below). A runner that can't
+  start, such as Jest without `npx`, fails the scenario: a run that didn't happen proves nothing.
 - **Mutated files** are the step's touched files only (§12). The R step's own diff adds tests and
-  nothing else, so its touched code is the code its scenarios protect: the Python files the
-  change's premises cite, which the auditor has checked. No other file is mutated.
-- **Pass** means at least one mutant of those files makes the tests fail. A scenario fails if its
-  tests survive every mutant, or if there is nothing to mutate.
+  nothing else, so its touched code is the code its scenarios protect: the files the change's
+  premises cite, which the auditor has checked, each mutated by the tool of the runner its
+  extension names (a cited `.py` file by mutmut, a `.js` file by Stryker), and only for a runner
+  that has one of the scenario's tests. No other file is mutated.
+- **Pass** means at least one mutant makes the tests fail. Made and killed mutants are added up
+  across the scenario's runners, which stop at the first kill. A scenario fails if its tests
+  survive every mutant, or if none of its runners has a file to mutate. When nothing was killed
+  and a runner's tool was unavailable, the scenario is skipped, not failed; once another runner's
+  tool has killed a mutant, an unavailable one changes nothing.
 
 It runs at the R step only. `pr` and `redline ci pr` run it as a gate there, as previews. After an
 R step merges, `redline ci push` runs it again on the merged commit and adds one result per
@@ -667,9 +674,9 @@ registry and not a field of `Runner`, so a runner stays plain data, and a test r
 by replacing one dict, built from the registry's own keys, so a runner added later is replaced
 too. A test fails if a runner has no tool. The tests always use the fake. mutmut doesn't run on
 Windows (3.8 refuses and points at WSL), so the real mutmut runs only in CI on Linux. On Windows,
-check-break still checks each scenario's tests and their unmutated run. It reports the mutation as
-skipped, not failed, because CI runs it. Stryker runs on Windows too, so a test that skipped the
-fake would start it.
+check-break still checks each scenario's tests and their unmutated run. It reports each scenario
+whose mutation it couldn't run as skipped, with the reason, because CI runs it; in CI a skip fails
+the run. Stryker runs on Windows too, so a test that skipped the fake would start it.
 
 Stryker mutates in its own sandbox, so no copy of the repository is made (copying `node_modules`
 is costly): `npx --no-install stryker run --mutate <files> --testRunner jest --reporters json`,
@@ -678,23 +685,26 @@ with `REDLINE_SPEC=<ID>` so its Jest workers run the scenario's tests alone (bel
 is `Killed`, `Survived`, `NoCoverage` or `Timeout`, and **killed** only when it is `Killed`: a
 timeout isn't a kill, as for mutmut. `CompileError`, `RuntimeError`, `Ignored` and `Pending` aren't
 counted. Stryker is unavailable, with the reason, without `npx` or without `@stryker-mutator/core`
-or `@stryker-mutator/jest-runner` in `node_modules`. From build 5 part 7 it is proved on the real
-tool (below); check-break calls it from part 8 (O-RUN1).
+or `@stryker-mutator/jest-runner` in `node_modules`. It is proved on the real tool (below), and
+check-break calls it for a scenario with a Jest test.
 
 **Runners.** A test file's extension decides its runner, and nothing in `redline/config.yaml`
 changes that: a switch there could hide tests from check-links and the lock, and a configurable
 command could make a suite pass by running nothing. Each runner sits behind the `Runner` seam in
-`redline/runner.py`. It knows its test files, how its marker reads, where each test starts and
-ends, and, from build 5 part 8, how to run a scenario's tests (O-RUN1). Its mutation tool is the
+`redline/runner.py`. It knows the files its markers are read from, the files that are tests
+(which check-track doesn't count as code), how its marker reads, where each test starts and ends,
+and the command that runs its tests, all of them or one scenario's. Its mutation tool is the
 `MUTATORS` registry's (above).
 
-| Runner | Test files | Marker | `new` | Mutation |
-|---|---|---|---|---|
-| pytest | `*.py` | `@pytest.mark.spec("ID")` | `spec("ID", new=True)`: `xfail(strict=True)` | mutmut |
-| Jest | `*.js`, `*.jsx`, `*.mjs`, `*.cjs`, `*.ts`, `*.tsx` | `spec("ID").test("name", fn)` | `spec("ID", { new: true }).test(…)`: `test.failing` | Stryker |
+| Runner | Markers read in | Test files | Run | Marker | `new` | Mutation |
+|---|---|---|---|---|---|---|
+| pytest | `*.py` | `test_*.py`, `*_test.py`, `conftest.py` | `python -m pytest`, `--redline-spec=<ID>` | `@pytest.mark.spec("ID")` | `spec("ID", new=True)`: `xfail(strict=True)` | mutmut |
+| Jest | `*.js`, `*.jsx`, `*.mjs`, `*.cjs`, `*.ts`, `*.tsx` | `*.test.<ext>`, `*.spec.<ext>`, `*__tests__/*.<ext>`, for those extensions | `npx --no-install jest --ci`, `REDLINE_SPEC=<ID>` | `spec("ID").test("name", fn)` | `spec("ID", { new: true }).test(…)`: `test.failing` | Stryker |
 
 check-links, check-order, check-break and the lock read every runner's markers, so a scenario may
-be linked from either language. A marker is read from one line, as pytest's is.
+be linked from either language. A marker is read from one line, as pytest's is. Jest's test files
+are its default `testMatch`, by extension only, so an `openapi.spec.json` stays code. The suite
+`redline ci` runs is still pytest's alone (O-RUN8).
 
 Jest has no marker, so Redline ships one. `redline install jest` writes `redline/runners/jest.js`,
 which tests import. It isn't named `spec.js`: Jest's default `testMatch` takes any `spec.js` for a
@@ -712,7 +722,10 @@ variable those tests are skipped, and with it a missing tool fails them. They pr
 helper runs a `new` test as `test.failing`, so a `new` test that passes fails the run; that the
 helper isn't taken for a test file; that `REDLINE_SPEC` runs one scenario's tests alone; and that
 Stryker counts as above, with `REDLINE_SPEC` reaching its Jest workers: of the 6 mutants of the
-toy's `adult`, TOY.H1's test kills 4 and TOY.H2's all 6.
+toy's `adult`, TOY.H1's test kills 4 and TOY.H2's all 6. They also run check-break end to end on
+a git repository holding the toy, its `node_modules` linked rather than copied, and a delta whose
+premise cites `src/adult.js`: TOY.H1 and TOY.H2 hold, and a TOY.H3 test that asserts nothing
+about `adult` survives all 6 mutants and fails.
 
 A Jest test is `path::name`, where the name is the first argument of its `test` call, a string
 literal. Two tests in one file with the same name are an error, since a `describe` around them
@@ -721,8 +734,7 @@ call. A scanner finds that `)`, skipping strings, template literals (with `${…
 regex literal with an unbalanced bracket misreads it. Brackets that don't balance by the end of
 the file are an error, never a shorter hash.
 
-Until part 8, check-break fails a scenario that has a Jest test, saying its tests can't be run yet,
-rather than skipping it. At critical, a Jest entry has no `reach` (O-RUN3), so check-lock reports
+At critical, a Jest entry has no `reach` (O-RUN3), so check-lock reports
 it as a critical entry without one: a critical change can't lock a Jest test yet.
 
 The R step also writes the lock (§4). `redline lock <change>` rewrites that change's entry from the
@@ -794,9 +806,10 @@ Redline-Departure: tests/test_greet.py::test_placeholder_returns_nothing approve
 
 A test with a trailer like that among the step's own commits (`base..HEAD`) may change its lock
 entry. Every other check still applies, so the lock must match the edited test. A trailer
-missing `approved-by @person: <reason>` doesn't count. The trailer stays in `main`'s history, so
-the departure is recorded with its approver (§2.7). The trailer is only a claim, so in CI it also
-needs a maintainer's `redline:departure` label on the PR (§7).
+missing `approved-by @person: <reason>` doesn't count. The test is everything before the last
+` approved-by @`, so a Jest test whose name is a sentence can be named (O-RUN7). The trailer
+stays in `main`'s history, so the departure is recorded with its approver (§2.7). The trailer is
+only a claim, so in CI it also needs a maintainer's `redline:departure` label on the PR (§7).
 
 **One track per Green PR.** A G step's **track** is the code it may change: the `Track:` line
 under its heading in `steps.md`, a comma-separated list of globs, matched as `generated:` globs
@@ -810,8 +823,8 @@ At a G step, `pr` and `redline ci pr` run check-track. It fails on:
   is there, it is checked.
 - **A file outside the track**: a file the step's diff (from the merge-base with `main`, renames
   as a delete and an add) adds, edits or deletes that matches none of the track's globs. Not
-  counted: anything under `redline/` (the lock, the ledger, the defect log), test files
-  (`test_*.py`, `*_test.py`, `conftest.py`, and `support:` files, §4), and `generated:` files.
+  counted: anything under `redline/` (the lock, the ledger, the defect log), test files (each
+  runner's, Runners above, and `support:` files, §4), and `generated:` files.
 
 The track is read from `steps.md` at the merge-base, as the auditor saw it, not from the PR: a
 step that widened its own `Track:` line would pass any diff. A file outside the track is a
@@ -1133,7 +1146,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
 5. Mutation (mutmut, then Stryker); contract lock; critical level. Part 6 is the `Runner`
    seam and Jest's markers in the links, the order and the lock; part 7 proves the real Jest and
    Stryker on a toy project in CI (O-RUN5); part 8 runs Jest tests and Stryker in the gates
-   (O-RUN1).
+   (O-RUN1), and lets a departure name a Jest test with spaces (O-RUN7); part 9 runs Jest in the
+   suite (O-RUN8).
 6. Initiatives and plans (part 1); the defect log and `retro` (part 2). The rest of the
    critical level builds on phases: a plan-auditor at each phase's start and end,
    end-of-initiative auditors, one track per Green PR, blind relabelling. Part 6 is the
@@ -1148,6 +1162,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
 8. **More runners**, once Jest is complete and verified: JUnit 5 and PIT (O-RUN2); the critical
    `reach` of Jest and JUnit tests (O-RUN3); runner configuration that can weaken tests outside
    a step (O-RUN4).
+9. **Fixes from the review of 2026-10-20**: text encoding on Windows (O-ENC1). The review's other
+   code items join this step, each with its own O-ID, as they are taken.
 
 ## 12. Open problems
 
@@ -1237,9 +1253,17 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   step. Now `redline lock` moves a scenario from a closed change's entry to the later change that
   declares it, keeping `reach` (§4), and every step's gate checks the whole lock, and compares it
   by test with `main`'s, so editing any frozen test is a departure at any step (§5).
-- O-RUN1 [build 5 part 8]: Jest tests are linked, ordered and locked, but not run. check-break
-  fails a scenario with a Jest test instead of running it unmutated and under Stryker; `redline
-  ci` runs no Jest suite; and check-track counts a Jest test file as code outside the track.
+- O-RUN1 [closed, build 5 part 8]: check-break failed a scenario with a Jest test instead of
+  running it, and check-track counted a Jest test file as code. Now check-break runs each runner
+  of a scenario, adding up its tools' kills, and check-track exempts every runner's test files (§5).
+- O-RUN8 [build 5 part 9]: `redline ci` runs pytest's suite alone, so a Jest test that fails isn't
+  seen, and a repository with Jest tests alone fails on a pytest that collected nothing.
+- O-RUN7 [closed, build 5 part 8]: a `Redline-Departure` trailer's test was read up to its first
+  space, so a locked Jest test named by a sentence couldn't be edited with an approved departure.
+- O-ENC1 [build 9]: on Windows, Python decodes text as cp1252. `git()`, `load_config` and the
+  open-step file don't say UTF-8, and a brief with "≤" printed to a pipe crashes, so a scenario
+  with "≤" reads as changed in check-specs. The fix: UTF-8 in every read and subprocess call (those
+  of build 5 parts 7 and 8 have it), stdout and stderr reconfigured, and a Windows CI job.
 - O-RUN5 [closed, build 5 part 7]: the helper had been checked under real Jest by hand only, and
   Stryker not at all. Now the `runners` CI job runs both on a toy project (§5). It found that Jest
   took the helper, then `redline/runners/spec.js`, for a test file and failed every run, so the
