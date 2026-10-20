@@ -8,9 +8,9 @@ import hashlib
 import tomllib
 from pathlib import Path, PurePosixPath
 
-from redline.breaks import source
 from redline.config import load_config
 from redline.lines import is_generated
+from redline.runner import source
 
 FUNCS = (ast.FunctionDef, ast.AsyncFunctionDef)
 CONFIGS = (("pytest.ini", "pytest"), ("pyproject.toml", None), ("tox.ini", "pytest"), ("setup.cfg", "tool:pytest"))

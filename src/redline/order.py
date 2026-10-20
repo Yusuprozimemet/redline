@@ -5,12 +5,12 @@ a commit where it was red (`new=True`) among its ancestors. With `since`, only t
 `since..rev` make a scenario red or turn it green: a change's window (redline.ledger).
 """
 
-import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-MARKER = re.compile(r"""mark\.spec\(\s*["']([^"']+)["']\s*(,\s*new\s*=\s*True\s*)?\)""")
+from redline.runner import RUNNERS
+
 
 
 @dataclass
@@ -27,11 +27,12 @@ def git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 def scan(repo: Path, commit: str) -> dict[str, str]:
     """Scenario ID -> "red" or "green" for the test files at `commit`."""
-    found = git(repo, "grep", "-h", "-E", r"mark\.spec\(", commit, "--", "*.py").stdout
     states: dict[str, str] = {}
-    for sid, new in MARKER.findall(found):
-        if not new or states.get(sid) != "green":
-            states[sid] = "red" if new else "green"
+    for runner in RUNNERS:
+        found = git(repo, "grep", "-h", "-E", runner.grep, commit, "--", *runner.paths).stdout
+        for sid, new in runner.marker.findall(found):
+            if not new or states.get(sid) != "green":
+                states[sid] = "red" if new else "green"
     return states
 
 

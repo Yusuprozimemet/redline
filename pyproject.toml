@@ -18,6 +18,9 @@ redline = "redline.cli:main"
 [project.entry-points.pytest11]
 redline = "redline.plugin"
 
+[tool.setuptools.package-data]
+redline = ["helpers/*.js"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers"
