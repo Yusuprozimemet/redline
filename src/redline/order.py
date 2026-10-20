@@ -1,7 +1,8 @@
 """Red before green, from git history.
 
 For every scenario, each commit that introduces it as green (marker without `new=True`) must have
-a commit where it was red (`new=True`) among its ancestors.
+a commit where it was red (`new=True`) among its ancestors. With `since`, only the commits of
+`since..rev` make a scenario red or turn it green: a change's window (redline.ledger).
 """
 
 import re
@@ -38,16 +39,19 @@ def is_ancestor(repo: Path, older: str, newer: str) -> bool:
     return git(repo, "merge-base", "--is-ancestor", older, newer).returncode == 0
 
 
-def check_order(repo: Path, rev: str = "HEAD") -> list[Result]:
+def check_order(repo: Path, rev: str = "HEAD", since: str | None = None) -> list[Result]:
     listing = git(repo, "rev-list", "--reverse", "--topo-order", "--parents", rev)
     if listing.returncode:
         raise RuntimeError(listing.stderr.strip())
+    counted = set(git(repo, "rev-list", f"{since}..{rev}").stdout.split()) if since else None
     states: dict[str, dict[str, str]] = {}
     reds: dict[str, list[str]] = {}
     results: dict[str, Result] = {}
     for line in listing.stdout.splitlines():
         commit, *parents = line.split()
         states[commit] = scan(repo, commit)
+        if counted is not None and commit not in counted:
+            continue  # still read: a parent of the window's first commits
         for sid, state in states[commit].items():
             result = results.setdefault(sid, Result(sid, "pending"))
             if state == "red":
