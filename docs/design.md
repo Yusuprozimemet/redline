@@ -237,6 +237,7 @@ An initiative's plan, `redline/initiatives/2fa-rollout/plan.md`:
 ```markdown
 # Initiative: 2fa-rollout
 Goal: every account can require a second factor at login
+Rigor: critical
 
 ## Phase 1: Codes from an authenticator app
 Changes: add-2fa, add-recovery-codes
@@ -250,11 +251,14 @@ Stop: every admin login asks for a code
 The plan is the only place that says which initiative and phase a change is in; a proposal
 doesn't repeat it. A listed change needn't exist yet: the plan names changes before their S
 steps. A change is **complete** when the last step of its `steps.md` is merged on `main` (§6);
-a change with no `steps.md` yet isn't. A phase is complete when all its changes are.
+a change with no `steps.md` yet isn't. A phase is complete when all its changes are. The optional
+`Rigor: lite|standard|critical` line, before the first phase, is the initiative's own level (plan
+audits, below).
 
 `redline check-plan [<initiative>]` checks every plan, or one, and fails on:
 
 - **No goal**: the plan has no `Goal:` line.
+- **An unknown level**: a `Rigor:` line that isn't `lite`, `standard` or `critical`.
 - **No phases**, or phases not numbered `1, 2, …` in order.
 - **A phase without changes or without a stop**: no `Changes:` line, an empty one, or no `Stop:`.
 - **A change listed twice**, in one plan or across plans.
@@ -264,10 +268,16 @@ a change with no `steps.md` yet isn't. A phase is complete when all its changes 
   from the tree being checked, so the PR that adds it passes.
 - **A complete critical initiative**, every phase complete on `main`, whose three
   end-of-initiative audits (below) aren't all there and resolved, read the same way.
+- **A stale audit**: the end audit of the last phase complete on `main`, or, once every phase
+  is, one of the three, that didn't read the plan in the tree being checked (below).
 
-**Plan audits**, at critical. An initiative is critical when any change it lists is: its
-proposal's `Rigor:`, else the config's `rigor:` (a change with no proposal yet takes the
-config's). Its plan is then audited at each phase's start and end by the plan-auditor,
+**Plan audits**, at critical. An initiative is critical when its plan's `Rigor:` line says
+`critical`, or any change it lists is: its proposal's `Rigor:`, else the config's `rigor:`. A
+change with no proposal yet takes the config's, so without the plan's line an initiative whose
+first S step declares `Rigor: critical` would skip that phase's start audit. The plan's line can
+only raise the level: a change it lists that is critical stays so. Changing the line, removing it
+or deleting a plan that has one is a claim, as changing the config's `rigor:` is (§7, Approvals).
+Its plan is then audited at each phase's start and end by the plan-auditor,
 `.claude/agents/redline-plan-auditor.md` (§9), given only `<initiative> phase <n> start` or
 `<initiative> phase <n> end`. The change auditor reads one change; nobody else reads how the
 changes fit together, and that is where a phase goes wrong: a change that needs another of its
@@ -294,6 +304,23 @@ Two gates refuse without it. `start` refuses every step of a change in phase n w
 `phase-<n>-start.md` on `main` is missing or unresolved, or an earlier phase's end audit is.
 check-plan fails on a complete phase's end audit, as above.
 
+**Tied to the plan it read.** The auditor is given the plan's blob hash with its arguments,
+`<initiative> phase <n> start with plan <blob>`, and its reply's second line records it:
+`Plan: <blob>`. An audit is **current** when that is the blob of `plan.md` in the tree being read
+(`git rev-parse main:<path>` for `main`, `git hash-object <path>` for the tree being checked). A
+PR outside any step may edit a plan, its phases' changes or their `Stop:` lines, after the audit
+that read it. Each gate then refuses the newest audit it needs:
+
+- `start` refuses a step of phase n while `phase-<n>-start.md` on `main` isn't current.
+- check-plan fails, on every PR, while the end audit of the last phase complete on `main` isn't
+  current, or, once every phase is complete, any of the three end-of-initiative audits isn't.
+  That end audit asked whether the later phases still hold, which is what a plan edit changes.
+
+The refusal names the audit, the blob it read (or that it has no `Plan:` line) and the plan's
+blob now, and says to run the auditor again with the new blob. The re-run reads its old file,
+keeps or closes each finding against the plan as it is now, records the new blob, and lands in a
+PR outside any step. Earlier audits need only be resolved: a newer one has read the plan since.
+
 **Refusing at a stopping point.** `merged` only prints: the merge is done, and refusing to sync
 `main` would undo nothing. At a critical initiative's stopping point it prints that the end
 audit is due, where it goes, and that the next phase's start audit is due before its first step.
@@ -303,9 +330,11 @@ with every finding resolved. `start` alone wouldn't do: an initiative that stops
 nothing, and its stop would go unaudited. The cost is that one late audit holds up unrelated
 PRs. That is meant: an unaudited stop is a silent gap (§2.7), and the fix is one small PR.
 
-What it doesn't prove: that the audited plan is the plan now, since a PR outside any step may
-edit the plan after its phase's start audit (O-PLAN3); and, as with the auditor, what the agent
-read, or that its reply was written unedited (§9).
+What it doesn't prove: that the agent read the plan whose blob it recorded, since it can't hash
+a file, and the blob is the main session's word, as what the agent read and that its reply was
+written unedited are (§9); a plan edited during phase 1, before any end audit, which nothing
+refuses until that end audit reads it; and a plan without a `Rigor:` line deleted outside any
+step, which takes its plan audits with it (O-PLAN5).
 
 **End-of-initiative audits**, at critical, once every phase is complete on `main`. A plan audit
 asks of one phase whether its `Stop:` is true and whether the phases after it still hold. Nobody
@@ -353,8 +382,8 @@ the gate: a complete initiative starts nothing.
 
 What it doesn't prove: that none read another's file, since Claude Code can't limit Read (§9); or
 what only git history holds. With `Read, Grep, Glob`, they see the ledger's commits, not the
-trailers and PR text that record `Oversized`, `Redline-Track` and departure claims (O-PLAN4). And
-a plan given a new phase after its audits keeps them, as an audit isn't tied to the plan (O-PLAN3).
+trailers and PR text that record `Oversized`, `Redline-Track` and departure claims (O-PLAN4). A
+plan edited after them makes them stale, and check-plan fails until each is run again (above).
 
 The defect log, `redline/changes/add-2fa/defects.md`, records what went wrong in the change's
 own work after it was committed: a wrong premise found at G2, a test that couldn't fail, a fix
@@ -614,7 +643,8 @@ When that completes the change's phase, it also prints that the initiative is at
 point, and the phase's `Stop:` line. Then it prints the next phase and its changes, or that the
 initiative is complete. It starts nothing: going on is the maintainer's call. In a critical
 initiative it also prints the plan audits now due (§4): the phase's end, and the next phase's
-start, or, after the last phase, the three end-of-initiative audits.
+start, or, after the last phase, the three end-of-initiative audits, and the plan's blob to give
+each auditor.
 
 The brief (goal, owned scenario IDs, cited files, open items, the rules of `redline/config.yaml`)
 is generated from the spec, the ledger, the open items and the config. For a change in an initiative, it also gives the initiative's goal,
@@ -679,12 +709,15 @@ says a maintainer agreed. Four claims need one:
 | `Redline-Departure: <test> approved-by @person: <reason>` | a frozen test's lock entry to change (§5) | `redline:departure` |
 | `Oversized: <reason>` | more than 400 changed lines (§2.3) | `redline:oversized` |
 | `Redline-Track: <reason>` | a G step changing files outside its track (§5) | `redline:track` |
-| `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml` | `redline:rigor` |
+| `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml`, or to a plan's `Rigor:` line | `redline:rigor` |
 
 `rigor:` sets the level of every change whose proposal names none, and so what all their gates
-require, so changing it, up or down, is a claim on any PR, in a step or outside one (§7). The
+require, so changing it, up or down, is a claim on any PR, in a step or outside one (§7). A plan's
+`Rigor:` line sets whether its initiative's plans are audited (§4), so it is the same claim. The
 rigor check compares the config's `rigor:` at the merge-base with `main` to its value now, and
-fails on a difference without the trailer, or, in CI, without the label.
+each plan's `Rigor:` there to its line now (none, for a plan without one or one deleted), and
+fails on a difference without the trailer, or, in CI, without the label. A new plan declares its
+level without a claim, as a new proposal does.
 
 A trailer without its reason (or, for a departure, without `approved-by @person:`) allows nothing.
 One label covers every claim of its kind in the PR. The labels are separate, so approving the size
@@ -752,13 +785,14 @@ prints and, on a re-run, the old `relabel.yaml`, whose entries it keeps unchange
 only from the entries' text, reads no other file, and replies with the whole `relabel.yaml`.
 
 The plan-auditor (§4, plan audits) is `.claude/agents/redline-plan-auditor.md`: tools `Read,
-Grep, Glob`, `model: fable`, the same refusal. It is given `<initiative> phase <n> start|end`,
-reads the old audit file on a re-run with the auditor's rules, and replies with the whole file.
+Grep, Glob`, `model: fable`, the same refusal. It is given `<initiative> phase <n> start|end
+with plan <blob>`, reads the old audit file on a re-run with the auditor's rules, and replies with
+the whole file, its `Plan:` line the blob it was given.
 
 The end-of-initiative auditors (§4) are `redline-security-auditor.md`,
 `redline-architecture-auditor.md` and `redline-process-auditor.md`, the same way: `Read, Grep,
-Glob`, `model: fable`, the same refusal. Each is given `<initiative>`, reads no other audit file
-but its own, and replies with the whole `initiative-<side>.md`.
+Glob`, `model: fable`, the same refusal. Each is given `<initiative> with plan <blob>`, reads no
+other audit file but its own, and replies with the whole `initiative-<side>.md`, `Plan:` line too.
 
 ## 10. Learning loop
 
@@ -804,7 +838,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    critical level builds on phases: a plan-auditor at each phase's start and end,
    end-of-initiative auditors, one track per Green PR, blind relabelling. Part 6 is the
    plan-auditor; part 7 the end-of-initiative auditors (O-PLAN2); part 8 the plan's own level
-   and the audited plan's version (O-PLAN1, O-PLAN3); part 9 the claims record (O-PLAN4).
+   and the audited plan's version (O-PLAN1, O-PLAN3); part 9 the claims record (O-PLAN4); part
+   10 a deleted plan (O-PLAN5).
 
 ## 12. Open problems
 
@@ -833,18 +868,22 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   `redline/config.yaml`, which sets the level of every change whose proposal declares none. Now
   any PR that changes it needs a `Redline-Rigor` trailer and a maintainer's `redline:rigor` label
   (§7).
-- O-PLAN1 [open, build 6 part 8]: an initiative is critical only through its changes' levels,
-  and a change with no proposal yet takes the config's. An initiative whose first S step declares
-  `Rigor: critical` was never required to audit that phase's start. The fix is a `Rigor:` line in
-  the plan, changed only under the rigor claim (§7), as `rigor:` in the config is.
+- O-PLAN1 [closed, build 6 part 8]: an initiative was critical only through its changes' levels,
+  and a change with no proposal yet takes the config's, so an initiative whose first S step
+  declared `Rigor: critical` skipped that phase's start audit. Now the plan has its own `Rigor:`
+  line, which only raises the level and changes only under the rigor claim (§4, §7).
 - O-PLAN2 [closed, build 6 part 7]: nothing audited a whole initiative once its last phase was
   complete. Now three independent auditors (security, architecture, process) each return
   `audits/initiative-<side>.md`, and check-plan fails on every PR until all three are resolved (§4).
-- O-PLAN3 [open, build 6 part 8]: a plan audit isn't tied to the plan it read. A PR outside any
-  step may change a phase's changes or its `Stop:` after the start audit, and `start` still
-  passes. The fix is to record the plan's blob hash in the audit and refuse on a mismatch.
+- O-PLAN3 [closed, build 6 part 8]: a plan audit wasn't tied to the plan it read, so a PR outside
+  any step could change a phase's changes or its `Stop:` after the start audit and `start` still
+  passed. Now each audit records the plan's blob in a `Plan:` line; `start` refuses a stale start
+  audit, and check-plan a stale latest end audit or end-of-initiative audit (§4).
 - O-PLAN4 [open, build 6 part 9]: the end-of-initiative auditors read files only, so the claims
   git history holds (`Oversized`, `Redline-Track`, `Redline-Departure`, `Redline-Rigor` trailers,
   and who labelled them) are out of the process auditor's sight. The fix is a `redline claims
   <initiative>` that prints them from `main`, given to it as `redline blind`'s text is given to the
   relabeller.
+- O-PLAN5 [open, build 6 part 10]: a PR outside any step may delete a plan that has no `Rigor:`
+  line. Its changes leave the initiative, and check-plan stops asking for its audits. The fix is
+  to make deleting a plan, or removing a change from one, a claim like a changed `Rigor:` line.
