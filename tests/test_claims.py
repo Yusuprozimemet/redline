@@ -188,6 +188,47 @@ def test_only_main_counts(planned, capsys, github):
     assert "From main: 0 claims on 1 commit:" in out and "No claims.\n" in out and "big" not in out
 
 
+def test_a_change_taken_out_of_the_plan_keeps_its_claims(planned, capsys, github):
+    wave = step(planned, "add-wave/G1", "Redline-Track: waving moved")
+    dropped = planned.commit("drop waving\n\nRedline-Rigor: waving is its own work",
+                             {PLAN: VALID.replace("add-greet, add-wave", "add-greet")})
+    code, out = claims(planned, capsys)
+    assert code == 0, out
+    assert out.splitlines()[1].startswith("From main: 2 claims on 3 commits: the steps of add-greet, add-wave, add-farewell,"), out
+    assert f"Left the plan: add-wave in {dropped[:7]}.\n" in out
+    assert f"## {wave[:7]} add-wave/G1: add-wave/G1 done\nRedline-Track: waving moved\n" in out
+    planned.commit("wave again", {PLAN: VALID})
+    code, out = claims(planned, capsys)
+    assert code == 0 and "Left the plan" not in out and wave[:7] in out, "a change put back isn't named"
+
+
+def test_a_change_taken_out_in_a_merged_pr_left_at_the_merge(planned, capsys, github):
+    planned.git("checkout", "-q", "-b", "drop")
+    planned.commit("hug too", {PLAN: VALID.replace("add-farewell", "add-farewell, add-hug")})
+    planned.commit("drop waving\n\nRedline-Rigor: waving is its own work",
+                   {PLAN: VALID.replace("add-greet, add-wave", "add-greet")})
+    planned.git("checkout", "-q", "main")
+    planned.git("merge", "-q", "--no-ff", "--no-edit", "drop")
+    merge = planned.git("rev-parse", "HEAD")
+    code, out = claims(planned, capsys)
+    assert code == 0, out
+    assert f"Left the plan: add-wave in {merge[:7]}.\n" in out
+    assert "add-hug" not in out, "a version only inside the PR isn't read"
+
+
+def test_a_deleted_plan_still_has_its_claims(planned, capsys, github):
+    greet = step(planned, "add-greet/G1", "Oversized: one change")
+    planned.git("rm", "-q", PLAN)
+    planned.git("commit", "-q", "-m", "drop greetings\n\nRedline-Rigor: not an initiative any more")
+    gone = planned.git("rev-parse", "HEAD")
+    code, out = claims(planned, capsys)
+    assert code == 0, out
+    assert f"Left the plan: add-greet, add-wave, add-farewell in {gone[:7]}.\n" \
+           f"The plan was deleted from main in {gone[:7]}.\n" in out
+    assert f"## {greet[:7]} add-greet/G1: " in out
+    assert f"## {gone[:7]} outside any step: drop greetings\nRedline-Rigor: not an initiative any more\n" in out
+
+
 def test_an_unknown_initiative_is_an_error(planned, capsys, github):
     code, out = claims(planned, capsys, "nope")
     assert code == 2 and "no plan redline/initiatives/nope/plan.md on main" in out, out
