@@ -62,7 +62,8 @@ redline/
 ├── specs/<domain>/spec.md          # living behaviour; each scenario carries its ID
 ├── contracts/lock.yaml             # hashes of frozen `hold` tests
 ├── initiatives/<id>/plan.md        # goal, phases, the changes of each, stopping points
-├── initiatives/<id>/audits/        # phase-<n>-start.md, phase-<n>-end.md: plan audits (critical)
+├── initiatives/<id>/audits/        # phase-<n>-start.md, phase-<n>-end.md: plan audits (critical);
+│                                   # initiative-<side>.md: end-of-initiative audits (critical)
 └── changes/<id>/
     ├── proposal.md                 # why, scope, non-goals, rigor level
     ├── specs/<domain>/delta.md     # ADDED/MODIFIED/REMOVED; scenarios tagged new | hold; premises
@@ -261,6 +262,8 @@ a change with no `steps.md` yet isn't. A phase is complete when all its changes 
   finding that isn't resolved as `check-audit` requires (§4): `[open]`, `[closed]` without
   `Resolution:`, `[waived]` without `Waived-by:`. Completeness is read from `main`; the audit
   from the tree being checked, so the PR that adds it passes.
+- **A complete critical initiative**, every phase complete on `main`, whose three
+  end-of-initiative audits (below) aren't all there and resolved, read the same way.
 
 **Plan audits**, at critical. An initiative is critical when any change it lists is: its
 proposal's `Rigor:`, else the config's `rigor:` (a change with no proposal yet takes the
@@ -303,6 +306,55 @@ PRs. That is meant: an unaudited stop is a silent gap (§2.7), and the fix is on
 What it doesn't prove: that the audited plan is the plan now, since a PR outside any step may
 edit the plan after its phase's start audit (O-PLAN3); and, as with the auditor, what the agent
 read, or that its reply was written unedited (§9).
+
+**End-of-initiative audits**, at critical, once every phase is complete on `main`. A plan audit
+asks of one phase whether its `Stop:` is true and whether the phases after it still hold. Nobody
+asks of the whole initiative, after its last stop, whether what it built can be relied on,
+whether its gates could have passed while its `Goal:` was false, or what its record shows. Three
+auditors do, as the migration engine's three end-of-migration auditors did. Each is read-only, on
+the strongest model, in a fresh context (§9), and is given only `<initiative>`:
+
+| Side | Agent (`.claude/agents/`) | Asks | Reads, besides the plan |
+|---|---|---|---|
+| `security` | `redline-security-auditor.md` | Can what the initiative built, and the way it was built, be trusted with more agent autonomy? | the code the changes' `Track:` lines name, `.github/workflows/`, `.claude/`, `redline/config.yaml` |
+| `architecture` | `redline-architecture-auditor.md` | Do its gates hold: could every test pass while the `Goal:` is false? | the living specs, each change's deltas and `steps.md`, the tests linked to them, the lock, each `ledger.yaml` |
+| `process` | `redline-process-auditor.md` | What does its record show, and how far can it be trusted? | each change's `proposal.md`, `audit.md`, `defects.md`, `relabel.yaml`, `steps.md` and `ledger.yaml`; the config's `rules:` |
+
+- **Security** checks authentication, authorization, secrets and the untrusted input the code
+  reads; and for the agents, what their tools and the workflow's tokens can reach, prompt
+  injection through the specs, defect logs and PR text a session reads, and actions not pinned.
+- **Architecture** checks that the `Goal:` is stated by scenarios on `main`, each with a test that
+  can fail (a red and green, or a break, in the ledger); what a gate enforces and what rests on an
+  agent's word; and what a test could pass while violating: a THEN clause it doesn't assert, a
+  break that mutated nothing its scenario protects.
+- **Process** checks the defects by cause across changes and phases, and whether a cause came back
+  after `retro` added a rule against it; how often the relabeller disagreed and how each was
+  decided; what the auditor found and who waived it; which decisions were a person's and which an
+  agent's.
+
+**How they differ from the last phase's end plan audit.** That audit reads one phase in the plan's
+own terms: its `Stop:`, its open items, the phases after it, and after the last phase there are
+none. These read every phase against the `Goal:`, each from a side the plan-auditor doesn't look
+from, and none judges the plan. They run beside it, at the same stopping point, independently:
+none reads another's file or the plan audits, so their disagreement is part of the result. Each
+reads only its own earlier file, on a re-run.
+
+Each replies with the whole file, which the main session writes unedited to
+`redline/initiatives/<id>/audits/initiative-<side>.md`, in the form of `audit.md`, in a PR
+outside any step. A finding is closed by a re-run once it is answered: fixed on `main`, or taken
+on by name by a change whose proposal says so. The initiative is complete, so that change is in
+no phase of it, and its own S step can carry the re-run that closes the finding. A limit the
+maintainer accepts is a waiver. No finding is left without an owner (§2.7).
+
+The gate is check-plan's, as at any stopping point: on every PR it fails on a complete critical
+initiative while any of the three is missing or unresolved. `merged` at the last stopping point
+prints the three, where each goes, and that check-plan fails until they land. `start` can't be
+the gate: a complete initiative starts nothing.
+
+What it doesn't prove: that none read another's file, since Claude Code can't limit Read (§9); or
+what only git history holds. With `Read, Grep, Glob`, they see the ledger's commits, not the
+trailers and PR text that record `Oversized`, `Redline-Track` and departure claims (O-PLAN4). And
+a plan given a new phase after its audits keeps them, as an audit isn't tied to the plan (O-PLAN3).
 
 The defect log, `redline/changes/add-2fa/defects.md`, records what went wrong in the change's
 own work after it was committed: a wrong premise found at G2, a test that couldn't fail, a fix
@@ -562,7 +614,7 @@ When that completes the change's phase, it also prints that the initiative is at
 point, and the phase's `Stop:` line. Then it prints the next phase and its changes, or that the
 initiative is complete. It starts nothing: going on is the maintainer's call. In a critical
 initiative it also prints the plan audits now due (§4): the phase's end, and the next phase's
-start.
+start, or, after the last phase, the three end-of-initiative audits.
 
 The brief (goal, owned scenario IDs, cited files, open items, the rules of `redline/config.yaml`)
 is generated from the spec, the ledger, the open items and the config. For a change in an initiative, it also gives the initiative's goal,
@@ -683,6 +735,7 @@ public APIs are critical) but never lower it.
 | Auditor | Strongest, fresh context | Read and report only |
 | Plan-auditor | Strongest, fresh context | Read and report on an initiative's phase, at its start and end |
 | Relabeller | Strongest, fresh context | Label defects from their text, blind to the first label |
+| End-of-initiative auditors (3) | Strongest, fresh context each | Read and report on a whole initiative, each from one side, none reading another |
 | Implementer | Cheaper | Code from a brief; never commits |
 
 The CLI holds the rules; each AI tool gets thin skills or commands, as in OpenSpec.
@@ -701,6 +754,11 @@ only from the entries' text, reads no other file, and replies with the whole `re
 The plan-auditor (§4, plan audits) is `.claude/agents/redline-plan-auditor.md`: tools `Read,
 Grep, Glob`, `model: fable`, the same refusal. It is given `<initiative> phase <n> start|end`,
 reads the old audit file on a re-run with the auditor's rules, and replies with the whole file.
+
+The end-of-initiative auditors (§4) are `redline-security-auditor.md`,
+`redline-architecture-auditor.md` and `redline-process-auditor.md`, the same way: `Read, Grep,
+Glob`, `model: fable`, the same refusal. Each is given `<initiative>`, reads no other audit file
+but its own, and replies with the whole `initiative-<side>.md`.
 
 ## 10. Learning loop
 
@@ -746,7 +804,7 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    critical level builds on phases: a plan-auditor at each phase's start and end,
    end-of-initiative auditors, one track per Green PR, blind relabelling. Part 6 is the
    plan-auditor; part 7 the end-of-initiative auditors (O-PLAN2); part 8 the plan's own level
-   and the audited plan's version (O-PLAN1, O-PLAN3).
+   and the audited plan's version (O-PLAN1, O-PLAN3); part 9 the claims record (O-PLAN4).
 
 ## 12. Open problems
 
@@ -779,8 +837,14 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   and a change with no proposal yet takes the config's. An initiative whose first S step declares
   `Rigor: critical` was never required to audit that phase's start. The fix is a `Rigor:` line in
   the plan, changed only under the rigor claim (§7), as `rigor:` in the config is.
-- O-PLAN2 [open, build 6 part 7]: the independent end-of-initiative auditors: what each reads,
-  the file each returns, and the gate that refuses without them once the last phase is complete.
+- O-PLAN2 [closed, build 6 part 7]: nothing audited a whole initiative once its last phase was
+  complete. Now three independent auditors (security, architecture, process) each return
+  `audits/initiative-<side>.md`, and check-plan fails on every PR until all three are resolved (§4).
 - O-PLAN3 [open, build 6 part 8]: a plan audit isn't tied to the plan it read. A PR outside any
   step may change a phase's changes or its `Stop:` after the start audit, and `start` still
   passes. The fix is to record the plan's blob hash in the audit and refuse on a mismatch.
+- O-PLAN4 [open, build 6 part 9]: the end-of-initiative auditors read files only, so the claims
+  git history holds (`Oversized`, `Redline-Track`, `Redline-Departure`, `Redline-Rigor` trailers,
+  and who labelled them) are out of the process auditor's sight. The fix is a `redline claims
+  <initiative>` that prints them from `main`, given to it as `redline blind`'s text is given to the
+  relabeller.
