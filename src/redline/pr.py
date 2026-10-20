@@ -6,7 +6,8 @@ change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
 check-lock runs at R, and at G steps against main's lock too. check-track runs at G steps (track.py).
-A changed `rigor:` in the config needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
+A changed `rigor:` in the config or `Rigor:` line in a plan, a deleted plan, or a change taken out of
+one, needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
 <reason>` trailer needs a maintainer's label, as a departure does (approval.py); locally, where
 the PR doesn't exist yet, `pr` only reports that CI will need it.
 If every gate passes, each commit of the step gets the `Redline-Step: <change>/<step>` trailer
@@ -89,7 +90,8 @@ def size(repo: Path, approvals: Approvals) -> list[str]:
 
 
 def rigor_claim(repo: Path, approvals: Approvals) -> list[str]:
-    """A changed `rigor:` in the config, or a plan's changed `Rigor:` line, needs an approved `Redline-Rigor` claim."""
+    """A changed `rigor:` in the config or `Rigor:` line in a plan, a deleted plan, or a change taken out of
+    one, needs an approved `Redline-Rigor` claim."""
     fork = git(repo, "merge-base", "main", "HEAD").stdout.strip()
     shown = git(repo, "show", f"{fork}:redline/config.yaml")
     old = str(((yaml.safe_load(shown.stdout) if shown.returncode == 0 else None) or {}).get("rigor") or "standard")
@@ -97,10 +99,16 @@ def rigor_claim(repo: Path, approvals: Approvals) -> list[str]:
         f"rigor: `rigor:` in redline/config.yaml changed from {old} to {new}"]
     listed = git(repo, "ls-tree", "-r", "--name-only", fork, "--", ROOT).stdout.split()
     for path in (p for p in listed if p.endswith("/plan.md") and p.count("/") == 3):  # a new plan isn't a change
-        before = parse_plan("", git(repo, "show", f"{fork}:{path}").stdout).rigor
-        now = parse_plan("", (repo / path).read_text(encoding="utf-8")).rigor if (repo / path).is_file() else ""
-        if before != now:
-            changed.append(f"rigor: the `Rigor:` line of {path} changed from {before or 'none'} to {now or 'none'}")
+        before = parse_plan("", git(repo, "show", f"{fork}:{path}").stdout)
+        now = parse_plan("", (repo / path).read_text(encoding="utf-8")) if (repo / path).is_file() else None
+        if before.rigor != (level := now.rigor if now else ""):
+            changed.append(f"rigor: the `Rigor:` line of {path} changed from {before.rigor or 'none'} to {level or 'none'}")
+        had = [c for phase in before.phases for c in phase.changes]
+        if now is None:
+            changed.append(f"rigor: {path} was deleted, taking {', '.join(had) or 'no changes'} out of its initiative")
+        else:
+            kept = {c for phase in now.phases for c in phase.changes}
+            changed += [f"rigor: {c} was taken out of {path}" for c in had if c not in kept]
     if changed and not claims(repo, fork, "Redline-Rigor"):
         return [f"{what}, with no Redline-Rigor trailer" for what in changed]
     return [why for what in changed if (why := approvals.approve(RIGOR, what))]

@@ -277,6 +277,19 @@ change with no proposal yet takes the config's, so without the plan's line an in
 first S step declares `Rigor: critical` would skip that phase's start audit. The plan's line can
 only raise the level: a change it lists that is critical stays so. Changing the line, removing it
 or deleting a plan that has one is a claim, as changing the config's `rigor:` is (§7, Approvals).
+
+So is **taking a change out of a plan**: deleting the plan, with or without a `Rigor:` line, or
+removing a change from every phase of it, or a whole phase. The change leaves the initiative: a
+critical change no longer makes it critical, its phase's audits stop being asked for, and `start`
+stops making it wait for earlier phases. That holds at every level, since a change with no
+proposal yet takes the config's, so whether its initiative was critical can't be known when it
+leaves. It is the same claim, `Redline-Rigor` with the `redline:rigor` label, not a new one: what
+the maintainer approves is the same, that an initiative's changes face less than they did. The
+rigor check (§7) reads each plan's changes at the merge-base with `main` and fails on any listed
+there that its plan, in the tree now, doesn't list, naming the change and the plan, or the plan
+and its changes when it was deleted. A plan renamed is a plan deleted. Adding a change, or moving
+one to another phase of the same plan, isn't a claim; a change moved to another plan is.
+
 Its plan is then audited at each phase's start and end by the plan-auditor,
 `.claude/agents/redline-plan-auditor.md` (§9), given only `<initiative> phase <n> start` or
 `<initiative> phase <n> end`. The change auditor reads one change; nobody else reads how the
@@ -333,8 +346,9 @@ PRs. That is meant: an unaudited stop is a silent gap (§2.7), and the fix is on
 What it doesn't prove: that the agent read the plan whose blob it recorded, since it can't hash
 a file, and the blob is the main session's word, as what the agent read and that its reply was
 written unedited are (§9); a plan edited during phase 1, before any end audit, which nothing
-refuses until that end audit reads it; and a plan without a `Rigor:` line deleted outside any
-step, which takes its plan audits with it (O-PLAN5).
+refuses until that end audit reads it; and a change moved between phases of its plan, which is
+a plan edit, not a claim, seen only by a stale audit. A deleted plan, or a change taken out of
+one, needs the rigor claim (above).
 
 **End-of-initiative audits**, at critical, once every phase is complete on `main`. A plan audit
 asks of one phase whether its `Stop:` is true and whether the phases after it still hold. Nobody
@@ -422,6 +436,10 @@ What it still doesn't prove:
 - **A claim that should have been made**: a PR merged over a gate, without CI or with it failing,
   has no trailer to print. It shows only that the record holds no claim there.
 - **PR text**: descriptions and review comments aren't printed.
+- **The claims of a change taken out of the plan**: the commit that took it out is printed, with
+  its `Redline-Rigor` claim, but the change's own steps no longer are, since the plan on `main`
+  doesn't list it (O-PLAN7). A deleted plan has no `claims` at all; its initiative is gone, and
+  the deletion's claim is in `main`'s history only.
 
 The defect log, `redline/changes/add-2fa/defects.md`, records what went wrong in the change's
 own work after it was committed: a wrong premise found at G2, a test that couldn't fail, a fix
@@ -722,7 +740,8 @@ Otherwise it runs the gates that hold for any PR, and prints every failure:
 - **check-lines**, with the `Oversized` rule (§7, Approvals): over 400 lines needs the trailer and
   a maintainer's `redline:oversized` label.
 - **check-plan** on every initiative.
-- **The rigor check**: a changed `rigor:` needs `Redline-Rigor` and its label (Approvals, below).
+- **The rigor check**: a changed `rigor:` or `Rigor:` line, a deleted plan or a change taken out
+  of one needs `Redline-Rigor` and its label (Approvals, below).
 - **check-lock** on every change the lock names, without `--base`. The PR can't touch the lock,
   so a locked test or (at critical) what it reaches can't change outside a step at all. A
   `Redline-Departure` trailer doesn't help: a departure is a step's, and re-locks the test.
@@ -747,15 +766,16 @@ says a maintainer agreed. Four claims need one:
 | `Redline-Departure: <test> approved-by @person: <reason>` | a frozen test's lock entry to change (§5) | `redline:departure` |
 | `Oversized: <reason>` | more than 400 changed lines (§2.3) | `redline:oversized` |
 | `Redline-Track: <reason>` | a G step changing files outside its track (§5) | `redline:track` |
-| `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml`, or to a plan's `Rigor:` line | `redline:rigor` |
+| `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml` or to a plan's `Rigor:` line; a plan deleted, or a change taken out of one | `redline:rigor` |
 
 `rigor:` sets the level of every change whose proposal names none, and so what all their gates
 require, so changing it, up or down, is a claim on any PR, in a step or outside one (§7). A plan's
 `Rigor:` line sets whether its initiative's plans are audited (§4), so it is the same claim. The
 rigor check compares the config's `rigor:` at the merge-base with `main` to its value now, and
 each plan's `Rigor:` there to its line now (none, for a plan without one or one deleted), and
-fails on a difference without the trailer, or, in CI, without the label. A new plan declares its
-level without a claim, as a new proposal does.
+each plan's changes there to its changes now (a deleted plan lists none, §4), and fails on a
+difference without the trailer, or, in CI, without the label. A new plan declares its level and
+its changes without a claim, as a new proposal does.
 
 A trailer without its reason (or, for a departure, without `approved-by @person:`) allows nothing.
 One label covers every claim of its kind in the PR. The labels are separate, so approving the size
@@ -879,7 +899,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    end-of-initiative auditors, one track per Green PR, blind relabelling. Part 6 is the
    plan-auditor; part 7 the end-of-initiative auditors (O-PLAN2); part 8 the plan's own level
    and the audited plan's version (O-PLAN1, O-PLAN3); part 9 the claims record (O-PLAN4); part
-   10 a deleted plan (O-PLAN5); part 11 labels recorded at the merge (O-PLAN6).
+   10 a deleted plan (O-PLAN5); part 11 labels recorded at the merge (O-PLAN6); part 12 the
+   claims of a change taken out of its plan (O-PLAN7).
 
 ## 12. Open problems
 
@@ -924,11 +945,16 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   and who labelled them) were out of the process auditor's sight. Now `redline claims
   <initiative>` prints them from `main`, with each one's PR and label, and the process auditor is
   given that text as the relabeller is given `redline blind`'s (§4).
-- O-PLAN5 [open, build 6 part 10]: a PR outside any step may delete a plan that has no `Rigor:`
-  line. Its changes leave the initiative, and check-plan stops asking for its audits. The fix is
-  to make deleting a plan, or removing a change from one, a claim like a changed `Rigor:` line.
+- O-PLAN5 [closed, build 6 part 10]: a PR outside any step could delete a plan that had no
+  `Rigor:` line. Its changes left the initiative, and check-plan stopped asking for its audits.
+  Now deleting a plan, or taking a change out of one, is the rigor claim: a `Redline-Rigor`
+  trailer and a maintainer's `redline:rigor` label, checked by `pr` and `redline ci pr` (§4, §7).
 - O-PLAN6 [open, build 6 part 11]: `redline claims` reads each claim's label and its applier's
   role when it runs, which may be long after the merge, so a label removed or added since, or a
   role changed, misreports what approved the PR. The fix is for `redline ci push` to record each
   claim of the merged PR, its label, who applied it and their role, in the CI note on the merged
   commit, and for `claims` to read the note.
+- O-PLAN7 [open, build 6 part 12]: `redline claims` prints the steps of the changes the plan on
+  `main` lists, so a change taken out of the plan, under an approved rigor claim, takes its own
+  claims out of the record the process auditor reads. The fix is for `claims` to take the
+  changes every version of the plan on `main` listed.
