@@ -8,7 +8,8 @@ each `- <ID> [<step>]: <text>` line is a deferred item owned by that step.
 A step is merged on main when a commit reachable from main carries the trailer
 `Redline-Step: <change>/<step>`. The open step is kept in the git directory, and stops being open
 once it is merged. A change is complete once its last step is merged. A change in an
-initiative's phase waits until every change of the earlier phases is complete (plan.py).
+initiative's phase waits until every change of the earlier phases is complete (plan.py), and, in
+a critical initiative, until its plan audits are on main (planaudit.py).
 """
 
 import re
@@ -168,6 +169,10 @@ def start(repo: Path, name: str) -> str:
         raise Refused(f"step {current} is still open; finish it with `redline pr` first")
     if why := waiting(repo, change, merged):
         raise Refused(why)
+    if found := placed(repo, change):
+        from redline.planaudit import before_start  # planaudit imports this module
+        if bad := before_start(repo, *found):
+            raise Refused(f"{found[0].name} needs its plan audits on main first:\n" + "\n".join(bad))
     if index and (previous := f"{change}/{steps[index - 1].name}") not in merged:
         raise Refused(f"previous step {previous} is not merged on main")
     head = git(repo, "rev-parse", "HEAD", "main").stdout.split()

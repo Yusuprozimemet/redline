@@ -15,6 +15,7 @@ from pathlib import Path
 
 from redline.order import git
 from redline.plan import placed
+from redline.planaudit import due
 from redline.start import Refused, brief, complete, find_step, merged_steps, open_step_file
 
 
@@ -47,7 +48,7 @@ def stopping_point(repo: Path, change: str, done: set[str]) -> str:
     if not all(complete(repo, c, done) for c in phase.changes):
         return ""
     said = (f"The initiative {plan.name} is at a stopping point: phase {phase.number} ({phase.name}) "
-            f"is complete.\nStop: {phase.stop}\n")
+            f"is complete.\nStop: {phase.stop}\n") + due(repo, plan, index)
     if index == len(plan.phases) - 1:
         return said + f"The initiative {plan.name} is complete.\n"
     following = plan.phases[index + 1]

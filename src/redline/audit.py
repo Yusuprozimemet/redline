@@ -28,11 +28,15 @@ def check_audit(repo: Path, change: str) -> AuditReport:
     if not (repo / "redline/changes" / change).is_dir():
         raise RuntimeError(f"no change redline/changes/{change}")
     where = f"redline/changes/{change}/audit.md"
-    report = AuditReport()
     if not (repo / where).is_file():
-        report.bad.append(f"{where}: missing; run the auditor on the change")
-        return report
-    lines = (repo / where).read_text(encoding="utf-8").splitlines()
+        return AuditReport(bad=[f"{where}: missing; run the auditor on the change"])
+    return read_findings((repo / where).read_text(encoding="utf-8"), where)
+
+
+def read_findings(text: str, where: str) -> AuditReport:
+    """The findings of an audit file's text, and what is wrong with them; plan audits use it too."""
+    report = AuditReport()
+    lines = text.splitlines()
     seen: dict[str, int] = {}
     for n, line in enumerate(lines, 1):
         if not line.startswith("## "):
