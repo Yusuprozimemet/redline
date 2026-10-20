@@ -1,12 +1,15 @@
 """`redline check-break <change>`: mutation proves each `hold` scenario's tests can fail.
 
 Its tests (spec marker without `new=True`) must pass unmutated, and fail under at least one mutant
-of the Python files the change's premises cite. mutmut sits behind `Mutator`, which tests replace;
-it doesn't run on Windows, so there the mutation is skipped (CI runs it). See docs/design.md, §5.
+of the Python files the change's premises cite. Each runner's mutation tool is in `MUTATORS`, keyed
+by runner name, which tests replace whole: mutmut for pytest, which doesn't run on Windows, so there
+the mutation is skipped (CI runs it), and Stryker for Jest. See docs/design.md, §5.
 """
 
 import configparser
+import contextlib
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -23,8 +26,8 @@ from redline.runner import PYTEST, RUNNERS, runner_for
 HOLD = re.compile(r"^#### Scenario (\S+) \[hold\]:")
 
 
-class Mutator:
-    """The mutation tool: mutmut, run in a throwaway copy of the repository."""
+class Mutmut:
+    """pytest's mutation tool: mutmut, run in a throwaway copy of the repository."""
 
     def __init__(self, repo: Path):
         self.repo = repo
@@ -50,6 +53,44 @@ class Mutator:
                     raise RuntimeError(f"{' '.join(command)}: {(done.stderr or done.stdout).strip()[-500:]}")
         statuses = [line.rpartition(": ")[2].strip() for line in done.stdout.splitlines() if "__mutmut_" in line]
         return len(statuses), statuses.count("killed")
+
+
+class Stryker:
+    """Jest's mutation tool: Stryker, which mutates in its own sandbox. Its JSON report is read, then deleted."""
+
+    REPORT = Path("reports/mutation/mutation.json")
+    PACKAGES = ("@stryker-mutator/core", "@stryker-mutator/jest-runner")
+    MADE = ("Killed", "Survived", "NoCoverage", "Timeout")  # not CompileError, RuntimeError, Ignored, Pending
+
+    def __init__(self, repo: Path):
+        self.repo = repo
+
+    def unavailable(self) -> str | None:
+        if not shutil.which("npx"):
+            return "npx isn't installed"
+        missing = (p for p in self.PACKAGES if not (self.repo / "node_modules" / p).is_dir())
+        return next((f"{p} isn't installed" for p in missing), None)
+
+    def kills(self, files: list[str], sid: str) -> tuple[int, int]:
+        """(mutants made from `files`, mutants that made the scenario's tests fail); a timeout isn't a kill."""
+        argv = [shutil.which("npx"), "--no-install", "stryker", "run", "--mutate", ",".join(files),
+                "--testRunner", "jest", "--reporters", "json"]
+        done = subprocess.run(argv, cwd=self.repo, capture_output=True, encoding="utf-8", errors="replace",
+                              env={**os.environ, "REDLINE_SPEC": sid})
+        report = self.repo / self.REPORT
+        try:
+            if done.returncode:
+                raise RuntimeError(f"stryker run: {(done.stderr or done.stdout).strip()[-500:]}")
+            found = json.loads(report.read_text(encoding="utf-8"))["files"].values()
+        finally:
+            shutil.rmtree(report.parent, ignore_errors=True)
+            with contextlib.suppress(OSError):
+                report.parent.parent.rmdir()  # reports/, unless something else is in it
+        made = [m["status"] for f in found for m in f["mutants"] if m["status"] in self.MADE]
+        return len(made), made.count("Killed")
+
+
+MUTATORS = {"pytest": Mutmut, "jest": Stryker}  # runner name -> its mutation tool
 
 
 @dataclass
@@ -108,7 +149,7 @@ def check_break(repo: Path, change: str) -> BreakReport:
     if not tests:
         return report
     files = touched(repo, change)
-    mutator = Mutator(repo)
+    mutator = MUTATORS[PYTEST.name](repo)  # Jest's from part 8 (O-RUN1)
     report.skipped = mutator.unavailable()
     for sid in tests:
         if not tests[sid]:

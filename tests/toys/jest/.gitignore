@@ -1,0 +1,4 @@
+node_modules/
+redline/
+reports/
+.stryker-tmp/

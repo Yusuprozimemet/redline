@@ -14,7 +14,7 @@ from fnmatch import fnmatch
 from importlib.resources import files
 from pathlib import Path
 
-HELPERS = {"jest": "redline/runners/spec.js"}  # runner -> where `redline install` writes its helper
+HELPERS = {"jest": "redline/runners/jest.js"}  # runner -> where `redline install` writes its helper
 CLOSE = {"(": ")", "[": "]", "{": "}"}
 
 

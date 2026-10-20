@@ -12,11 +12,11 @@ from test_check_break import check_break, holds, mutator  # noqa: F401 (fixtures
 from test_lock import LOCK, check_lock, lock
 from test_start import CHANGE, change  # noqa: F401 (change is a fixture)
 
-HELPER = "redline/runners/spec.js"
+HELPER = "redline/runners/jest.js"
 H1 = """spec("GREET.H1").test('returns nothing (or ")")', () => {
   expect(`${placeholder()} {`).toBe("undefined {"); // a ) in a comment
 })"""
-JEST = ('const { spec } = require("./redline/runners/spec");\nconst { placeholder } = require("./greet");\n\n' + H1
+JEST = ('const { spec } = require("./redline/runners/jest");\nconst { placeholder } = require("./greet");\n\n' + H1
         + ';\n\nspec("GREET.H2", { new: true }).test("takes no arguments", () => {\n  expect(() => placeholder(1)).toThrow();\n});\n')
 NAME = 'greet.test.ts::returns nothing (or ")")'
 
@@ -28,7 +28,7 @@ def install(repo) -> int:
 def test_install_jest_writes_the_helper_redline_ships(repo, capsys):
     repo.commit("start")
     assert install(repo) == 0
-    shipped = files("redline").joinpath("helpers", "spec.js").read_text(encoding="utf-8")
+    shipped = files("redline").joinpath("helpers", "jest.js").read_text(encoding="utf-8")
     assert (repo.path / HELPER).read_text(encoding="utf-8") == shipped
     assert "test.failing" in shipped and "REDLINE_SPEC" in shipped
     assert f"ok: wrote {HELPER}" in capsys.readouterr().out
