@@ -4,6 +4,7 @@ from pathlib import Path
 from redline.audit import check_audit
 from redline.breaks import check_break
 from redline.ci import ci_pr, ci_push
+from redline.claims import claims
 from redline.defects import check_defects, retro
 from redline.ledger import check_ledger, declared, write_ledger
 from redline.lines import LIMIT, check_lines
@@ -47,6 +48,9 @@ def main(argv: list[str] | None = None) -> int:
         logged = commands.add_parser(name, help=help)
         logged.add_argument("change", help="the change, e.g. add-greet")
         logged.add_argument("--repo", type=Path, default=Path.cwd())
+    claimed = commands.add_parser("claims", help="print the claims main's history holds for an initiative")
+    claimed.add_argument("initiative", help="the initiative, e.g. 2fa-rollout")
+    claimed.add_argument("--repo", type=Path, default=Path.cwd())
     broken = commands.add_parser("check-break", help="prove by mutation that each hold scenario's tests can fail")
     broken.add_argument("change", help="the change, e.g. add-greet")
     broken.add_argument("--repo", type=Path, default=Path.cwd())
@@ -101,6 +105,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_defects(args.repo, args.change)
     if args.command in ("retro", "blind"):
         return run_retro(args.repo, args.change, retro if args.command == "retro" else blind)
+    if args.command == "claims":
+        return run_retro(args.repo, args.initiative, claims)
     if args.command == "check-relabel":
         return run_check_relabel(args.repo, args.change)
     if args.command in ("lock", "check-lock"):

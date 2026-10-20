@@ -347,7 +347,7 @@ the strongest model, in a fresh context (§9), and is given only `<initiative>`:
 |---|---|---|---|
 | `security` | `redline-security-auditor.md` | Can what the initiative built, and the way it was built, be trusted with more agent autonomy? | the code the changes' `Track:` lines name, `.github/workflows/`, `.claude/`, `redline/config.yaml` |
 | `architecture` | `redline-architecture-auditor.md` | Do its gates hold: could every test pass while the `Goal:` is false? | the living specs, each change's deltas and `steps.md`, the tests linked to them, the lock, each `ledger.yaml` |
-| `process` | `redline-process-auditor.md` | What does its record show, and how far can it be trusted? | each change's `proposal.md`, `audit.md`, `defects.md`, `relabel.yaml`, `steps.md` and `ledger.yaml`; the config's `rules:` |
+| `process` | `redline-process-auditor.md` | What does its record show, and how far can it be trusted? | each change's `proposal.md`, `audit.md`, `defects.md`, `relabel.yaml`, `steps.md` and `ledger.yaml`; the config's `rules:`; the text `redline claims` prints (below) |
 
 - **Security** checks authentication, authorization, secrets and the untrusted input the code
   reads; and for the agents, what their tools and the workflow's tokens can reach, prompt
@@ -359,7 +359,7 @@ the strongest model, in a fresh context (§9), and is given only `<initiative>`:
 - **Process** checks the defects by cause across changes and phases, and whether a cause came back
   after `retro` added a rule against it; how often the relabeller disagreed and how each was
   decided; what the auditor found and who waived it; which decisions were a person's and which an
-  agent's.
+  agent's; and each claim git history holds, and whose label approved it.
 
 **How they differ from the last phase's end plan audit.** That audit reads one phase in the plan's
 own terms: its `Stop:`, its open items, the phases after it, and after the last phase there are
@@ -380,10 +380,48 @@ initiative while any of the three is missing or unresolved. `merged` at the last
 prints the three, where each goes, and that check-plan fails until they land. `start` can't be
 the gate: a complete initiative starts nothing.
 
-What it doesn't prove: that none read another's file, since Claude Code can't limit Read (§9); or
-what only git history holds. With `Read, Grep, Glob`, they see the ledger's commits, not the
-trailers and PR text that record `Oversized`, `Redline-Track` and departure claims (O-PLAN4). A
+What it doesn't prove: that none read another's file, since Claude Code can't limit Read (§9). A
 plan edited after them makes them stale, and check-plan fails until each is run again (above).
+
+**The claims record.** With `Read, Grep, Glob`, an auditor sees files, not git history, and the
+claims (§7, Approvals) live only there: the `Oversized`, `Redline-Track`, `Redline-Departure` and
+`Redline-Rigor` trailers, and the labels that approved them. Those are the decisions a person made
+to let a gate pass, which is what the process auditor asks about. `redline claims <initiative>`
+prints them from `main`, and the main session gives that text to the process auditor after its
+arguments, as it gives `redline blind`'s text to the relabeller:
+
+```markdown
+# Claims: 2fa-rollout
+From main: 1 claim on 9 commits: the steps of add-2fa, add-recovery-codes, enforce-admin-2fa,
+and every commit that touches redline/initiatives/2fa-rollout/ or redline/config.yaml.
+
+## 4d5e6f1 add-2fa/G2 (PR #12): Lock out after five wrong codes
+Redline-Departure: tests/test_login.py::test_lockout approved-by @maintainer: five, not three
+Label: redline:departure, applied by @alice, now admin
+```
+
+- **The commits** are every non-merge commit reachable from `main` whose `Redline-Step` names a
+  step of a change the plan on `main` lists, or that touches the initiative's directory (plan
+  edits, audits, a `Rigor:` line) or `redline/config.yaml` (its `rigor:`), oldest first. Only
+  those with a claim trailer get a heading; with none, the text says `No claims.`
+- **The PR** of a commit is the merged PR GitHub associates with it
+  (`gh api repos/{owner}/{repo}/commits/<sha>/pulls`), through the `GitHub` seam (§7).
+- **The label** is the claim's label on that PR, who applied it last and their role, read as CI
+  reads them; or that it isn't on the PR, or that no merged PR was found.
+
+It prints every claim and judges none: a claim of a PR that didn't need it, a label applied by
+someone who isn't a maintainer, or a departure approved by someone other than the person its
+trailer names, is for the auditor to weigh. It writes nothing, and its text is no evidence (§7).
+
+What it still doesn't prove:
+
+- **That the auditor saw that text, unedited**: it is the main session's word, as `blind`'s is.
+- **The labels when the PR merged**: they and the roles are read when `claims` runs. A label
+  removed after the merge reads as missing; one added after it, as present (O-PLAN6). §7's limits
+  hold too: who pressed the button, and what they saw.
+- **A claim that should have been made**: a PR merged over a gate, without CI or with it failing,
+  has no trailer to print. It shows only that the record holds no claim there.
+- **PR text**: descriptions and review comments aren't printed.
 
 The defect log, `redline/changes/add-2fa/defects.md`, records what went wrong in the change's
 own work after it was committed: a wrong premise found at G2, a test that couldn't fail, a fix
@@ -644,7 +682,7 @@ point, and the phase's `Stop:` line. Then it prints the next phase and its chang
 initiative is complete. It starts nothing: going on is the maintainer's call. In a critical
 initiative it also prints the plan audits now due (§4): the phase's end, and the next phase's
 start, or, after the last phase, the three end-of-initiative audits, and the plan's blob to give
-each auditor.
+each auditor, and, to the process auditor, the text `redline claims <initiative>` prints.
 
 The brief (goal, owned scenario IDs, cited files, open items, the rules of `redline/config.yaml`)
 is generated from the spec, the ledger, the open items and the config. For a change in an initiative, it also gives the initiative's goal,
@@ -793,6 +831,8 @@ The end-of-initiative auditors (§4) are `redline-security-auditor.md`,
 `redline-architecture-auditor.md` and `redline-process-auditor.md`, the same way: `Read, Grep,
 Glob`, `model: fable`, the same refusal. Each is given `<initiative> with plan <blob>`, reads no
 other audit file but its own, and replies with the whole `initiative-<side>.md`, `Plan:` line too.
+The process auditor is also given the text `redline claims <initiative>` prints (§4), and without
+it opens a finding: the record's claims are out of its sight.
 
 ## 10. Learning loop
 
@@ -839,7 +879,7 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    end-of-initiative auditors, one track per Green PR, blind relabelling. Part 6 is the
    plan-auditor; part 7 the end-of-initiative auditors (O-PLAN2); part 8 the plan's own level
    and the audited plan's version (O-PLAN1, O-PLAN3); part 9 the claims record (O-PLAN4); part
-   10 a deleted plan (O-PLAN5).
+   10 a deleted plan (O-PLAN5); part 11 labels recorded at the merge (O-PLAN6).
 
 ## 12. Open problems
 
@@ -879,11 +919,16 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   any step could change a phase's changes or its `Stop:` after the start audit and `start` still
   passed. Now each audit records the plan's blob in a `Plan:` line; `start` refuses a stale start
   audit, and check-plan a stale latest end audit or end-of-initiative audit (§4).
-- O-PLAN4 [open, build 6 part 9]: the end-of-initiative auditors read files only, so the claims
+- O-PLAN4 [closed, build 6 part 9]: the end-of-initiative auditors read files only, so the claims
   git history holds (`Oversized`, `Redline-Track`, `Redline-Departure`, `Redline-Rigor` trailers,
-  and who labelled them) are out of the process auditor's sight. The fix is a `redline claims
-  <initiative>` that prints them from `main`, given to it as `redline blind`'s text is given to the
-  relabeller.
+  and who labelled them) were out of the process auditor's sight. Now `redline claims
+  <initiative>` prints them from `main`, with each one's PR and label, and the process auditor is
+  given that text as the relabeller is given `redline blind`'s (§4).
 - O-PLAN5 [open, build 6 part 10]: a PR outside any step may delete a plan that has no `Rigor:`
   line. Its changes leave the initiative, and check-plan stops asking for its audits. The fix is
   to make deleting a plan, or removing a change from one, a claim like a changed `Rigor:` line.
+- O-PLAN6 [open, build 6 part 11]: `redline claims` reads each claim's label and its applier's
+  role when it runs, which may be long after the merge, so a label removed or added since, or a
+  role changed, misreports what approved the PR. The fix is for `redline ci push` to record each
+  claim of the merged PR, its label, who applied it and their role, in the CI note on the merged
+  commit, and for `claims` to read the note.

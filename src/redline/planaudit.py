@@ -111,4 +111,5 @@ def due(repo: Path, plan: Plan, index: int) -> str:
              "another's reply or the plan audits.\n")
     said += "".join(f"- run redline-{side}-auditor on `{plan.name}`; write its reply unedited to "
                     f"{side_path(plan, side)}\n" for side in SIDES)
+    said += f"Give redline-process-auditor, after its arguments, the text `redline claims {plan.name}` prints.\n"
     return said + "Until all three land with every finding resolved, check-plan fails on every PR.\n"
