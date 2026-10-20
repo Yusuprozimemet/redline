@@ -11,6 +11,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from redline.links import closed
+
 CITATION = re.compile(r"`([^`\s:]+):(\d+)(?:-(\d+))?`(?:\s*\(`([^`]+)`\))?")
 PREMISE = re.compile(r"^- (\S+?):")
 
@@ -22,12 +24,15 @@ class PremiseReport:
 
 
 def premise_lines(repo: Path, change: str | None = None) -> list[tuple[str, int, str]]:
-    """(delta path, line number, text) for each premise, in one change or in all of them."""
+    """(delta path, line number, text) for each premise, in one change or in every change not closed."""
     changes = repo / "redline/changes"
     if change is not None and not (changes / change).is_dir():
         raise RuntimeError(f"no change redline/changes/{change}")
+    done = closed(repo) if change is None else set()
     found = []
     for path in sorted(changes.glob(f"{change or '*'}/specs/**/delta.md")):
+        if path.relative_to(changes).parts[0] in done:
+            continue
         inside = False
         for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if line.startswith("#"):
