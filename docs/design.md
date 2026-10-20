@@ -689,6 +689,29 @@ maintainer's `redline:track` label (§7). Without the trailer, it fails.
 Two G steps' tracks may overlap: G2 often builds on code G1 wrote, and keeping them apart would
 force splits that make no sense. The check is that a Green PR stays where it said it would.
 
+**The close is checked against the evidence.** A ledger that matches `main`'s history can still
+be incomplete: a `new` scenario that never turned green, a result CI never noted, a break that
+failed. check-ledger passes all three, so at the C step `pr` and `redline ci pr` also run
+`redline check-close <change>`. It rebuilds the ledger from `main` and fails, naming the scenario,
+on:
+
+- **A `new` scenario without both a red and a green**, or either with a `result` that isn't
+  `pass`. The red's result is the suite's on its merged commit, which passes because the test
+  failed strictly, as it should.
+- **A `hold` scenario without a break**, or one whose `result` isn't `pass`.
+
+A scenario is `new` or `hold` by its tag in the delta. It runs at C only, since at G a scenario
+owned by a later step has no green yet by design; run on its own, it checks as at C.
+
+`unverified` refuses: until CI has run on the merged commit, there is no evidence (§7). A C PR
+opened right after the last G merges usually waits so, for that merge's push run. The refusal says
+it is waiting, not wrong: once the note on that commit lands, fetch it (`git fetch origin
+'refs/notes/*:refs/notes/*'`), run `redline ledger <change>`, commit and push. The committed ledger
+must then say `pass` too, or check-ledger fails. Nothing else in the PR needs to change.
+
+What it doesn't prove: that the scenario's own test ran. A result is the whole suite's on the
+merged commit, and a test skipped there passes with it.
+
 At **lite** rigor, S and R may share one PR, so the smallest change is two sessions.
 
 ## 6. Session protocol
@@ -712,7 +735,7 @@ on `main` (§4, plan audits).
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
 which have no red by design), check-break at the R step only, check-lock from R on (G steps
-with `--base main`, §5), check-track at G steps (§5), check-defects and check-relabel at every step on the
+with `--base main`, §5), check-track at G steps (§5), check-close at the C step (§5), check-defects and check-relabel at every step on the
 step's change (the log is required only at C, the relabel only at C and critical), and the rigor
 check at every step (§7). A departure or an `Oversized` trailer doesn't refuse: the PR and its
 labels don't exist yet, so `pr` prints that CI will need the label (§7). Only when every gate
@@ -956,6 +979,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    and the audited plan's version (O-PLAN1, O-PLAN3); part 9 the claims record (O-PLAN4); part
    10 a deleted plan (O-PLAN5); part 11 labels recorded at the merge (O-PLAN6); part 12 the
    claims of a change taken out of its plan (O-PLAN7).
+7. **The close**: part 1 checks the C step against the ledger's evidence (O-CLOSE1); part 2
+   checks that the delta reached `specs/` (O-CLOSE2).
 
 ## 12. Open problems
 
@@ -1015,3 +1040,11 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   claims out of the record the process auditor reads, and a deleted plan had no `claims` at all.
   Now `claims` takes the changes every version of the plan on `main`'s first-parent line listed,
   names each that has left the plan and where, and prints a deleted plan's initiative too (§4).
+- O-CLOSE1 [closed, build 7 part 1]: check-ledger only compared the committed ledger with the
+  one rebuilt from history, so a change could close with a `new` scenario that never turned green,
+  a result CI never noted or a failed break. Now `check-close` runs at the C step and fails on any
+  scenario whose red and green, or break, isn't on `main` with `result: pass` (§5).
+- O-CLOSE2 [build 7 part 2]: §5 says the C step merges the delta into `specs/` and adds a verify
+  report, but nothing checks that the delta's ADDED, MODIFIED and REMOVED reached the living
+  specs, and the verify report has no form. Part 2 defines both and checks them at C, or drops the
+  verify report from §5.
