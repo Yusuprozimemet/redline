@@ -14,9 +14,10 @@ from redline.approval import TRACK, Approvals, claims
 from redline.config import load_config, rigor
 from redline.lines import is_generated
 from redline.order import git
+from redline.runner import RUNNERS
 from redline.start import parse_steps
 
-TESTS = ("test_*.py", "*_test.py", "conftest.py")
+TESTS = tuple(glob for runner in RUNNERS for glob in runner.test_files)
 
 
 def check_track(repo: Path, change: str, step: str, approvals: Approvals) -> list[str]:

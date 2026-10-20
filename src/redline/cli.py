@@ -346,8 +346,8 @@ def run_check_break(repo: Path, change: str) -> int:
         print(f"{sid}: {why}")
     if report.bad:
         return 1
-    if report.skipped:
-        print(f"skipped: {report.skipped}; CI runs the mutation")
+    for sid, why in report.skipped.items():
+        print(f"skipped {sid}: {why}; CI runs the mutation")
     proved = "" if report.skipped else " and fail under a mutant"
     print(f"ok: {len(report.results)} hold scenario(s): tests pass unmutated{proved}")
     return 0

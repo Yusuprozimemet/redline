@@ -111,8 +111,8 @@ def ci_push(repo: Path, run_url: str, rev: str = "HEAD") -> list[str]:
     if step == "R":
         report = check_break(repo, change)
         failures += [f"check-break: {sid}: {why}" for sid, why in report.bad.items()]
-        failures += [f"check-break: {sid}: not mutated: {report.skipped}" for sid in report.results if report.skipped]
-        broken = {sid: "fail" if why or report.skipped else "pass" for sid, why in report.results.items()}
+        failures += [f"check-break: {sid}: not mutated: {why}" for sid, why in report.skipped.items()]
+        broken = {sid: "fail" if why or sid in report.skipped else "pass" for sid, why in report.results.items()}
         message += yaml.safe_dump({"break": broken}, sort_keys=False) if broken else ""
     if not (made := (note(repo, rev) or {}).get("claims")):  # a re-run keeps the labels read at the merge
         try:

@@ -1,7 +1,7 @@
 """`redline check-break <change>`: mutation proves each `hold` scenario's tests can fail.
 
 Its tests (spec marker without `new=True`) must pass unmutated, and fail under at least one mutant
-of the Python files the change's premises cite. Each runner's mutation tool is in `MUTATORS`, keyed
+of the files its premises cite, mutated by their runner's tool. Each tool is in `MUTATORS`, keyed
 by runner name, which tests replace whole: mutmut for pytest, which doesn't run on Windows, so there
 the mutation is skipped (CI runs it), and Stryker for Jest. See docs/design.md, §5.
 """
@@ -21,7 +21,7 @@ from pathlib import Path
 
 from redline.links import SPEC_PATHS, declarations, grep
 from redline.premises import CITATION, premise_lines
-from redline.runner import PYTEST, RUNNERS, runner_for
+from redline.runner import RUNNERS, Runner, run, runner_for
 
 HOLD = re.compile(r"^#### Scenario (\S+) \[hold\]:")
 
@@ -96,7 +96,7 @@ MUTATORS = {"pytest": Mutmut, "jest": Stryker}  # runner name -> its mutation to
 @dataclass
 class BreakReport:
     results: dict[str, str | None] = field(default_factory=dict)  # hold scenario -> why it isn't proved
-    skipped: str | None = None  # why nothing was mutated here
+    skipped: dict[str, str] = field(default_factory=dict)  # hold scenario -> why its mutation was skipped
 
     @property
     def bad(self) -> dict[str, str]:
@@ -128,42 +128,55 @@ def hold_tests(repo: Path, change: str) -> dict[str, dict[str, str]]:
     return found
 
 
-def touched(repo: Path, change: str) -> list[str]:
-    """The Python files the change's premises cite: the code its R step's tests protect."""
+def touched(repo: Path, change: str, runner: Runner) -> list[str]:
+    """The files the change's premises cite that are `runner`'s: the code its R step's tests protect."""
     cited = {path for _, _, text in premise_lines(repo, change) for path, *_ in CITATION.findall(text)}
-    return sorted(p for p in cited if p.endswith(".py") and (repo / p).is_file())
+    return sorted(p for p in cited if runner_for(p) is runner and (repo / p).is_file())
 
 
-def passes(repo: Path, sid: str) -> bool:
-    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
-    done = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", f"--redline-spec={sid}"],
-        cwd=repo, capture_output=True, text=True, env=env,
-    )
-    return done.returncode == 0
+def passes(repo: Path, runner: Runner, sid: str) -> bool:
+    return run(repo, runner, sid).returncode == 0
+
+
+def unmutated(repo: Path, runner: Runner, sid: str) -> str | None:
+    """Why the scenario's tests of this runner don't pass on today's code, or None."""
+    if runner.needs and not shutil.which(runner.needs):
+        return f"its {runner.name} tests can't run: {runner.needs} isn't installed"
+    return None if passes(repo, runner, sid) else f"its {runner.name} tests fail on unmutated code"
+
+
+def mutate(repo: Path, change: str, sid: str, runners: list[Runner], report: BreakReport) -> str | None:
+    """Each runner's tool on its cited files until a mutant is killed: why the scenario isn't proved, or None."""
+    made = killed = 0
+    files, skipped = [], []
+    for runner in runners:
+        if not (mine := touched(repo, change, runner)):
+            continue
+        files += mine
+        tool = MUTATORS[runner.name](repo)
+        if why := tool.unavailable():
+            skipped.append(why)
+            continue
+        more, kills = tool.kills(mine, sid)
+        made, killed = made + more, killed + kills
+        if killed:
+            return None
+    if skipped:  # nothing killed, and a tool CI has didn't run here
+        report.skipped[sid] = "; ".join(skipped)
+        return None
+    if not files:
+        return "nothing to mutate: the change's premises cite no file its tests' runners mutate"
+    return f"its tests survive every mutant ({killed} of {made} killed, in {', '.join(files)})"
 
 
 def check_break(repo: Path, change: str) -> BreakReport:
     report = BreakReport()
-    tests = hold_tests(repo, change)
-    if not tests:
-        return report
-    files = touched(repo, change)
-    mutator = MUTATORS[PYTEST.name](repo)  # Jest's from part 8 (O-RUN1)
-    report.skipped = mutator.unavailable()
-    for sid in tests:
-        if not tests[sid]:
+    for sid, tests in hold_tests(repo, change).items():
+        runners = [r for r in RUNNERS if any(runner_for(test) is r for test in tests)]
+        if not tests:
             report.results[sid] = "no test links it without new=True"
-        elif any(runner_for(test) is not PYTEST for test in tests[sid]):
-            report.results[sid] = "its tests include Jest tests, which check-break can't run yet (O-RUN1)"
-        elif not passes(repo, sid):
-            report.results[sid] = "its tests fail on unmutated code"
-        elif report.skipped:
-            report.results[sid] = None
-        elif not files:
-            report.results[sid] = "nothing to mutate: the change's premises cite no Python file"
+        elif failed := next((why for r in runners if (why := unmutated(repo, r, sid))), None):
+            report.results[sid] = failed
         else:
-            made, killed = mutator.kills(files, sid)
-            survived = f"its tests survive every mutant ({killed} of {made} killed, in {', '.join(files)})"
-            report.results[sid] = None if killed else survived
+            report.results[sid] = mutate(repo, change, sid, runners, report)
     return report
