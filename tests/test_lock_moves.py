@@ -5,6 +5,7 @@ import yaml
 
 from redline.cli import main
 from redline.pr import gates
+from test_check_break import mutator  # noqa: F401 (a fixture)
 from test_close import HELD
 from test_start import CHANGE, DELTA, change, fresh_branch, merge_step  # noqa: F401 (change is a fixture)
 
@@ -37,6 +38,12 @@ def closed_old_greet(repo, delta: str, rigor: str = "standard") -> None:
     repo.commit("old-greet closed\n\nRedline-Step: old-greet/C")
     repo.commit("add-greet spec", {f"{CHANGE}/specs/greet/delta.md": delta})
     merge_step(repo, "S")
+
+
+@pytest.fixture(autouse=True)
+def fake_mutator(mutator):
+    """The R gate runs check-break; in CI, where mutmut is installed, the real one would run on the toy."""
+    return mutator
 
 
 @pytest.fixture
