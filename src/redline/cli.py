@@ -15,6 +15,7 @@ from redline.order import check_order
 from redline.plan import check_plan
 from redline.pr import pr
 from redline.premises import check_premises
+from redline.relabel import blind, check_relabel
 from redline.start import Refused, start
 
 
@@ -39,7 +40,9 @@ def main(argv: list[str] | None = None) -> int:
     audit.add_argument("change", help="the change, e.g. add-greet")
     audit.add_argument("--repo", type=Path, default=Path.cwd())
     for name, help in (("check-defects", "check the form of a change's defect log, as at the C step"),
-                       ("retro", "group a change's defects by cause and propose rules; writes nothing")):
+                       ("retro", "group a change's defects by cause and propose rules; writes nothing"),
+                       ("blind", "print a change's defect log without its causes, for the relabeller"),
+                       ("check-relabel", "compare the blind relabel with the defect log, as at the C step")):
         logged = commands.add_parser(name, help=help)
         logged.add_argument("change", help="the change, e.g. add-greet")
         logged.add_argument("--repo", type=Path, default=Path.cwd())
@@ -95,8 +98,10 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_break(args.repo, args.change)
     if args.command == "check-defects":
         return run_check_defects(args.repo, args.change)
-    if args.command == "retro":
-        return run_retro(args.repo, args.change)
+    if args.command in ("retro", "blind"):
+        return run_retro(args.repo, args.change, retro if args.command == "retro" else blind)
+    if args.command == "check-relabel":
+        return run_check_relabel(args.repo, args.change)
     if args.command in ("lock", "check-lock"):
         return run_lock(args.repo, args.change, getattr(args, "base", None), args.command == "check-lock")
     if args.command == "check-audit":
@@ -246,9 +251,24 @@ def run_check_defects(repo: Path, change: str) -> int:
     return 0
 
 
-def run_retro(repo: Path, change: str) -> int:
+def run_check_relabel(repo: Path, change: str) -> int:
     try:
-        print(retro(repo, change), end="")
+        report = check_relabel(repo, change)
+    except RuntimeError as error:
+        print(f"redline: {error}")
+        return 2
+    for line in report.disagreements + report.bad:
+        print(line)
+    if report.bad:
+        return 1
+    n = len(report.disagreements)
+    print(f"ok: {report.labelled} defects relabelled blind, {n} disagreement{'' if n == 1 else 's'}")
+    return 0
+
+
+def run_retro(repo: Path, change: str, make=retro) -> int:
+    try:
+        print(make(repo, change), end="")
     except Refused as reason:
         print(f"refused: {reason}")
         return 1

@@ -69,6 +69,7 @@ redline/
     ├── steps.md                    # S, R, G1..Gn, C, and the scenario IDs each step owns
     ├── audit.md                    # auditor findings and their resolution
     ├── defects.md                  # the defect log: what went wrong, its cause, what found it
+    ├── relabel.yaml                # a second, blind label per defect (critical)
     └── ledger.yaml                 # a cache of evidence; CI rebuilds it and fails on a mismatch
 ```
 
@@ -288,9 +289,53 @@ those are free text.
 
 The cause is on its own line and nowhere else, so the critical level's blind relabelling (§8) can
 show a second labeller the entry with the `Cause:` line removed and compare the two labels by ID.
-The heading and the free text say what happened, not which cause it was. Relabelling isn't built;
-when it is, the second labels go outside `defects.md`, so the first labeller can't edit them after
-seeing them.
+The heading and the free text say what happened, not which cause it was.
+
+**Blind relabelling.** The main session labelled each defect, and it also wrote the spec, the
+tests or the code the defect is about. A second label from a reader who shares none of that view
+says whether the causes, and so `retro`'s rules, can be trusted:
+
+1. `redline blind <change>` prints the log with every `Cause:` line and every `Decided:` line
+   removed. It refuses unless check-defects passes.
+2. The main session gives that text, and nothing else, to the relabeller,
+   `.claude/agents/redline-relabeller.md` (§9): read-only, on the strongest model, in a fresh
+   context. It labels each entry from its text alone and replies with the whole relabel file.
+3. The main session writes the reply unedited to `redline/changes/<id>/relabel.yaml`, outside
+   `defects.md`, so the first labels and the second can't be edited into each other.
+
+```yaml
+# Relabel: add-2fa
+D1:
+  cause: premise
+  note: P2 claimed where the counter lived, and the code showed otherwise.
+D2:
+  cause: unclear
+  note: The entry says the fix was in a later step but not what was wrong.
+```
+
+`cause` is one label of the table, or `unclear` when the text doesn't let it choose; `note` is one
+sentence on what decided it. A disagreement, where the second label isn't the `Cause:` line, is
+decided by the maintainer or the main session in a `Decided: <reason>` line under the defect in
+`defects.md`: the label kept and why, or the `Cause:` changed and why. `unclear` is a
+disagreement too: an entry nobody else can label is a weak record.
+
+`redline check-relabel <change>` prints each disagreement, then fails on:
+
+- **A missing `relabel.yaml`** at the C step, at critical. Below critical it is optional; if it
+  exists, it is checked. Run on its own, the command checks as at C.
+- **A defect with no label**, or a label for an ID the log doesn't have. A defect added after the
+  relabel needs the relabeller run again; a re-run keeps every earlier entry.
+- **A label not in the table** and not `unclear`, or an entry without a `note`.
+- **A disagreement with no `Decided:` line.**
+- **A `Cause:` changed after the relabel** with no `Decided:` line: the first label of a defect is
+  its `Cause:` in the parent of the first commit whose `relabel.yaml` labels it. Changing it after
+  seeing the second label is the bias relabelling exists to show, so it is allowed only in the
+  open, with a reason.
+
+What it doesn't prove: that the relabeller saw only the blind text. It can read any file, and the
+main session could hand it more. Claude Code can't limit Read to one file, as with the auditor
+(§9). Nor does it prove that the reply was written unedited; it is a recorded file in the PR,
+reviewed as such.
 
 `redline check-defects <change>` fails on:
 
@@ -311,7 +356,7 @@ It checks the log's form, never that it is complete: a defect nobody writes down
 | **S: Spec** | Proposal and delta spec, with audit findings resolved | Structure is valid, every premise citation resolves, IDs are unique, every finding is closed or waived |
 | **R: Red** | Linked tests: `new` as strict expected failures (`xfail(strict=True)`, Jest `test.failing`); `hold` added to the lock | Every `new` test fails on today's code; every `hold` test passes, then fails under mutation |
 | **G1…Gn: Green** | Code that turns expected failures into passes | Owned scenarios pass with their markers removed, the lock is unchanged, the code stays in the step's track, nothing else regressed |
-| **C: Close** | Verify report, delta merged into `specs/`, defect log, deferred items with owners | Every `new` scenario has red and green results from merged commits, the red commit an ancestor of the green one; every `hold` scenario has a break result; the defect log exists (standard, critical) and is well formed |
+| **C: Close** | Verify report, delta merged into `specs/`, defect log, deferred items with owners | Every `new` scenario has red and green results from merged commits, the red commit an ancestor of the green one; every `hold` scenario has a break result; the defect log exists (standard, critical) and is well formed; at critical, each defect has a blind second label and each disagreement a decision |
 
 Red tests can merge onto `main` while CI stays green, because CI expects them to fail. A `new` test
 that passes before the code exists turns CI red under strict expected-failure, so a check that
@@ -452,8 +497,9 @@ the changes are independent, each with its own sessions.
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
 which have no red by design), check-break at the R step only, check-lock from R on (G steps
-with `--base main`, §5), check-track at G steps (§5), check-defects at every step on the step's
-change (a log is required only at C), and the rigor check at every step (§7). A departure or an `Oversized` trailer doesn't refuse: the PR and its
+with `--base main`, §5), check-track at G steps (§5), check-defects and check-relabel at every step on the
+step's change (the log is required only at C, the relabel only at C and critical), and the rigor
+check at every step (§7). A departure or an `Oversized` trailer doesn't refuse: the PR and its
 labels don't exist yet, so `pr` prints that CI will need the label (§7). Only when every gate
 passes does it put the `Redline-Step` trailer on each of the step's commits (once), push, and open
 the PR with `gh`.
@@ -584,6 +630,7 @@ public APIs are critical) but never lower it.
 | Maintainer (a person) | — | Merge; approve waivers, departures, `Oversized` |
 | Main session | Strong | Specs, briefs, review, breaks, PRs |
 | Auditor | Strongest, fresh context | Read and report only |
+| Relabeller | Strongest, fresh context | Label defects from their text, blind to the first label |
 | Implementer | Cheaper | Code from a brief; never commits |
 
 The CLI holds the rules; each AI tool gets thin skills or commands, as in OpenSpec.
@@ -593,6 +640,11 @@ For Claude Code the auditor is `.claude/agents/redline-auditor.md`: tools `Read,
 can't limit Write to one file, so the auditor stays read-only and replies with the whole
 `audit.md`, which the main session writes unedited. A re-run reads the old `audit.md`, keeps
 every finding and closes only what it has checked. The `Waived-by:` line is the maintainer's.
+
+The relabeller (§4, blind relabelling) is `.claude/agents/redline-relabeller.md`, the same way:
+tool `Read` only, `model: fable`, and the same refusal. It is given the text `redline blind`
+prints and, on a re-run, the old `relabel.yaml`, whose entries it keeps unchanged. It labels
+only from the entries' text, reads no other file, and replies with the whole `relabel.yaml`.
 
 ## 10. Learning loop
 
