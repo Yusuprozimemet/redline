@@ -1439,10 +1439,12 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
   token was read-only. Now every job that runs repository code holds `contents: read` and keeps no
   credentials; `redline ci push --note` hands the note's text on, and a `note` job that runs git
   alone writes it on the merged commit, which a workflow test checks line by line (§7).
-- O-CI6 [build 9 part 10]: every push to `main` shared one concurrency group, and GitHub cancels a
-  group's pending run when another queues, so the middle of three quick merges got no note: its
-  evidence stayed `unverified` and check-close refused until a re-run by hand. A push run needs
-  its own group, and the `note` job, whose push then races, a bounded retry (§7).
+- O-CI6 [closed, build 9 part 10]: every push to `main` shared one concurrency group, and GitHub
+  cancels a group's pending run when another queues, so the middle of three quick merges got no
+  note: its evidence stayed `unverified` and check-close refused until a re-run by hand. Now a push
+  run's group is its own, and the `note` job, whose push then races, fetches the notes again,
+  re-adds its note and pushes, five times at most, which a test proves by running the job's script
+  against a bare repository that refuses its first push (§7).
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs
