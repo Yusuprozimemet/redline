@@ -63,6 +63,7 @@ def test_tool_mutmut_is_taken_out_of_the_copy_and_pytests_settings_stay(tmp_path
     seen = fake_run(monkeypatch)
     Mutmut(tmp_path).kills(["greet.py"], "TOY.H1", [])
     assert seen[0]["pyproject"] == {"tool": {"pytest": {"ini_options": {"addopts": "-q"}}}, "project": {"name": "toy"}}
+    assert "also_copy" not in seen[0]["mutmut"]  # nothing to copy: mutmut would read "" as ".", the whole copy
     assert "mutmut" in (tmp_path / "pyproject.toml").read_text(encoding="utf-8")  # the repository itself is untouched
 
 
