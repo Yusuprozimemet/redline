@@ -69,7 +69,7 @@ def test_the_workflow_passes_the_pr_number_and_reruns_on_a_label():
     flow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     triggers = flow.get("on", flow.get(True))
     assert {"opened", "synchronize", "reopened", "labeled", "unlabeled"} <= set(triggers["pull_request"]["types"])
-    assert flow["permissions"]["pull-requests"] == "read"
+    assert flow["jobs"]["redline"]["permissions"]["pull-requests"] == "read"
     step = next(s for job in flow["jobs"].values() for s in job["steps"] if "redline ci pr" in s.get("run", ""))
     assert "--pr ${{ github.event.pull_request.number }}" in step["run"]
     assert step["env"]["GH_TOKEN"] == "${{ github.token }}"

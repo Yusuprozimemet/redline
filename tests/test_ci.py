@@ -179,3 +179,64 @@ def test_the_workflow_runs_redline_ci_on_prs_and_on_pushes_to_main():
     runs = [step.get("run", "") for job in flow["jobs"].values() for step in job["steps"]]
     assert any("redline ci pr" in run for run in runs)
     assert any("redline ci push" in run for run in runs)
+
+
+def test_a_push_with_note_writes_the_note_to_the_file_and_adds_and_pushes_nothing(change, capsys, remote, tmp_path):
+    land(change, "red", {"tests/test_greet.py": RED})
+    code, out = ci(change, capsys, "push", "--run-url", RUN, "--note", str(tmp_path / "note"))
+    assert code == 0, out
+    assert (tmp_path / "note").read_text(encoding="utf-8") == f"result: pass\nrun: {RUN}\n"
+    assert change.git("notes", "--ref=redline-ci", "list") == "" and remote.pushed == []
+
+
+def test_a_push_with_note_still_writes_a_failed_run(change, capsys, remote, tmp_path):
+    land(change, "broken", {"tests/test_broken.py": BROKEN})
+    code, out = ci(change, capsys, "push", "--run-url", RUN, "--note", str(tmp_path / "note"))
+    assert code == 1 and "suite: the test suite failed" in out
+    assert (tmp_path / "note").read_text(encoding="utf-8") == f"result: fail\nrun: {RUN}\n"
+    assert remote.pushed == []
+
+
+NOTE_LINES = {  # every line the job that writes the note may run: git alone, on the workflow's commit
+    "git fetch --no-tags origin '+refs/notes/*:refs/notes/*'",
+    "printf '%s' \"$NOTE\" | base64 -d > \"$RUNNER_TEMP/note\"",
+    'git -c user.name=redline-ci -c user.email=redline-ci@users.noreply.github.com '
+    'notes --ref=redline-ci add -f -F "$RUNNER_TEMP/note" "$GITHUB_SHA"',
+    "git push origin refs/notes/redline-ci",
+}
+
+
+def test_only_the_note_job_can_write_and_it_runs_no_repository_code():
+    flow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    assert flow["permissions"] == {"contents": "read"}
+    writers = [name for name, job in flow["jobs"].items() if job.get("permissions", {}).get("contents") != "read"]
+    assert writers == ["note"] and flow["jobs"]["note"]["permissions"] == {"contents": "write"}
+    job = flow["jobs"]["note"]
+    assert job["needs"] == "redline" and "github.event_name == 'push'" in job["if"]
+    for step in job["steps"]:
+        if "uses" in step:
+            assert step["uses"].startswith("actions/checkout@") and "run" not in step, step
+            assert not {"submodules", "lfs"} & set(step.get("with", {})), step
+        else:
+            lines = [line.strip() for line in step["run"].splitlines() if line.strip()]
+            assert all(line in NOTE_LINES for line in lines), lines
+            assert "${{" not in step["run"]
+    assert {line for s in job["steps"] for line in s.get("run", "").splitlines() if line.strip()} == NOTE_LINES
+    assert next(s for s in job["steps"] if "run" in s)["env"] == {"NOTE": "${{ needs.redline.outputs.note }}"}
+
+
+def test_every_job_that_runs_repository_code_is_read_only_and_drops_its_credentials():
+    flow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    for name, job in flow["jobs"].items():
+        if name != "note":
+            assert job["permissions"]["contents"] == "read", name
+            checkouts = [s for s in job["steps"] if s.get("uses", "").startswith("actions/checkout@")]
+            assert checkouts and all(s["with"]["persist-credentials"] is False for s in checkouts), name
+    steps = flow["jobs"]["redline"]["steps"]
+    fetch = next(s for s in steps if "refs/notes/*" in s.get("run", ""))
+    assert "http.extraheader" in fetch["run"] and fetch["env"]["GH_TOKEN"] == "${{ github.token }}"
+    push = next(s for s in steps if "redline ci push" in s.get("run", ""))
+    assert '--note "$RUNNER_TEMP/note"' in push["run"]
+    handed = next(s for s in steps if s.get("id") == "note")
+    assert "always()" in handed["if"] and "base64 -w0" in handed["run"] and "GITHUB_OUTPUT" in handed["run"]
+    assert flow["jobs"]["redline"]["outputs"] == {"note": "${{ steps.note.outputs.note }}"}
