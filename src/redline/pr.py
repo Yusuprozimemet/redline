@@ -36,7 +36,7 @@ from redline.relabel import check_relabel
 from redline.runner import check_helpers
 from redline.specs import check_specs
 from redline.start import TRAILER, Refused, open_step_file, read_steps
-from redline.steps import check_steps, edited
+from redline.steps import check_steps, edited, since
 from redline.track import check_track
 
 
@@ -136,9 +136,9 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
     failures = size(repo, approvals) + rigor_claim(repo, approvals)
     failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad + check_plan_audits(repo)]
     failures += [f"check-helpers: {bad}" for bad in check_helpers(repo)]
-    failures += [f"check-steps: {bad}" for bad in check_steps(repo, change)]
+    failures += [f"check-steps: {bad}" for bad in check_steps(repo, change) + since(repo, change, own=step)]
     for other in sorted(edited(repo) - {change}):  # nothing else stops a step editing another change's
-        failures += [f"check-steps: {other}: {bad}" for bad in check_steps(repo, other)]
+        failures += [f"check-steps: {other}: {bad}" for bad in check_steps(repo, other) + since(repo, other)]
     failures += [f"check-defects: {bad}" for bad in check_defects(repo, change, step == "C").bad]
     failures += [f"check-relabel: {bad}" for bad in check_relabel(repo, change, step == "C").bad]
     if step == "S":
