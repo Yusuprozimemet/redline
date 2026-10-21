@@ -26,7 +26,7 @@ class Remote:
         self.repo = repo
 
     def run(self, *command: str) -> None:
-        done = subprocess.run(command, cwd=self.repo, capture_output=True, text=True)
+        done = subprocess.run(command, cwd=self.repo, capture_output=True, encoding="utf-8", errors="replace")
         if done.returncode:
             raise RuntimeError(f"{' '.join(command[:3])}: {done.stderr.strip()}")
 
@@ -69,7 +69,7 @@ def merged(repo: Path, name: str) -> str:
     if switched.returncode:
         raise RuntimeError(f"could not switch to main: {switched.stderr.strip()}")
     state = open_step_file(repo)
-    if state.is_file() and state.read_text().strip() in done:
+    if state.is_file() and state.read_text(encoding="utf-8").strip() in done:
         state.unlink()
     said = f"ok: {name} is merged on main; switched to main.\n"
     if index == len(steps) - 1:
