@@ -177,7 +177,9 @@ scenarios:
 `red` is check-order's red commit (where the test's marker has `new=True`; once there is a green,
 it is the red commit that is an ancestor of green), and `green` is the commit where `new` was
 removed. `merged` is the first commit on `main`'s first-parent line that contains `commit`, which
-is the commit CI ran on after the merge. `result` is that run's outcome: `pass`, `fail`, or
+is the commit CI ran on after the merge: `commit` itself when it is on that line, else the oldest
+of `git rev-list --first-parent --ancestry-path <commit>..main`, one call however long the line
+(O-PERF1). `result` is that run's outcome: `pass`, `fail`, or
 `unverified` when no result is recorded. `break` is the mutation evidence (§5) and is `null` for a
 `new` scenario. A `hold` scenario is the other way round: its test carries no `new=True`, so it
 has no red and no green, and both stay `null`. Its `break` is `{commit, merged, result}`:
@@ -748,7 +750,13 @@ The ID and `{ new: true }` are read from the original text at the offset found. 
 
 check-order reads each commit's test files from git: each runner's files in the commit's tree,
 each blob read once and its markers kept by blob hash, so a file unchanged across commits is
-parsed once, and only a file whose text matches the runner's grep pattern is parsed at all. A file
+parsed once, and only a file whose text matches the runner's grep pattern is parsed at all. The
+history is read in a fixed number of git calls, however long it is (O-PERF1): one `git log --raw`
+gives every commit, its parents and the blobs its diff changes, a merge's against its first
+parent, so a commit's files are its first parent's with that diff applied; one `git cat-file
+--batch` reads every new blob. A commit whose diff changes no runner's file has its first
+parent's markers, unread. Finding a red among a green's ancestors still asks git, once per red
+of that scenario, which grows with the scenarios, not the history. A file
 that doesn't parse at a commit, such as a syntax error committed mid-history, gives no markers
 there, and check-order prints `skipped <path> at <commit>: <error>`. History can't be rewritten,
 so failing would fail every later PR, and reading its lines as text would let comments and
@@ -1418,7 +1426,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    only and the scenario's tests copied, proved on the real mutmut in CI (O-MUT1, O-MUT2); part 9,
    the CI notes written by a job that runs no repository code, every other job read-only (O-CI5);
 part 10, every merged commit's note, none lost to a cancelled run or a raced push (O-CI6); part
-   11, the actions pinned to commits and the toolchain to versions (O-CI7, O-CI8). The
+   11, the actions pinned to commits and the toolchain to versions (O-CI7, O-CI8); part 12,
+   history read in a fixed number of git calls, not two a commit (O-PERF1). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1484,6 +1493,15 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
   CI's evidence says with no commit. Now Python is exact in every job (`3.12.15`, and `3.12.10` on Windows), every pip line installs from
   `constraints.txt`, setuptools is pinned in `[build-system]`, and a test in CI fails on an
   installed package the pip lines pull in that the file doesn't pin at its version (§7).
+- O-PERF1 [build 9 part 12]: check-order ran `git ls-tree` and `git cat-file` on every commit of
+  the history, the parents before a window too: 393 git calls and 9.3 s for this repository's 196
+  commits on Windows, run by every gate from R on and twice more at C (check-close and
+  check-ledger each rebuild the ledger). And the ledger's `merged`, and `redline claims`, asked
+  `git merge-base --is-ancestor` of each first-parent commit in turn until one contained the
+  commit. Both grew with the history. Now check-order reads it in a fixed number of calls, a
+  commit's markers carried from its first parent unless its diff changes a runner's file (§5), and
+  a commit's merge is found in one `rev-list` (§4). The two rebuilds at C stay separate: each is a
+  few calls now, and a result shared by ref could go stale within a process.
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs
