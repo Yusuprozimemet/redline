@@ -15,7 +15,7 @@ from pathlib import Path
 import yaml
 
 from redline.breaks import holds
-from redline.order import check_order, git, is_ancestor, scan
+from redline.order import check_order, git, merged_into, scan
 from redline.start import HEADING, TRAILER
 
 NOTES = "redline-ci"
@@ -71,7 +71,7 @@ def rebuild(repo: Path, change: str, main: str = "main") -> dict:
     line = listing.stdout.split()
 
     def merge(commit: str) -> str:
-        return next(c for c in line if is_ancestor(repo, commit, c))
+        return merged_into(repo, commit, line, main)
 
     since = until = None
     reds = []

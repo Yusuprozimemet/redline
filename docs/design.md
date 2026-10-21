@@ -177,9 +177,10 @@ scenarios:
 `red` is check-order's red commit (where the test's marker has `new=True`; once there is a green,
 it is the red commit that is an ancestor of green), and `green` is the commit where `new` was
 removed. `merged` is the first commit on `main`'s first-parent line that contains `commit`, which
-is the commit CI ran on after the merge: `commit` itself when it is on that line, else the oldest
-of `git rev-list --first-parent --ancestry-path <commit>..main`, one call however long the line
-(O-PERF1). `result` is that run's outcome: `pass`, `fail`, or
+is the commit CI ran on after the merge: the first commit of that line that is `commit` or one of
+its descendants, which `git rev-list --ancestry-path <commit>..main` lists in one call however
+long the line (O-PERF1). With `--first-parent` it would walk first parents only and miss the
+merge of a PR of two commits. `result` is that run's outcome: `pass`, `fail`, or
 `unverified` when no result is recorded. `break` is the mutation evidence (§5) and is `null` for a
 `new` scenario. A `hold` scenario is the other way round: its test carries no `new=True`, so it
 has no red and no green, and both stay `null`. Its `break` is `{commit, merged, result}`:
@@ -1493,14 +1494,15 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
   CI's evidence says with no commit. Now Python is exact in every job (`3.12.15`, and `3.12.10` on Windows), every pip line installs from
   `constraints.txt`, setuptools is pinned in `[build-system]`, and a test in CI fails on an
   installed package the pip lines pull in that the file doesn't pin at its version (§7).
-- O-PERF1 [build 9 part 12]: check-order ran `git ls-tree` and `git cat-file` on every commit of
+- O-PERF1 [closed, build 9 part 12]: check-order ran `git ls-tree` and `git cat-file` on every commit of
   the history, the parents before a window too: 393 git calls and 9.3 s for this repository's 196
   commits on Windows, run by every gate from R on and twice more at C (check-close and
   check-ledger each rebuild the ledger). And the ledger's `merged`, and `redline claims`, asked
   `git merge-base --is-ancestor` of each first-parent commit in turn until one contained the
   commit. Both grew with the history. Now check-order reads it in a fixed number of calls, a
   commit's markers carried from its first parent unless its diff changes a runner's file (§5), and
-  a commit's merge is found in one `rev-list` (§4). The two rebuilds at C stay separate: each is a
+  a commit's merge is found in one `rev-list` (§4): 2 calls and 0.3 s on the same 196 commits, the
+  same output. The two rebuilds at C stay separate: each is a
   few calls now, and a result shared by ref could go stale within a process.
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as

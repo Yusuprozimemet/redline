@@ -16,7 +16,7 @@ import yaml
 
 from redline.approval import DEPARTURE, OVERSIZED, RIGOR, TRACK
 from redline.ledger import NOTES
-from redline.order import git, is_ancestor
+from redline.order import git, merged_into
 from redline.plan import ROOT, parse_plan
 from redline.pr import GitHub
 from redline.start import TRAILER
@@ -110,7 +110,7 @@ def claims(repo: Path, name: str) -> str:
         count += 1
         if not (claimed := [(key, value) for key, value in trailers if key in LABELS]):
             continue
-        merged = next(c for c in line if is_ancestor(repo, sha, c))
+        merged = merged_into(repo, sha, line, "main")
         noted = note(repo, merged)
         kept = {e.get("claim"): e for e in (noted or {}).get("claims") or [] if isinstance(e, dict) and e.get("commit") == sha}
         found = [kept.get(f"{key}: {value}") for key, value in claimed]
