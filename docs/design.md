@@ -993,7 +993,21 @@ hand-off: a new session needs nothing from the old one.
 CI is `.github/workflows/redline.yml`, a thin wrapper around `redline ci`; every rule lives in the
 CLI. It checks out the full history, `main` and `refs/notes/*`. A second job, `runners`, runs the
 real Jest and Stryker on a toy project (§5) and records nothing. A repository with Jest tests
-installs Node and runs `npm ci` in its workflow before `redline ci`, so the suite can run them.
+installs Node and runs `npm ci` in its workflow before `redline ci`, so the suite can run them. A
+third job, `windows`, runs Redline's own suite on Windows with a read-only token, and records
+nothing either. It runs pytest, not `redline ci`: mutmut doesn't run on Windows, and a skipped
+break fails the run (§5).
+
+**Text is UTF-8, on every platform.** Windows' Python decodes and prints text in the code page
+(cp1252) unless told otherwise, while git writes, and Redline's files hold, UTF-8. So every file
+Redline reads or writes says `encoding="utf-8"`, and a file that isn't UTF-8 is an error. What it
+reads from a process (git, `gh`, mutmut, a runner) is UTF-8 with `errors="replace"`, since a
+process may print bytes that aren't UTF-8 and failing there would fail inside `subprocess`. `git()`
+runs with `-c core.quotePath=false`, so a path outside ASCII reads as itself, not as a quoted
+`"t\303\274.py"` that names no file. `main()` reconfigures stdout and stderr to UTF-8 with
+`errors="replace"`, so a brief printed into a pipe, as an agent session reads it, never fails on a
+"≤". A reader that decodes the pipe in its console's code page shows those characters wrongly, but
+nothing is lost or fails. In a console, Python already writes Unicode.
 
 On a pull request, `redline ci pr --base main` works out the step from the `Redline-Step`
 trailers of the PR's own commits (`main..HEAD`), which `pr` added. It refuses if they name more
@@ -1274,7 +1288,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    `generated:` and `support:` read at the merge-base, a glob added to either a claim (O-CFG1);
    part 4, a change's level lowered is a claim (O-CI4); part 5, a pytest marker counts only as a
    decorator, read with Python's parser (O-MARK1); part 6, a Jest marker only in code, not in a
-   comment or a string (O-MARK2); text encoding on Windows (O-ENC1). The
+   comment or a string (O-MARK2); part 7, text read and printed as UTF-8 on Windows, a Windows CI
+   job, and paths from git unquoted (O-ENC1, O-ENC2). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1424,10 +1439,17 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   items later steps still own. It prints and judges nothing, as `merged` does (§6).
 - O-RUN7 [closed, build 5 part 8]: a `Redline-Departure` trailer's test was read up to its first
   space, so a locked Jest test named by a sentence couldn't be edited with an approved departure.
-- O-ENC1 [build 9]: on Windows, Python decodes text as cp1252. `git()`, `load_config` and the
-  open-step file don't say UTF-8, and a brief with "≤" printed to a pipe crashes, so a scenario
-  with "≤" reads as changed in check-specs. The fix: UTF-8 in every read and subprocess call (those
-  of build 5 parts 7 and 8 have it), stdout and stderr reconfigured, and a Windows CI job.
+- O-ENC1 [closed, build 9 part 7]: on Windows, Python decoded text as cp1252. `git()`,
+  `load_config` and the open-step file didn't say UTF-8, so a config rule with "Ł" failed `start`
+  and most gates, and an unchanged scenario with "≤" read as changed in check-specs; and a brief
+  with "≤" printed to a pipe crashed after `start` had recorded the step. Now every file read and
+  write is UTF-8, every process's output is UTF-8 with `errors="replace"`, `main()` prints UTF-8,
+  and a `windows` CI job runs the suite (§7).
+- O-ENC2 [closed, build 9 part 7]: git quotes a path outside ASCII in any output not split on NUL,
+  so `ls-tree --name-only`, `ls-files`, `diff --name-only` and `grep` named such a file as
+  `"\303\274…"`: a living spec under `redline/specs/grüße/` vanished at the merge-base, and
+  check-specs reported its scenarios as changes no delta names. Now `git()` runs with
+  `core.quotePath=false` (§7).
 - O-RUN5 [closed, build 5 part 7]: the helper had been checked under real Jest by hand only, and
   Stryker not at all. Now the `runners` CI job runs both on a toy project (§5). It found that Jest
   took the helper, then `redline/runners/spec.js`, for a test file and failed every run, so the
