@@ -1,13 +1,13 @@
-"""The plan's own level, changed only under the rigor claim. See docs/design.md §4, §7."""
+"""A plan's own level, and a change's, changed (a change's lowered) only under the rigor claim. See docs/design.md §4, §7."""
 
 import pytest
 
 from redline.approval import Approvals
 from redline.pr import gates, rigor_claim
-from test_ci import ci
+from test_ci import ci, red_pr
 from test_outside import OUTSIDE, outside
 from test_plan import FAREWELL, PLAN, VALID, WAVE, check_plan
-from test_pr import github  # noqa: F401 (a fixture)
+from test_pr import RED_TESTS, github  # noqa: F401 (a fixture)
 from test_start import change, fresh_branch, start  # noqa: F401 (change is a fixture)
 
 CRITICAL = VALID.replace("seen off\n", "seen off\nRigor: critical\n", 1)
@@ -150,3 +150,76 @@ def test_a_new_plan_declares_its_level_without_a_claim(change):
     fresh_branch(change, "plan")
     change.commit("a new plan", {PLAN: CRITICAL, **FAREWELL, **WAVE})
     assert rigor_claim(change.path, Approvals()) == []
+
+
+PROPOSAL = "redline/changes/add-greet/proposal.md"
+CONFIG = "redline/config.yaml"
+
+
+def proposed(level: str | None) -> str:
+    return "# Proposal: add-greet\n" + (f"Rigor: {level}\n" if level else "")
+
+
+def lowered(old: str, new: str) -> str:
+    return f"rigor: add-greet's level was lowered from {old} to {new}"
+
+
+@pytest.mark.parametrize(("config", "proposal", "now"), [
+    ("", proposed("lite"), "lite"),
+    ("", proposed(None), "standard"),
+    ("rigor: lite\n", None, "lite"),
+], ids=["line-lowered", "line-removed", "proposal-deleted"])
+def test_lowering_a_changes_level_needs_the_rigor_claim(change, config, proposal, now):
+    change.commit("critical", {PROPOSAL: proposed("critical"), **({CONFIG: config} if config else {})})
+    fresh_branch(change, "lower")
+    if proposal is None:
+        change.git("rm", "-q", PROPOSAL)
+    change.commit("lower", {PROPOSAL: proposal} if proposal else None)
+    assert rigor_claim(change.path, Approvals()) == [f"{lowered('critical', now)}, with no Redline-Rigor trailer"]
+    change.commit("why\n\nRedline-Rigor: add-greet touches no secrets")
+    approvals = Approvals()
+    assert rigor_claim(change.path, approvals) == []
+    assert approvals.pending == [f"{lowered('critical', now)}: CI will need the `redline:rigor` label from a maintainer"]
+
+
+@pytest.mark.parametrize(("before", "after"), [
+    ({PROPOSAL: proposed("standard")}, {PROPOSAL: proposed("critical")}),
+    ({}, {PROPOSAL: proposed("lite")}),
+], ids=["raised", "new-proposal"])
+def test_raising_a_changes_level_or_a_new_proposal_is_no_claim(change, before, after):
+    if before:
+        change.commit("before", before)
+    fresh_branch(change, "edit")
+    change.commit("edit", after)
+    assert rigor_claim(change.path, Approvals()) == []
+
+
+def test_lowering_the_configs_rigor_names_each_change_it_lowers(change):
+    change.commit("critical", {CONFIG: "rigor: critical\n", PROPOSAL: proposed(None)})
+    fresh_branch(change, "lower")
+    change.commit("lower", {CONFIG: "rigor: standard\n"})
+    assert rigor_claim(change.path, Approvals()) == [
+        "rigor: `rigor:` in redline/config.yaml changed from critical to standard, with no Redline-Rigor trailer",
+        f"{lowered('critical', 'standard')}, with no Redline-Rigor trailer"]
+
+
+def test_an_unknown_level_fails_whatever_the_trailer(change):
+    change.commit("standard", {PROPOSAL: proposed("standard")})
+    fresh_branch(change, "high")
+    change.commit("high\n\nRedline-Rigor: higher still", {PROPOSAL: proposed("high")})
+    assert rigor_claim(change.path, Approvals()) == ["rigor: add-greet: unknown rigor level `high`"]
+
+
+def test_ci_refuses_a_step_that_lowers_its_changes_level_until_a_maintainer_labels_the_claim(change, capsys, github):
+    change.commit("standard", {PROPOSAL: proposed("standard")})
+    red_pr(change, capsys, {"tests/test_greet.py": RED_TESTS, PROPOSAL: proposed("lite")})
+    code, out = ci(change, capsys, "pr", "--base", "main", "--pr", "1")
+    assert code == 1
+    assert f"{lowered('standard', 'lite')}, with no Redline-Rigor trailer" in out
+    change.commit("why\n\nRedline-Step: add-greet/R\nRedline-Rigor: greetings are harmless")
+    code, out = ci(change, capsys, "pr", "--base", "main", "--pr", "1")
+    assert code == 1
+    assert f"{lowered('standard', 'lite')}: needs the `redline:rigor` label from a maintainer" in out
+    github.applied["redline:rigor"] = "maintainer"
+    code, out = ci(change, capsys, "pr", "--base", "main", "--pr", "1")
+    assert code == 0, out
