@@ -95,6 +95,25 @@ def test_a_new_scenario_no_g_step_owns_fails(change, capsys):
     assert code == 1 and "GREET.S2 is new, but no G step owns it" in out, out  # R owning it isn't enough
 
 
+@pytest.mark.parametrize("line", ["#### Scenario GREET.S3 [manual]: looks right",
+                                  "#### Scenario GREET.S3: no tag"])
+def test_a_malformed_scenario_heading_in_a_delta_fails(change, capsys, line):
+    change.commit("manual", {f"{CHANGE}/specs/greet/delta.md": DELTA + "\n" + line + "\n- THEN it looks right\n"})
+    code, out = check(change, capsys)
+    line_no = DELTA.count("\n") + 2
+    assert code == 1, out
+    assert (f"specs/greet/delta.md:{line_no}: not a scenario heading "
+            f"`#### Scenario <ID> [new|hold]: <title>`: {line}") in out, out
+
+
+def test_the_gate_fails_a_malformed_heading_at_s(change):
+    fresh_branch(change, "add-greet-S")
+    change.commit("manual", {f"{CHANGE}/specs/greet/delta.md": DELTA + "#### Scenario GREET.S3 [manual]: blue\n"})
+    assert [f for f in gates(change.path, "add-greet", "S") if "not a scenario heading" in f] == [
+        f"check-steps: specs/greet/delta.md:{DELTA.count(chr(10)) + 1}: not a scenario heading "
+        "`#### Scenario <ID> [new|hold]: <title>`: #### Scenario GREET.S3 [manual]: blue"]
+
+
 def test_a_closed_change_still_reads_its_own_delta(change, capsys):
     change.commit("closed\n\nRedline-Step: add-greet/C")
     assert check(change, capsys)[0] == 0

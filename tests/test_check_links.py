@@ -94,12 +94,35 @@ def test_a_change_may_restate_a_living_scenario(repo, capsys):
 
 @pytest.mark.parametrize("line", [
     "### Scenario TOY.S2 [new]: wrong level",
-    "#### Scenario TOY.S2: no tag",
-    "#### Scenario TOY.S2 [maybe]: unknown tag",
     "  #### Scenario TOY.S2 [new]: indented",
 ])
 def test_only_well_formed_headings_declare_scenarios(repo, capsys, line):
     repo.commit("headings", {SPEC: scenarios("TOY.S1") + line + "\n", "tests/test_toy.py": marked("TOY.S1")})
+    assert run(repo, capsys)[0] == 0
+
+
+FORM = "not a scenario heading `#### Scenario <ID> [new|hold]: <title>`"
+
+
+@pytest.mark.parametrize("line", [
+    "#### Scenario TOY.S2: no tag",
+    "#### Scenario TOY.S2 [manual]: unknown tag",
+    "#### Scenario TOY.S2 [New]: capital",
+    "#### Scenario TOY.S2 [new] no colon",
+    "#### Scenario: TOY.S2",
+])
+@pytest.mark.parametrize("path", [SPEC, DELTA])
+def test_a_malformed_scenario_heading_is_a_gap(repo, capsys, line, path):
+    repo.commit("headings", {path: scenarios("TOY.S1") + line + "\n", "tests/test_toy.py": marked("TOY.S1")})
+    code, out = run(repo, capsys)
+    assert code == 1
+    assert out == [f"{FORM} ({path}:6): {line}"]  # TOY.S1 still counts and is linked
+
+
+def test_a_closed_changes_malformed_heading_isnt_read(repo, capsys):
+    repo.commit("closed\n\nRedline-Step: add-bye/C", {
+        SPEC: scenarios("TOY.S1"), DELTA: "#### Scenario TOY.S2 [manual]: looks right\n",
+        "tests/test_toy.py": marked("TOY.S1")})
     assert run(repo, capsys)[0] == 0
 
 
