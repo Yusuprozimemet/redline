@@ -59,3 +59,15 @@ jobs:
         run: python -m pytest -v -p no:cacheprovider tests/test_runners.py
         env:
           REDLINE_REAL_RUNNERS: "1"  # without it these tests are skipped
+
+  windows:  # Redline's suite where Python's own encoding isn't UTF-8 (docs/design.md, section 7)
+    runs-on: windows-latest
+    permissions:
+      contents: read  # records nothing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e . pytest-xdist==3.8.0  # pytest, not `redline ci`: mutmut doesn't run on Windows
+      - run: python -m pytest -n auto -p no:cacheprovider

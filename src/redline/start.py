@@ -201,7 +201,7 @@ def start(repo: Path, name: str) -> str:
     change, steps, index = find_step(repo, name)
     merged = merged_steps(repo)
     state = open_step_file(repo)
-    current = state.read_text().strip() if state.is_file() else ""
+    current = state.read_text(encoding="utf-8").strip() if state.is_file() else ""
     if current and current != name and current not in merged:
         raise Refused(f"step {current} is still open; finish it with `redline pr` first")
     may_begin(repo, change, merged, "main")  # the tree too: the branch must be fresh from main, below
@@ -213,5 +213,5 @@ def start(repo: Path, name: str) -> str:
         raise Refused("start each step on a new branch fresh from main (no commits of its own yet)")
     text = brief(repo, change, steps[index])
     state.parent.mkdir(parents=True, exist_ok=True)
-    state.write_text(name + "\n")
+    state.write_text(name + "\n", encoding="utf-8")
     return text

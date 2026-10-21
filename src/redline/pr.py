@@ -45,7 +45,7 @@ class GitHub:
         self.repo = repo
 
     def run(self, *command: str) -> str:
-        done = subprocess.run(command, cwd=self.repo, capture_output=True, text=True)
+        done = subprocess.run(command, cwd=self.repo, capture_output=True, encoding="utf-8", errors="replace")
         if done.returncode:
             raise RuntimeError(f"{' '.join(command[:3])}: {done.stderr.strip()}")
         return done.stdout.strip()
@@ -183,7 +183,7 @@ def stamp(repo: Path, base: str, name: str) -> None:
 def pr(repo: Path, body: str = "") -> tuple[str, list[str]]:
     """Open the PR for the open step; return its URL and the labels CI will need."""
     state = open_step_file(repo)
-    name = state.read_text().strip() if state.is_file() else ""
+    name = state.read_text(encoding="utf-8").strip() if state.is_file() else ""
     if not name:
         raise Refused("no step is open; begin one with `redline start <change>/<step>`")
     change, _, step_name = name.partition("/")

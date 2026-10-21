@@ -1,4 +1,6 @@
 import argparse
+import io
+import sys
 from pathlib import Path
 
 from redline.audit import check_audit
@@ -25,6 +27,9 @@ from redline.start import Refused, start
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # a brief printed into a pipe is UTF-8, as on Linux (§7)
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(prog="redline")
     commands = parser.add_subparsers(dest="command", required=True)
     order = commands.add_parser("check-order", help="prove each scenario was red before green")

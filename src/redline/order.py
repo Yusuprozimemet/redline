@@ -25,7 +25,8 @@ class Result:
 
 
 def git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
+    return subprocess.run(["git", "-c", "core.quotePath=false", *args], cwd=repo, capture_output=True,
+                          encoding="utf-8", errors="replace")
 
 
 def shown(repo: Path, path: str, rev: str | None = None) -> str | None:

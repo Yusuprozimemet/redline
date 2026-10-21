@@ -43,12 +43,12 @@ class Mutmut:
             copy = Path(tmp) / "repo"
             shutil.copytree(self.repo, copy, ignore=shutil.ignore_patterns(".git", ".venv", "mutants"))
             config = configparser.ConfigParser()
-            config.read(copy / "setup.cfg")
+            config.read(copy / "setup.cfg", encoding="utf-8")
             config["mutmut"] = {"paths_to_mutate": "\n".join(files), "pytest_add_cli_args": f"--redline-spec={sid}"}
-            with open(copy / "setup.cfg", "w") as out:
+            with open(copy / "setup.cfg", "w", encoding="utf-8") as out:
                 config.write(out)
             for command in (["mutmut", "run"], ["mutmut", "results", "--all", "true"]):
-                done = subprocess.run(command, cwd=copy, capture_output=True, text=True)
+                done = subprocess.run(command, cwd=copy, capture_output=True, encoding="utf-8", errors="replace")
                 if done.returncode:
                     raise RuntimeError(f"{' '.join(command)}: {(done.stderr or done.stdout).strip()[-500:]}")
         statuses = [line.rpartition(": ")[2].strip() for line in done.stdout.splitlines() if "__mutmut_" in line]

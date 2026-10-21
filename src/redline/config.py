@@ -33,7 +33,7 @@ def strings(value, key: str) -> list[str]:
 def load_config(repo: Path, rev: str | None = None) -> Config:
     """The config in the working tree, or at `rev`."""
     path = repo / PATH
-    text = shown(repo, PATH.as_posix(), rev) if rev else path.read_text() if path.is_file() else None
+    text = shown(repo, PATH.as_posix(), rev) if rev else path.read_text(encoding="utf-8") if path.is_file() else None
     data = (yaml.safe_load(text) if text is not None else None) or {}
     if not isinstance(data, dict) or not isinstance(data.get("rules") or {}, dict):
         raise RuntimeError(f"{PATH.as_posix()}: must be a map, and `rules:` a map of causes to lists of strings")
