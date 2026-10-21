@@ -303,7 +303,10 @@ An entry that is a plain hash, as every lock written before this was, still read
 `{test: <hash>}` with no `reach`. Below critical, `redline lock` keeps writing plain hashes.
 
 The change's level is the `Rigor: lite|standard|critical` line of its `proposal.md`, else
-`rigor:` in `redline/config.yaml`, else `standard`. Any other value is an error.
+`rigor:` in `redline/config.yaml`, else `standard`. Any other value is an error. Lowering it once
+the proposal is on `main` (its line changed or removed, or the proposal deleted, so that the level
+falls to a lower `rigor:`) is a claim (§7, Approvals); raising it isn't, since the auditor may
+raise a level but never lower it (§8). A new proposal declares its level without a claim.
 
 An initiative's plan, `redline/initiatives/2fa-rollout/plan.md`:
 
@@ -1014,8 +1017,9 @@ Otherwise it runs the gates that hold for any PR, and prints every failure:
 - **check-lines**, with the `Oversized` rule (§7, Approvals): over 400 lines needs the trailer and
   a maintainer's `redline:oversized` label.
 - **check-plan** on every initiative.
-- **The rigor check**: a changed `rigor:` or `Rigor:` line, a glob added to `generated:` or
-  `support:`, a deleted plan or a change taken out of one needs `Redline-Rigor` and its label
+- **The rigor check**: a changed `rigor:` or `Rigor:` line, a change's level lowered, a glob added
+  to `generated:` or `support:`, a deleted plan or a change taken out of one needs `Redline-Rigor`
+  and its label
   (Approvals, below).
 - **check-lock** on every change the lock names, without `--base`. The PR can't touch the lock,
   so a locked test or (at critical) what it reaches can't change outside a step at all. A
@@ -1067,7 +1071,7 @@ says a maintainer agreed. Four claims need one:
 | `Redline-Departure: <test> approved-by @person: <reason>` | a frozen test's lock entry to change (§5) | `redline:departure` |
 | `Oversized: <reason>` | more than 400 changed lines (§2.3) | `redline:oversized` |
 | `Redline-Track: <reason>` | a G step changing files outside its track (§5) | `redline:track` |
-| `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml` or to a plan's `Rigor:` line; a glob added to its `generated:` or `support:`; a plan deleted, or a change taken out of one | `redline:rigor` |
+| `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml` or to a plan's `Rigor:` line; a change's level lowered; a glob added to its `generated:` or `support:`; a plan deleted, or a change taken out of one | `redline:rigor` |
 
 `rigor:` sets the level of every change whose proposal names none, and so what all their gates
 require, so changing it, up or down, is a claim on any PR, in a step or outside one (§7). A plan's
@@ -1077,6 +1081,18 @@ each plan's `Rigor:` there to its line now (none, for a plan without one or one 
 each plan's changes there to its changes now (a deleted plan lists none, §4), and fails on a
 difference without the trailer, or, in CI, without the label. A new plan declares its level and
 its changes without a claim, as a new proposal does.
+
+A change's level (its proposal's `Rigor:`, else the config's `rigor:`, §4) sets what its own gates
+require: the defect log and the relabel at C, a `Track:` line on every G step, `reach` in a
+critical lock entry, and whether its initiative is critical, which asks for plan audits. So the
+rigor check also reads the level of each change with a proposal at the merge-base, there and now,
+and fails on one that is lower now, naming the change and both levels. Only lowering is a claim: a
+raise asks more of every gate, and it is the auditor's to make (§8). A proposal new since the
+merge-base declares its level without a claim. A deleted proposal or a removed `Rigor:` line
+takes the config's level, and is a claim when that is lower. A lowered `rigor:` also names each
+change it lowers. An unknown level, there or now, fails, and no trailer allows it. The gates read
+the level from the tree, as they read `rigor:`: a lowering not approved fails the rigor check, and
+an approved one holds from the PR that makes it, as a raise does.
 
 `generated:` and `support:` say which files the gates don't count: check-lines leaves out
 generated files, and check-track exempts both (§5). Each gate reads them at the merge-base, so a
@@ -1126,7 +1142,8 @@ The real `gh api` calls are tested only by hand; the suite uses the fake.
 | **critical** | Contract lock covers what each test reaches, timing included (§4, §5), one track per Green PR, a plan-auditor at the start and end of each phase, blind relabelling of defects, independent end-of-initiative auditors |
 
 The proposal declares its level. The auditor may raise it (auth, payments, data migrations,
-public APIs are critical) but never lower it.
+public APIs are critical) but never lower it. Nor may a step: lowering a change's level once its
+proposal is on `main` is the rigor claim, a maintainer's decision (§7, Approvals).
 
 ## 9. Roles
 
@@ -1226,7 +1243,7 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
 9. **Fixes from the review of 2026-10-20**: part 1, a step's PR must be the change's next step
    (O-CI2); part 2, `start`'s phase and plan-audit refusals in CI (O-CI3); part 3, the config's
    `generated:` and `support:` read at the merge-base, a glob added to either a claim (O-CFG1);
-   text encoding on Windows (O-ENC1). The
+   part 4, a change's level lowered is a claim (O-CI4); text encoding on Windows (O-ENC1). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1275,6 +1292,11 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   at the merge-base, a glob added to either needs the `Redline-Rigor` claim, and a value that
   isn't a list of strings is an error (§4, §7). `reach` still reads `support:` from the tree, since
   its hash guards itself (§4).
+- O-CI4 [closed, build 9 part 4]: the rigor check compared the config's `rigor:` and each plan's
+  `Rigor:` line with the merge-base, but not proposals, so a step's PR could lower its own
+  change's level from critical to lite and drop the defect log and relabel at C, the required
+  `Track:` lines and its initiative's plan audits. Now a change's level lower than at the
+  merge-base needs `Redline-Rigor` and the `redline:rigor` label; a raise doesn't (§7, §8).
 - O-PLAN1 [closed, build 6 part 8]: an initiative was critical only through its changes' levels,
   and a change with no proposal yet takes the config's, so an initiative whose first S step
   declared `Rigor: critical` skipped that phase's start audit. Now the plan has its own `Rigor:`
