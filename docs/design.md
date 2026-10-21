@@ -190,9 +190,34 @@ land on `main`, which the next step's PR then reads at its merge-base for its or
 one so that what it lands is well formed. At S, where `steps.md` and the delta land together,
 it is the first check of either.
 
-What it doesn't prove: anything across steps. A later step may edit `steps.md`, and an open item
-deleted, an item given to a step already merged, which progress never prints, or a step removed
-since the merge-base passes it (O-STEPS2).
+**Across steps**, the same gate compares each of those changes' `steps.md` with the one at the
+merge-base, items by ID and steps by name (O-STEPS2). A later step may edit the file, and the form
+alone can't see what left it. It fails on:
+
+- **An open item dropped**: an ID at the merge-base that is gone now. An item is never closed by
+  removing it, at its owning step either: it stays as the record, progress stops printing it once
+  its step merges (§6), and whether it was done is the end audit's to say (§4, plan audits). An
+  item **moved** to another change passes: the same PR adds to that change's `steps.md` an item
+  with the same text, after `]: `, that it didn't have at the merge-base. Its ID there may differ,
+  since each file numbers its own. That change is then one the PR edits, so its item is checked too.
+- **An item given to a merged step**: one owned now by a step merged on `main`, as `start` reads
+  merged steps, that is new since the merge-base or had another owner there. Progress never prints
+  it. The PR's own step isn't merged yet, so an item given to it is done in this PR; one moved from
+  a merged step to a later one is printed again, and passes.
+- **A step removed**: a step at the merge-base that is gone now and is merged on `main` or is the
+  PR's own. A step not yet merged, such as a G3 found unneeded, may go without a claim: its `new`
+  scenarios must still have a G step and its items an owner, above, so no gate asks less. A step
+  renamed is one removed and one added.
+
+A change with no `steps.md` at the merge-base, at its S step or new in the PR, has nothing to
+compare, and only its form is checked. Run on its own, `redline check-steps` takes `--base`
+(default `main`); with no step, only merged steps are kept. On `main` after the merge there is no
+diff, and it passes.
+
+What it doesn't prove: an item's text reworded under its ID, or a merged step's `Owns:` or
+`Track:` edited. Whether new words say less is a judgment, the end audit's, as a scenario's is
+the auditor's (§12); check-track and the C step's checks read what they need at the merge-base
+or from the ledger, so a merged step's lines are only its record.
 
 The ledger has one entry for each scenario the change's deltas declare:
 
@@ -1011,7 +1036,7 @@ fresh from `main`. `start` runs on the agent's machine, so `redline ci pr` repea
 every step's PR: the step must be the change's next, and its phase must be ready (§7).
 
 `pr` runs check-lines and check-plan always, check-steps at every step (on the step's change and each change whose
-`steps.md` or deltas the PR changes, §4), check-premises and check-audit at S (on the step's own change: an
+`steps.md` or deltas the PR changes, its form and what left it since the merge-base, §4), check-premises and check-audit at S (on the step's own change: an
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
 which have no red by design), check-break at the R step only, check-lock at every step (on the
@@ -1547,7 +1572,8 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
   `scan`, which `parse_steps` uses too (§4).
 - O-STEPS2 [build 9 part 14]: check-steps reads one `steps.md`, so an open item deleted, an item
   given to a step already merged, which progress never prints, or a step removed since the
-  merge-base, isn't seen (§4).
+  merge-base, isn't seen (§4). It will compare each change's `steps.md` with the merge-base's, by
+  item ID and step name, an item moved to another change's by its text.
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs
