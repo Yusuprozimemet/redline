@@ -84,6 +84,14 @@ A scenario:
 - THEN login fails AND no session is created
 ```
 
+A scenario's heading is exactly `#### Scenario <ID> [new|hold]: <title>`. Every gate finds
+scenarios by that form, so a line that starts `#### Scenario` in any other (no tag, an unknown one
+such as `[manual]`, no `: ` after the tag) would be no scenario to any of them: it would need no
+test, no evidence at C and no place in `specs/`, and nothing would say so. So check-links fails
+such a line in the living specs and the deltas of changes not closed, and check-steps in its
+change's deltas, at every step from S on, each naming the file and line (O-SPEC1). A scenario
+that can't be automated has no form yet (O-SPEC2, §12), so it fails, where it is seen.
+
 A delta's scenarios sit under its `## ` sections, which say what the C step does to the living
 spec of the same domain, `redline/specs/<domain>/spec.md`:
 
@@ -181,6 +189,8 @@ the line, on:
   needs no test, so no step owns it.
 - **A `new` scenario no G step owns.** Without this it is found only at C, by check-close, as a
   scenario with no green.
+- **A malformed scenario heading** in one of the change's deltas (above). check-links reads
+  every delta too, but only from R on.
 
 `pr` and `redline ci pr` run it at every step, on the step's change and on each other change
 whose `steps.md` or deltas the PR changes since the merge-base: nothing else stops a step from
@@ -594,10 +604,11 @@ What it still doesn't prove:
   after it as present, and a re-run's record reads them as late as it runs.
 - **A PR merged by rebase**: the push run reads the claims of the merged commit and its first
   parent's range only, as it reads the step (§7), so a claim in an earlier commit of the PR gets
-  no record.
+  no record. Redline needs merge commits or squash merges, a repository setting (§12).
 - **A claim that should have been made**: a PR merged over a gate, without CI or with it failing,
   has no trailer to print. It shows only that the record holds no claim there.
-- **PR text**: descriptions and review comments aren't printed.
+- **PR text**: descriptions and review comments aren't printed, on purpose: they are untrusted
+  text in the process auditor's context (§12).
 - **Whose test a departure edited**: a departure on a test another change locked is a claim of
   the step that made it, printed in that step's initiative, not in the initiative of the change
   that locked the test.
@@ -914,15 +925,16 @@ What the lock still doesn't prove:
 
 - **Timing from outside the files it reads**: an environment variable (`PYTEST_TIMEOUT`,
   `PYTEST_ADDOPTS`, a value the test reads with `os.environ`), a command-line flag in the CI
-  workflow, or a value read from a data file.
+  workflow, or a value read from a data file (O-LOCK4).
 - **What it doesn't follow**: an import from a file `support:` doesn't name; `from m import *`;
   an import inside a function; a name deeper than `m.name` (`m.sub.name`, `obj.attr`); fixtures
   from installed plugins or `pytest_plugins` modules; `request.getfixturevalue`; a fixture
   renamed with `@pytest.fixture(name=…)`; a module found through `sys.path` edits or an import
-  mode other than the default `prepend`.
+  mode other than the default `prepend`. These stay the auditor's judgment (§12).
 - **That the code under test still meets the bound.** The lock freezes what the test expects,
   not what the API shows while it waits. The migration engine pins that with a second test
-  outside the frozen set, which the departure's spec names. Redline doesn't check that it exists.
+  outside the frozen set, which the departure's spec names. Redline doesn't check that it exists;
+  the auditor does (§12).
 
 Editing a frozen test is a **departure**, at any step: an R step too, when another change froze
 the test before it. The step re-runs `redline lock`, and one of its
@@ -986,7 +998,7 @@ it is waiting, not wrong: once the note on that commit lands, fetch it (`git fet
 must then say `pass` too, or check-ledger fails. Nothing else in the PR needs to change.
 
 What it doesn't prove: that the scenario's own test ran. A result is the whole suite's on the
-merged commit, and a test skipped there passes with it.
+merged commit, and a test skipped there passes with it (O-CLOSE6).
 
 There is no verify report. The ledger, which CI rebuilds, already holds the evidence, and
 check-close reads it. A report the agent wrote would either repeat the ledger or be the agent
@@ -1010,7 +1022,8 @@ scenario, on:
 It compares with the merge-base, so it is the C PR's gate; run on its own it takes `--base`
 (default `main`), and run on `main` after the merge it has no diff to read and fails. What it
 doesn't prove: anything outside the scenarios. A requirement's own prose, a `### Requirement:`
-heading with no scenario under it, or text before the first requirement, can change unseen.
+heading with no scenario under it, or text before the first requirement, can change unseen
+(O-CLOSE7).
 
 At **lite** rigor, S and R may share one PR, so the smallest change is two sessions.
 
@@ -1288,7 +1301,7 @@ What it doesn't prove: that GitHub enforces the permissions it is given, or that
 jobs use are sound: a pin stops a moved tag from changing them, but the pinned commit is trusted as
 it is. The toolchain is pinned by version, not by hash, so an index serving other files under a
 version isn't caught; the runner images (`ubuntu-latest`, `windows-latest`), and pip, which comes
-with the pinned Python, change with GitHub's updates. Nor does it prove the note's text, which merged code
+with the pinned Python, change with GitHub's updates (O-CI9). Nor does it prove the note's text, which merged code
 still writes for its own merge commit, as it runs the suite that says `pass`. A token with
 `contents: write` held elsewhere, a maintainer's or an agent's given one, still writes any note
 (§4).
@@ -1359,12 +1372,12 @@ What the label still doesn't prove:
 - **Who pressed the button.** Anyone holding a maintainer's token, including an agent given it,
   applies the label as that maintainer.
 - **What they saw.** The label isn't tied to a commit. Commits pushed after it, with new
-  departures, are covered by it until someone removes it.
+  departures, are covered by it until someone removes it (O-APPR1).
 - **That the named person agreed.** Any maintainer's label approves a departure, whoever its
-  trailer names.
+  trailer names (O-APPR2).
 - **The role at the time.** The role is read when CI runs, not when the label was applied.
 
-The real `gh api` calls are tested only by hand; the suite uses the fake.
+The real `gh api` calls are tested only by hand; the suite uses the fake (O-GH1).
 
 ## 8. Rigor levels (on top of the invariants)
 
@@ -1487,16 +1500,80 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    11, the actions pinned to commits and the toolchain to versions (O-CI7, O-CI8); part 12,
    history read in a fixed number of git calls, not two a commit (O-PERF1); part 13, `steps.md`
    checked at every step, an open item without an ID or an owner a failure (O-STEPS1); part 14,
-   `steps.md` compared with the merge-base, so no item or step leaves it silently (O-STEPS2). The
-   review's other code items join this step, each with its own O-ID, as they are taken.
+   `steps.md` compared with the merge-base, so no item or step leaves it silently (O-STEPS2); part
+   15, every known limit given an O-ID and an owner or a reason it stays a judgment, and a
+   scenario heading not in its form a failure (O-SPEC1); part 16, a recorded manual check
+   (O-SPEC2). Later parts take O-CLOSE7, O-CI9, O-APPR1, O-APPR2 and O-GH1. The review's other
+   code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
+11. **Per-scenario outcomes from CI** (O-CLOSE6, the review's item 19): each linked test's
+   outcome in the note, so red, green and a break are the scenario's own tests', not the suite's.
 
 ## 12. Open problems
 
-- Scenarios that can't be automated (visual, timing): a recorded manual check with a reason,
-  which the auditor may challenge.
-- Mutation cost on large codebases: touched files only, at the Red step only.
-- Whether a test asserts its scenario's THEN clauses is a judgment; the auditor checks it.
+Every limit a "What it doesn't prove" list names is either an O-item below, with an owning step,
+or a judgment this list names, with whose it is and why no gate can make it (§2.7).
+
+**Judgments**, which stay so:
+
+- **Whether a test asserts its scenario's THEN clauses.** The change auditor runs at S, before any
+  test exists, so it can't check this. A gate bounds it: a `new` test that asserts nothing passes
+  on today's code and fails its strict red; a `hold` test that asserts nothing kills no mutant and
+  fails its break. A test that asserts some clauses and not others passes both. Whether it covers
+  them all is the maintainer's, reviewing the R PR, and at critical the architecture auditor's
+  (§4), which asks what a test could pass while violating.
+- **Mutation cost on large codebases** is a cost, never a gate passed: only the files the change's
+  premises cite are mutated, at the R step only, each scenario's runners stopping at the first
+  kill (§5). A run that takes too long fails CI where it is seen. How much to cite is the
+  auditor's, who checks the premises.
+- **What `reach` can't follow** (§5): a static reading doesn't run the code, so dynamic imports,
+  plugins and renamed fixtures are out of its sight, and following every import would hash the
+  code under test. At critical, whether a locked test leans on one is the auditor's.
+- **That the code under test still meets a frozen bound** (§5): the second test outside the frozen
+  set is named by the departure's spec, which the auditor reads at S.
+- **What Redline can't observe**: what an agent read, and that its reply was written unedited
+  (§4, §9); who pressed a label's button, and the role a person had before CI ran (§7); that
+  GitHub enforces the permissions it is given, and that a pinned action's commit is sound; and
+  the note's text, which merged code writes for its own merge commit by running the suite (§7).
+  Each is recorded where it applies; none has a mechanism Redline could add.
+- **What the claims record leaves out** (§4): PR text, which is untrusted and an injection path
+  into the process auditor's context, so it is left out on purpose; and a claim in an earlier
+  commit of a PR merged by rebase, since the push run reads the merged commit's own range.
+  Redline needs merge commits or squash merges; allowing only those is a repository setting, as
+  branch protection is.
+
+- O-SPEC1 [build 9 part 15]: every gate finds scenarios by `#### Scenario <ID> [new|hold]:`, so a
+  heading with an unknown tag, such as the `[manual]` §12 once suggested, or with none, is no
+  scenario at all: it needs no test, no evidence at C and no place in `specs/`, and check-links
+  reports `0 scenarios` without a gap. The plan: check-links and check-steps fail a line that
+  starts `#### Scenario` in any other form, naming it (§4).
+- O-SPEC2 [build 9 part 16]: a scenario that can't be automated (visual, timing) has no form, so
+  check-links fails it and its change can't close. The plan: a `[manual]` tag with a `Manual:
+  <reason>` line, which the auditor may challenge at S; no test; and at C, check-close asks for a
+  fifth claim, `Redline-Manual: <ID> checked-by @person: <what was seen>`, with a maintainer's
+  `redline:manual` label (§7), which `redline claims` prints.
+- O-CLOSE6 [build 11]: check-close takes a scenario's red, green or break from the whole suite's
+  result on the merged commit, so a test skipped or not collected there passes with it (§5). The
+  plan: each linked test's outcome in the note, red the first commit where the scenario's `new`
+  tests failed strictly, green where they passed without `new`.
+- O-CLOSE7 [build 9]: check-specs compares scenarios only, so a requirement's prose, a
+  `### Requirement:` heading with no scenario, or text before the first requirement changes unseen
+  at C (§5). The plan: text outside scenarios may change only under a requirement the delta names.
+- O-LOCK4 [build 8]: the lock reads no timing from outside its files: environment variables
+  (`PYTEST_TIMEOUT`, `PYTEST_ADDOPTS`), flags in the CI workflow, or data files a test reads (§5).
+  It is runner configuration outside a step, with O-RUN4.
+- O-CI9 [build 9]: the toolchain is pinned by version, not hash, so an index serving other files
+  under a version isn't caught; pip comes with the pinned Python, and the runner images
+  (`ubuntu-latest`, `windows-latest`) move with GitHub's updates (§7). The plan: `pip install
+  --require-hashes`, pip pinned, and the images by version label.
+- O-APPR1 [build 9]: a label isn't tied to a commit, so commits pushed after it, with new claims,
+  are covered by it until someone removes it (§7). The plan: a claim's label counts only when it
+  was applied after the PR's head commit was pushed.
+- O-APPR2 [build 9]: any maintainer's label approves a departure, whoever its trailer names as
+  approving (§7). The plan: the label's applier must be the person the trailer names.
+- O-GH1 [build 9]: the real `gh api` calls that read labels, roles and merged PRs are tested only
+  by hand; the suite uses the fake (§7). Running Redline on itself (the review's item 17) would
+  call them on every claim; a test may call them on this repository's own PRs.
 - O-LOCK1 [closed, build 5 part 3]: a departure's approval was a recorded line, not proof. Now
   `redline ci pr` checks a maintainer's `redline:departure` label, with the same function that
   checks `Oversized` (§7, Approvals), and §7 says what that still doesn't prove.
