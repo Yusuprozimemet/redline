@@ -97,7 +97,9 @@ def premises(repo: Path, change: str) -> list[str]:
     return [text for _, _, text in premise_lines(repo, change)]
 
 
-def brief(repo: Path, change: str, step: Step) -> str:
+def brief(repo: Path, change: str, step: Step, done: set[str]) -> str:
+    """The step's hand-off, ending with the change's progress given the steps `done` on main."""
+    from redline.progress import progress  # progress imports this module
     parts = [f"# Brief: {change}/{step.name}", f"Goal: {step.goal}", "", "## Owned scenarios"]
     parts += [scenario(repo, change, sid) + "\n" for sid in step.owns] or ["(none)", ""]
     parts += ["## Cited files (premises)"] + (premises(repo, change) or ["(none)"])
@@ -111,7 +113,7 @@ def brief(repo: Path, change: str, step: Step) -> str:
         phase = plan.phases[index]
         parts += ["", f"## Initiative: {plan.name}", f"Goal: {plan.goal}",
                   f"Phase {phase.number} of {len(plan.phases)}: {phase.name}", f"Stop: {phase.stop}"]
-    return "\n".join(parts) + "\n"
+    return "\n".join(parts) + "\n\n" + progress(repo, change, done)
 
 
 def complete(repo: Path, change: str, done: set[str], rev: str | None = None) -> bool:
@@ -211,7 +213,7 @@ def start(repo: Path, name: str) -> str:
     branch = git(repo, "branch", "--show-current").stdout.strip()
     if branch == "main" or len(head) != 2 or head[0] != head[1]:
         raise Refused("start each step on a new branch fresh from main (no commits of its own yet)")
-    text = brief(repo, change, steps[index])
+    text = brief(repo, change, steps[index], merged)
     state.parent.mkdir(parents=True, exist_ok=True)
     state.write_text(name + "\n", encoding="utf-8")
     return text
