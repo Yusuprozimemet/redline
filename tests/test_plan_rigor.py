@@ -114,6 +114,38 @@ def test_a_step_that_takes_a_change_out_of_its_plan_needs_the_claim_too(plain):
     assert f"rigor: add-wave was taken out of {PLAN}, with no Redline-Rigor trailer" in gates(plain.path, "add-greet", "S")
 
 
+def added(glob: str, key: str) -> str:
+    return f"rigor: `{glob}` was added to `{key}:` in redline/config.yaml"
+
+
+def test_ci_refuses_a_glob_added_to_generated_or_support_until_a_maintainer_labels_the_claim(change, capsys, github):
+    outside(change, {"redline/config.yaml": 'generated:\n  - "*"\nsupport:\n  - "tests/*.py"\n'})
+    code, out = ci(change, capsys, "pr", "--base", "main", "--pr", "1")
+    assert code == 1
+    assert f"{added('*', 'generated')}, with no Redline-Rigor trailer" in out
+    assert f"{added('tests/*.py', 'support')}, with no Redline-Rigor trailer" in out
+    change.commit("why\n\nRedline-Rigor: every file here is built")
+    code, out = ci(change, capsys, "pr", "--base", "main", "--pr", "1")
+    assert code == 1
+    assert f"{added('*', 'generated')}: needs the `redline:rigor` label from a maintainer" in out
+    github.applied["redline:rigor"] = "maintainer"
+    code, out = ci(change, capsys, "pr", "--base", "main", "--pr", "1")
+    assert code == 0, out
+    assert OUTSIDE in out
+
+
+def test_a_step_that_adds_a_glob_needs_the_claim_too(plain):
+    plain.commit("widen", {"redline/config.yaml": 'generated:\n  - "*.json"\n'})
+    assert f"{added('*.json', 'generated')}, with no Redline-Rigor trailer" in gates(plain.path, "add-greet", "S")
+
+
+def test_removing_or_reordering_globs_is_no_claim(change):
+    change.commit("globs", {"redline/config.yaml": 'generated:\n  - "*.lock"\n  - "*.json"\nsupport:\n  - "a.py"\n'})
+    fresh_branch(change, "narrow")
+    change.commit("narrow", {"redline/config.yaml": 'generated:\n  - "*.json"\n'})
+    assert rigor_claim(change.path, Approvals()) == []
+
+
 def test_a_new_plan_declares_its_level_without_a_claim(change):
     fresh_branch(change, "plan")
     change.commit("a new plan", {PLAN: CRITICAL, **FAREWELL, **WAVE})
