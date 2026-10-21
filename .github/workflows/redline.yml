@@ -109,6 +109,6 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version: "3.12.15"  # exact: "3.12" gave Linux and Windows different patches
+          python-version: "3.12.10"  # the last 3.12 built for Windows; later ones are source-only
       - run: pip install -e . pytest-xdist -c constraints.txt  # pytest, not `redline ci`: mutmut doesn't run on Windows
       - run: python -m pytest -n auto -p no:cacheprovider

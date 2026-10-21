@@ -1196,10 +1196,11 @@ whose hook writes another run's note and refuses the first push.
 **What CI runs is pinned.** CI's runs are the evidence, so two runs of one commit run the same
 tools unless a commit changes them. Each action is used by its full commit SHA, its release tag in
 a comment (`actions/checkout@11d5960…  # v4.4.0`), since a tag can be moved to other code; an
-action has one SHA throughout. Python and Node are exact versions (`3.12.15`, `22.23.3`): `3.12`
-gave Linux 3.12.15 and Windows 3.12.10 in one run. Every `pip install` takes `-c constraints.txt`,
-which pins with `==` every package any job installs, on Linux and Windows, and no pip line pins a
-version of its own. The build backend is pinned in `pyproject.toml`'s `[build-system]` itself
+action has one SHA throughout. Python and Node are exact versions: `3.12` gave Linux 3.12.15 and
+Windows 3.12.10 in one run, so Linux is `3.12.15` and Windows `3.12.10`, the last 3.12 GitHub
+builds for Windows (3.12's later releases are source-only security fixes); Node is `22.23.3`.
+Every `pip install` takes `-c constraints.txt`, which pins with `==` every package any job
+installs, on Linux and Windows, and no pip line pins a version of its own. The build backend is pinned in `pyproject.toml`'s `[build-system]` itself
 (`setuptools==84.2.1`), since whether `-c` reaches pip's isolated build environment depends on
 pip's version. `npm ci` already installs from the toy's `package-lock.json`.
 
@@ -1476,7 +1477,7 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
 - O-CI8 [closed, build 9 part 11]: `pip install -e ".[mutation]"` resolved pytest, pyyaml, mutmut
   and their dependencies afresh on every run, beside a pinned pytest-xdist on Windows, and
   `python-version: "3.12"` gave two patch versions in one run, so a new release could change what
-  CI's evidence says with no commit. Now Python is `3.12.15`, every pip line installs from
+  CI's evidence says with no commit. Now Python is exact in every job (`3.12.15`, and `3.12.10` on Windows), every pip line installs from
   `constraints.txt`, setuptools is pinned in `[build-system]`, and a test in CI fails on an
   installed distribution the file doesn't pin at its version (§7).
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
