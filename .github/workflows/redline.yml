@@ -42,7 +42,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}  # the merged PR's claim labels, recorded in the note
 
-  runners:  # the real Jest and Stryker on a toy project, which the suite fakes (docs/design.md, section 5)
+  runners:  # the real Jest, Stryker and mutmut on toys, which the suite fakes (docs/design.md, section 5)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,9 +54,9 @@ jobs:
           node-version: "22.23.3"  # pinned, as the toy's package-lock.json pins Jest and Stryker
       - run: npm ci --no-audit --no-fund
         working-directory: tests/toys/jest
-      - run: pip install -e .
-      - name: Prove the Jest helper, REDLINE_SPEC and Stryker's counts on the real tools
-        run: python -m pytest -v -p no:cacheprovider tests/test_runners.py
+      - run: pip install -e ".[mutation]"  # mutmut, proved here as Jest and Stryker are
+      - name: Prove the Jest helper, REDLINE_SPEC, Stryker's counts and mutmut's credit on the real tools
+        run: python -m pytest -v -p no:cacheprovider tests/test_runners.py tests/test_mutmut.py
         env:
           REDLINE_REAL_RUNNERS: "1"  # without it these tests are skipped
 

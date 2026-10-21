@@ -16,14 +16,66 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
+from redline.config import load_config
+from redline.lines import is_generated
 from redline.links import SPEC_PATHS, declarations, grep
 from redline.premises import CITATION, premise_lines
 from redline.runner import RUNNERS, Runner, run, runner_for
 
 HOLD = re.compile(r"^#### Scenario (\S+) \[hold\]:")
+UNCOPIED = (".git", ".venv", "mutants")
+TABLE = re.compile(r"\s*\[\[?[^\[\]=]+\]\]?\s*(#.*)?$")  # a table's header line
+MUTMUT_TABLE = re.compile(r"\s*\[\[?\s*tool\s*\.\s*mutmut\s*[\].]")  # [tool.mutmut] or one of its subtables
+
+
+def without_mutmut(pyproject: Path) -> None:
+    """Take `[tool.mutmut]` out of the copy's pyproject.toml, which mutmut would read instead of setup.cfg.
+    Python's TOML parser checks that only that table went; when it can't be taken out by its headers, an error."""
+    if not pyproject.is_file():
+        return
+    text = pyproject.read_text(encoding="utf-8")
+    try:
+        data = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as e:
+        raise RuntimeError(f"pyproject.toml: {e}") from None
+    if not (isinstance(tool := data.get("tool"), dict) and "mutmut" in tool):
+        return
+    kept, inside = [], False
+    for line in text.splitlines(keepends=True):
+        if TABLE.match(line):
+            inside = bool(MUTMUT_TABLE.match(line))
+        if not inside:
+            kept.append(line)
+    del tool["mutmut"]
+    if not tool:
+        del data["tool"]
+    try:
+        left = tomllib.loads("".join(kept))
+    except tomllib.TOMLDecodeError:
+        left = None
+    if left != data:
+        raise RuntimeError("can't take [tool.mutmut] out of pyproject.toml by its table headers, "
+                           "and mutmut would read its settings instead of Redline's")
+    pyproject.write_text("".join(kept), encoding="utf-8", newline="")
+
+
+def copied(copy: Path, tests: list[str]) -> list[str]:
+    """mutmut's `also_copy`: the directory of each of the scenario's tests, of each conftest.py from the root down
+    to them and of each `support:` file, or the file itself at the root, since mutmut makes no directory for a file."""
+    files = set(tests)
+    for test in tests:
+        files |= {(parent / "conftest.py").as_posix() for parent in PurePosixPath(test).parents
+                  if (copy / parent / "conftest.py").is_file()}
+    if support := load_config(copy).support:
+        for root, dirs, names in os.walk(copy):
+            dirs[:] = [d for d in dirs if d not in UNCOPIED]
+            relative = (Path(root, name).relative_to(copy).as_posix() for name in names)
+            files |= {path for path in relative if is_generated(path, support)}
+    return sorted({path.rpartition("/")[0] or path for path in files})
 
 
 class Mutmut:
@@ -37,14 +89,18 @@ class Mutmut:
             return "mutmut doesn't run on Windows"
         return None if shutil.which("mutmut") else "mutmut isn't installed"
 
-    def kills(self, files: list[str], sid: str) -> tuple[int, int]:
-        """(mutants made from `files`, mutants that made the scenario's tests fail)."""
+    def kills(self, files: list[str], sid: str, tests=()) -> tuple[int, int]:
+        """(mutants made from `files`, mutants that made the scenario's tests, in the files `tests`, fail),
+        with Redline's settings alone, so no other test's kill counts."""
         with tempfile.TemporaryDirectory() as tmp:
             copy = Path(tmp) / "repo"
-            shutil.copytree(self.repo, copy, ignore=shutil.ignore_patterns(".git", ".venv", "mutants"))
+            shutil.copytree(self.repo, copy, ignore=shutil.ignore_patterns(*UNCOPIED))
+            without_mutmut(copy / "pyproject.toml")
             config = configparser.ConfigParser()
             config.read(copy / "setup.cfg", encoding="utf-8")
-            config["mutmut"] = {"paths_to_mutate": "\n".join(files), "pytest_add_cli_args": f"--redline-spec={sid}"}
+            config["mutmut"] = {"source_paths": "\n".join(files), "pytest_add_cli_args": f"--redline-spec={sid}"}
+            if also := copied(copy, list(tests)):  # never empty: mutmut reads "" as ".", the whole copy
+                config["mutmut"]["also_copy"] = "\n".join(also)
             with open(copy / "setup.cfg", "w", encoding="utf-8") as out:
                 config.write(out)
             for command in (["mutmut", "run"], ["mutmut", "results", "--all", "true"]):
@@ -71,8 +127,9 @@ class Stryker:
         missing = (p for p in self.PACKAGES if not (self.repo / "node_modules" / p).is_dir())
         return next((f"{p} isn't installed" for p in missing), None)
 
-    def kills(self, files: list[str], sid: str) -> tuple[int, int]:
-        """(mutants made from `files`, mutants that made the scenario's tests fail); a timeout isn't a kill."""
+    def kills(self, files: list[str], sid: str, tests=()) -> tuple[int, int]:
+        """(mutants made from `files`, mutants that made the scenario's tests fail); a timeout isn't a kill.
+        Its sandbox holds the whole project, so it needs no `tests`."""
         argv = [shutil.which("npx"), "--no-install", "stryker", "run", "--mutate", ",".join(files),
                 "--testRunner", "jest", "--reporters", "json"]
         done = subprocess.run(argv, cwd=self.repo, capture_output=True, encoding="utf-8", errors="replace",
@@ -145,7 +202,8 @@ def unmutated(repo: Path, runner: Runner, sid: str) -> str | None:
     return None if passes(repo, runner, sid) else f"its {runner.name} tests fail on unmutated code"
 
 
-def mutate(repo: Path, change: str, sid: str, runners: list[Runner], report: BreakReport) -> str | None:
+def mutate(repo: Path, change: str, sid: str, runners: list[Runner], tests: list[str],
+           report: BreakReport) -> str | None:
     """Each runner's tool on its cited files until a mutant is killed: why the scenario isn't proved, or None."""
     made = killed = 0
     files, skipped = [], []
@@ -157,7 +215,7 @@ def mutate(repo: Path, change: str, sid: str, runners: list[Runner], report: Bre
         if why := tool.unavailable():
             skipped.append(why)
             continue
-        more, kills = tool.kills(mine, sid)
+        more, kills = tool.kills(mine, sid, sorted({t.partition('::')[0] for t in tests if runner_for(t) is runner}))
         made, killed = made + more, killed + kills
         if killed:
             return None
@@ -178,5 +236,5 @@ def check_break(repo: Path, change: str) -> BreakReport:
         elif failed := next((why for r in runners if (why := unmutated(repo, r, sid))), None):
             report.results[sid] = failed
         else:
-            report.results[sid] = mutate(repo, change, sid, runners, report)
+            report.results[sid] = mutate(repo, change, sid, runners, list(tests), report)
     return report
