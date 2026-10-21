@@ -1,8 +1,9 @@
 """Runners: the test framework a test file belongs to, chosen by its extension. See docs/design.md, §5.
 
-Each knows its test files, its spec marker (the scenario ID, and whether it is `new`) and where each
-of its tests starts and ends: pytest's from Python's own parser, Jest's from a scanner that skips
-strings, template literals and comments; and the command that runs them. `redline install jest`
+Each knows its test files, where each of its tests starts and ends, and the spec markers on each (the
+scenario ID, and whether it is `new`): pytest's from Python's own parser, a marker counting only as a
+test function's decorator; Jest's from a scanner that skips strings, template literals and comments;
+and the command that runs them. check-links, check-order and the lock all read markers through it. `redline install jest`
 writes the Jest helper tests import; `check_helpers`, run by every gate, fails on one that differs
 from the copy Redline ships.
 """
@@ -18,31 +19,34 @@ from dataclasses import dataclass
 from fnmatch import fnmatch
 from importlib.resources import files
 from pathlib import Path
+from typing import NamedTuple
 
 HELPERS = {"jest": "redline/runners/jest.js"}  # runner -> where `redline install` writes its helper
 CLOSE = {"(": ")", "[": "]", "{": "}"}
+
+
+class Mark(NamedTuple):
+    sid: str
+    new: bool
+    line: int
 
 
 @dataclass(frozen=True)
 class Runner:
     name: str
     paths: tuple[str, ...]  # git pathspecs of its test files
-    grep: str  # a `git grep -E` pattern for a line with a marker
-    call: str  # a Python pattern for the marker's opening, up to its `(`
-    new: str  # a Python pattern for the `new` argument after the ID
-    tests: Callable[[str, str], Iterator[tuple[str, str, str]]]  # (path, text) -> (name, source, marker text)
+    grep: str  # a pattern, for `git grep -E` and Python alike, for a line that may hold a marker
+    tests: Callable[[str, str], Iterator[tuple[str, str, tuple[Mark, ...]]]]  # (path, text) -> (name, source, its markers)
     test_files: tuple[str, ...]  # globs of its test files, which check-track doesn't count as code
     needs: str  # the program its command needs on PATH, or ""
     command: Callable[[str | None], tuple[list[str], dict[str, str]]]  # scenario or all -> (argv, env it adds)
 
-    @property
-    def ids(self) -> re.Pattern:
-        return re.compile(self.call + r"""\s*["']([^"']+)["']""")
 
-    @property
-    def marker(self) -> re.Pattern:
-        """(scenario ID, the `new` argument or "")."""
-        return re.compile(self.call + r"""\s*["']([^"']+)["']\s*(""" + self.new + r""")?\)""")
+def markers(runner: Runner, path: str, text: str) -> tuple[Mark, ...]:
+    """Every spec marker in a file, as its runner reads them; RuntimeError when it can't read the file."""
+    if not re.search(runner.grep, text, re.M):
+        return ()
+    return tuple(mark for _, _, marks in runner.tests(path, text) for mark in marks)
 
 
 def functions(tree: ast.AST, prefix: str = ""):
@@ -60,14 +64,27 @@ def source(lines: list[str], node: ast.AST) -> str:
     return "\n".join(lines[(decorators[0] if decorators else node).lineno - 1:node.end_lineno])
 
 
-def python_tests(path: str, text: str) -> Iterator[tuple[str, str, str]]:
+def spec_mark(node: ast.expr) -> Mark | None:
+    """The decorator as a marker when it is `….mark.spec("ID")`, or with `new=True`, as pytest reads it."""
+    func = node.func if isinstance(node, ast.Call) else None
+    owner = getattr(func, "value", None)
+    if not (isinstance(func, ast.Attribute) and func.attr == "spec"
+            and (getattr(owner, "attr", None) == "mark" or getattr(owner, "id", None) == "mark")):
+        return None
+    if not (node.args and isinstance(node.args[0], ast.Constant) and isinstance(sid := node.args[0].value, str)):
+        return None
+    new = any(k.arg == "new" and isinstance(k.value, ast.Constant) and k.value.value is True for k in node.keywords)
+    return Mark(sid, new, node.lineno)
+
+
+def python_tests(path: str, text: str) -> Iterator[tuple[str, str, tuple[Mark, ...]]]:
     try:
         tree = ast.parse(text, path)
     except SyntaxError as error:
         raise RuntimeError(f"{path}: {error}") from None
     lines = text.split("\n")
     for name, node in functions(tree):
-        yield name, source(lines, node), " ".join(ast.get_source_segment(text, d) or "" for d in node.decorator_list)
+        yield name, source(lines, node), tuple(mark for d in node.decorator_list if (mark := spec_mark(d)))
 
 
 def closing(text: str, start: int, path: str) -> int:
@@ -105,19 +122,20 @@ def closing(text: str, start: int, path: str) -> int:
 
 
 TEST_CALL = re.compile(r"""\s*\.test\(\s*(["'])((?:\\.|(?!\1).)*)\1""")
+JEST_MARK = re.compile(r"""(?<![\w.$])spec\(\s*["']([^"']+)["']\s*(,\s*\{\s*new\s*:\s*true\s*\}\s*)?\)""")
 
 
-def jest_tests(path: str, text: str) -> Iterator[tuple[str, str, str]]:
+def jest_tests(path: str, text: str) -> Iterator[tuple[str, str, tuple[Mark, ...]]]:
     """Each `spec(...).test("name", ...)`, its source from `spec(` to the `)` closing its `test(` call."""
     names = set()
-    for found in JEST.marker.finditer(text):
+    for found in JEST_MARK.finditer(text):
         line = text.count("\n", 0, found.start()) + 1
         if not (call := TEST_CALL.match(text, found.end())):
             raise RuntimeError(f"{path}:{line}: a spec marker must be followed by .test(\"name\", ...)")
         if call[2] in names:
             raise RuntimeError(f"{path}:{line}: two tests named {call[2]!r}")
         names.add(call[2])
-        yield call[2], text[found.start():closing(text, text.index("(", found.end()), path) + 1], found[0]
+        yield call[2], text[found.start():closing(text, text.index("(", found.end()), path) + 1], (Mark(found[1], bool(found[2]), line),)
 
 
 def pytest_command(sid: str | None) -> tuple[list[str], dict[str, str]]:
@@ -130,10 +148,8 @@ def jest_command(sid: str | None) -> tuple[list[str], dict[str, str]]:
 
 
 JS = ("js", "jsx", "mjs", "cjs", "ts", "tsx")
-PYTEST = Runner("pytest", ("*.py",), r"mark\.spec\(", r"mark\.spec\(", r",\s*new\s*=\s*True\s*", python_tests,
-                ("test_*.py", "*_test.py", "conftest.py"), "", pytest_command)
-JEST = Runner("jest", tuple(f"*.{ext}" for ext in JS),
-              r"(^|[^[:alnum:]_.$])spec\(", r"(?<![\w.$])spec\(", r",\s*\{\s*new\s*:\s*true\s*\}\s*", jest_tests,
+PYTEST = Runner("pytest", ("*.py",), r"mark\.spec\(", python_tests, ("test_*.py", "*_test.py", "conftest.py"), "", pytest_command)
+JEST = Runner("jest", tuple(f"*.{ext}" for ext in JS), r"(^|[^A-Za-z0-9_.$])spec\(", jest_tests,
               tuple(f"*.{kind}.{ext}" for kind in ("test", "spec") for ext in JS) + tuple(f"*__tests__/*.{ext}" for ext in JS),
               "npx", jest_command)
 RUNNERS = (PYTEST, JEST)

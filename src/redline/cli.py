@@ -136,11 +136,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in ("ledger", "check-ledger"):
         return run_ledger(args.repo, args.change, args.main, args.command == "check-ledger")
 
+    notes: list[str] = []
     try:
-        results = check_order(args.repo, args.rev)
+        results = check_order(args.repo, args.rev, notes=notes)
     except RuntimeError as error:
         print(f"redline: {error}")
         return 2
+    for note in notes:
+        print(note)
     for r in results:
         if r.status == "ok":
             print(f"ok {r.scenario}: red {r.red[:7]} is an ancestor of green {r.green[:7]}")
