@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 
+from redline.progress import bar
 from test_merged import merged, on_step, remote  # noqa: F401 (remote is a fixture)
 from test_plan import FAREWELL, PLAN, VALID, close_greet, complete, planned  # noqa: F401 (planned is a fixture)
 from test_start import change, fresh_branch, merge_step, start  # noqa: F401 (change is a fixture)
@@ -80,6 +81,10 @@ def test_start_prints_it_at_the_end_of_the_brief(change, capsys):
     code, out = start(change, capsys, "add-greet/S")
     assert code == 0, out
     assert f"## Progress\nadd-greet: {EMPTY} 0 of 5 steps merged · next: add-greet/S\n" in out
+
+
+def test_the_bar_is_full_only_when_everything_is_done():
+    assert bar(39, 40) == "[" + "█" * 19 + "░" + "]"
 
 
 def test_the_bar_prints_through_a_pipe(change):
