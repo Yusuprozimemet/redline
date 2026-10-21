@@ -145,7 +145,9 @@ Waived-by: @maintainer: timing is a manual check (O2)
 `pr` at S refuses if `audit.md` is missing, or any finding is `[open]`, a `[closed]` one has no
 `Resolution:` or a `[waived]` one has no `Waived-by:`.
 
-A test is linked to its scenario with a marker, e.g. `@pytest.mark.spec("AUTH.2FA.S1")`.
+A test is linked to its scenario with a marker, e.g. `@pytest.mark.spec("AUTH.2FA.S1")`. A marker
+counts only where its runner reads one: pytest's as a decorator of a test function, never in a
+comment or a string (§5, Runners).
 
 Steps, in order, with the scenarios each owns and the deferred items each step owns:
 
@@ -713,8 +715,26 @@ and the command that runs its tests, all of them or one scenario's. Its mutation
 | Jest | `*.js`, `*.jsx`, `*.mjs`, `*.cjs`, `*.ts`, `*.tsx` | `*.test.<ext>`, `*.spec.<ext>`, `*__tests__/*.<ext>`, for those extensions | `npx --no-install jest --ci`, `REDLINE_SPEC=<ID>` | `spec("ID").test("name", fn)` | `spec("ID", { new: true }).test(…)`: `test.failing` | Stryker |
 
 check-links, check-order, check-break and the lock read every runner's markers, so a scenario may
-be linked from either language. A marker is read from one line, as pytest's is. Jest's test files
-are its default `testMatch`, by extension only, so an `openapi.spec.json` stays code.
+be linked from either language. They read them with one function per runner, the one that finds
+its tests (below), so the four can't disagree. A marker counts only where its runner reads it.
+pytest's is a decorator of a test function (at module level, or a method), read with Python's
+parser: a commented-out `# @pytest.mark.spec("X", new=True)`, or a marker inside a string, is no
+marker, so it makes no red and links nothing. The plugin refuses a `spec` marker pytest would
+apply from anywhere else, a class decorator, `pytestmark` or `pytest.param(marks=…)`, since
+Redline doesn't read it there. Jest's is still read from the file's text, comments and strings
+included, until build 9 part 6 (O-MARK2). A marked function pytest doesn't collect still counts
+(O-RUN6). Jest's test files are its default `testMatch`, by extension only, so an
+`openapi.spec.json` stays code.
+
+check-order reads each commit's test files from git: each runner's files in the commit's tree,
+each blob read once and its markers kept by blob hash, so a file unchanged across commits is
+parsed once, and only a file whose text matches the runner's grep pattern is parsed at all. A file
+that doesn't parse at a commit, such as a syntax error committed mid-history, gives no markers
+there, and check-order prints `skipped <path> at <commit>: <error>`. History can't be rewritten,
+so failing would fail every later PR, and reading its lines as text would let comments and
+strings count again. Skipping can only drop a red or a green, never make one, and a green whose
+red was dropped fails, where it is seen. In the working tree a file that doesn't parse is an
+error: check-links reports it as a gap, and the lock refuses.
 
 The suite `redline ci` runs is every test of each runner the repository uses, run by the command
 check-break runs (all tests, no `REDLINE_SPEC`). pytest is used when git tracks one of its test
@@ -1243,7 +1263,9 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
 9. **Fixes from the review of 2026-10-20**: part 1, a step's PR must be the change's next step
    (O-CI2); part 2, `start`'s phase and plan-audit refusals in CI (O-CI3); part 3, the config's
    `generated:` and `support:` read at the merge-base, a glob added to either a claim (O-CFG1);
-   part 4, a change's level lowered is a claim (O-CI4); text encoding on Windows (O-ENC1). The
+   part 4, a change's level lowered is a claim (O-CI4); part 5, a pytest marker counts only as a
+   decorator, read with Python's parser (O-MARK1); part 6, a Jest marker only in code, not in a
+   comment or a string (O-MARK2); text encoding on Windows (O-ENC1). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1297,6 +1319,17 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   change's level from critical to lite and drop the defect log and relabel at C, the required
   `Track:` lines and its initiative's plan audits. Now a change's level lower than at the
   merge-base needs `Redline-Rigor` and the `redline:rigor` label; a raise doesn't (§7, §8).
+- O-MARK1 [closed, build 9 part 5]: check-order and check-links read a marker as text on a line,
+  so a commented-out `new=True` marker made a red whose test never failed, which check-close then
+  accepted, and a marker inside a string linked its scenario: Redline's own history reported `ID`
+  from the plugin's usage message. The lock read decorators, so the gates disagreed. Now one
+  function per runner reads the markers for all four, pytest's from a test function's decorators
+  with Python's parser, check-order's by blob hash; a file that doesn't parse at a commit is
+  skipped with a note; and the plugin refuses a `spec` marker from a class, `pytestmark` or
+  `pytest.param` (§5).
+- O-MARK2 [build 9 part 6]: Jest markers are still read from the whole text, comments and strings
+  included, by check-order, check-links and the lock. The fix: one scanner that blanks comments,
+  strings and templates, used to find `spec(` in code and by `closing`.
 - O-PLAN1 [closed, build 6 part 8]: an initiative was critical only through its changes' levels,
   and a change with no proposal yet takes the config's, so an initiative whose first S step
   declared `Rigor: critical` skipped that phase's start audit. Now the plan has its own `Rigor:`

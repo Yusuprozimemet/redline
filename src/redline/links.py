@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from redline.order import git
-from redline.runner import RUNNERS
+from redline.runner import RUNNERS, markers
 
 SPEC_PATHS = [":(glob)redline/specs/**/spec.md", ":(glob)redline/changes/*/specs/**/delta.md"]
 HEADING = re.compile(r"^#### Scenario (\S+) \[(?:new|hold)\]:")
@@ -54,23 +54,29 @@ def check_links(repo: Path) -> LinkReport:
     for path, line, text in declarations(repo):
         if heading := HEADING.match(text):
             declared.setdefault(heading[1], []).append((path, line))
-    markers: dict[str, list[tuple[str, int]]] = {}
+    linked: dict[str, list[tuple[str, int]]] = {}
+    unreadable = []
     for runner in RUNNERS:
-        for path, line, text in grep(repo, runner.grep, *runner.paths):
-            for sid in runner.ids.findall(text):
-                markers.setdefault(sid, []).append((path, line))
+        for path in sorted({path for path, _, _ in grep(repo, runner.grep, *runner.paths)}):
+            try:
+                found = markers(runner, path, (repo / path).read_text(encoding="utf-8"))
+            except RuntimeError as error:
+                unreadable.append(f"unreadable test file {path}: {str(error).removeprefix(f'{path}: ')}")
+                continue
+            for mark in found:
+                linked.setdefault(mark.sid, []).append((path, mark.line))
 
-    report = LinkReport(len(declared))
+    report = LinkReport(len(declared), unreadable)
     for sid, places in sorted(declared.items()):
         living = [p for p in places if p[0].startswith("redline/specs/")]
         changes = {p.split("/")[2] for p, _ in places if p.startswith("redline/changes/")}
         if len(living) > 1 or len(changes) > 1 or len(places) - len(living) > len(changes):
             report.gaps.append(f"duplicate scenario {sid}: " + ", ".join(f"{p}:{n}" for p, n in places))
     for sid, places in sorted(declared.items()):
-        if sid not in markers:
+        if sid not in linked:
             path, line = places[0]
             report.gaps.append(f"unlinked scenario {sid} ({path}:{line}): no test has a spec marker for it")
-    for sid, places in sorted(markers.items()):
+    for sid, places in sorted(linked.items()):
         if sid not in declared:
             for path, line in places:
                 report.gaps.append(f"unknown scenario {sid} ({path}:{line}): no spec declares it")

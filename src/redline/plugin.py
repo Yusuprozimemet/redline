@@ -26,6 +26,10 @@ def linked(item: pytest.Item, sid: str) -> bool:
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     for item in items:
+        own = [m for m in getattr(getattr(item, "function", None), "pytestmark", []) if m.name == "spec"]
+        if len(list(item.iter_markers("spec"))) > len(own):  # Redline reads a marker only as the function's decorator
+            raise pytest.UsageError(f"{item.nodeid}: a spec marker goes on the test function, as its decorator, "
+                                    "not on its class, its module or a parameter")
         for mark in item.iter_markers("spec"):
             args_ok = len(mark.args) == 1 and isinstance(mark.args[0], str) and mark.args[0]
             if not args_ok or set(mark.kwargs) - {"new"}:

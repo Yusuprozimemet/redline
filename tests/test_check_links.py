@@ -121,3 +121,22 @@ def test_untracked_files_count_and_markers_with_options_link(repo, capsys):
         '@pytest.mark.spec("TOY.S2", new=False)\ndef test_b():\n    pass\n'
     )
     assert run(repo, capsys) == (0, ["ok: 2 scenarios, each linked to a test"])
+
+
+@pytest.mark.parametrize("text", [
+    'import pytest\n\n# @pytest.mark.spec("TOY.S1")\ndef test_it():\n    pass\n',
+    'TOY = """\n@pytest.mark.spec("TOY.S1")\ndef test_it():\n    pass\n"""\n',
+], ids=["commented", "quoted"])
+def test_a_marker_in_a_comment_or_a_string_links_nothing(repo, capsys, text):
+    repo.commit("unlinked", {SPEC: scenarios("TOY.S1"), "tests/test_toy.py": text})
+    code, out = run(repo, capsys)
+    assert code == 1
+    assert out == [f"unlinked scenario TOY.S1 ({SPEC}:3): no test has a spec marker for it"]
+
+
+def test_a_test_file_that_doesnt_parse_is_a_gap(repo, capsys):
+    repo.commit("broken", {SPEC: scenarios("TOY.S1"), "tests/test_toy.py": marked("TOY.S1") + "def (:\n"})
+    code, out = run(repo, capsys)
+    assert code == 1
+    assert out[0].startswith("unreadable test file tests/test_toy.py: invalid syntax")
+    assert f"unlinked scenario TOY.S1 ({SPEC}:3): no test has a spec marker for it" in out

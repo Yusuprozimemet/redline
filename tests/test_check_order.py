@@ -1,8 +1,12 @@
+import pytest
+
 from redline.cli import main
 from redline.order import check_order
 
 RED = 'import pytest\n\n@pytest.mark.spec("TOY.S1", new=True)\ndef test_it():\n    assert False\n'
 GREEN = 'import pytest\n\n@pytest.mark.spec("TOY.S1")\ndef test_it():\n    assert True\n'
+COMMENTED = 'import pytest\n\n# @pytest.mark.spec("TOY.S1", new=True)\ndef test_it():\n    assert True\n'
+QUOTED = 'import pytest\n\nTOY = """\n@pytest.mark.spec("TOY.S1", new=True)\ndef test_it():\n    assert False\n"""\n'
 
 
 def statuses(repo):
@@ -48,3 +52,21 @@ def test_cli_exit_code_and_report(repo, capsys):
     repo.commit("green 2", {"test_two.py": GREEN.replace("TOY.S1", "TOY.S2")})
     assert main(["check-order", "--repo", str(repo.path)]) == 1
     assert "FAIL TOY.S2" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("red", [COMMENTED, QUOTED], ids=["commented", "quoted"])
+def test_a_marker_in_a_comment_or_a_string_makes_no_red(repo, red):
+    repo.commit("no red", {"test_toy.py": red})
+    assert statuses(repo) == {}
+    repo.commit("green", {"test_toy.py": GREEN})
+    assert statuses(repo) == {"TOY.S1": "fail"}
+
+
+def test_a_file_that_doesnt_parse_at_a_commit_is_skipped_with_a_note(repo, capsys):
+    red = repo.commit("red", {"test_toy.py": RED})
+    broken = repo.commit("broken", {"test_toy.py": RED + "def (:\n"})
+    green = repo.commit("green", {"test_toy.py": GREEN})
+    [result] = check_order(repo.path)
+    assert (result.status, result.red, result.green) == ("ok", red, green)
+    assert main(["check-order", "--repo", str(repo.path)]) == 0
+    assert f"skipped test_toy.py at {broken[:7]}: invalid syntax" in capsys.readouterr().out

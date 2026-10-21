@@ -122,9 +122,9 @@ def hold_tests(repo: Path, change: str) -> dict[str, dict[str, str]]:
         for path in sorted({path for path, _, _ in grep(repo, runner.grep, *runner.paths)}):
             for name, text, marks in runner.tests(path, (repo / path).read_text(encoding="utf-8")):
                 digest = hashlib.sha256((text + "\n").encode()).hexdigest()
-                for sid, new in runner.marker.findall(marks):
-                    if not new and sid in found:
-                        found[sid][f"{path}::{name}"] = digest
+                for mark in marks:
+                    if not mark.new and mark.sid in found:
+                        found[mark.sid][f"{path}::{name}"] = digest
     return found
 
 
