@@ -1542,11 +1542,12 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   Redline needs merge commits or squash merges; allowing only those is a repository setting, as
   branch protection is.
 
-- O-SPEC1 [build 9 part 15]: every gate finds scenarios by `#### Scenario <ID> [new|hold]:`, so a
-  heading with an unknown tag, such as the `[manual]` §12 once suggested, or with none, is no
-  scenario at all: it needs no test, no evidence at C and no place in `specs/`, and check-links
-  reports `0 scenarios` without a gap. The plan: check-links and check-steps fail a line that
-  starts `#### Scenario` in any other form, naming it (§4).
+- O-SPEC1 [closed, build 9 part 15]: every gate found scenarios by `#### Scenario <ID>
+  [new|hold]:`, so a heading with an unknown tag, such as the `[manual]` §12 once suggested, or with
+  none, was no scenario at all: it needed no test, no evidence at C and no place in `specs/`, and
+  check-links reported `0 scenarios` without a gap. Now check-links and check-steps fail a line
+  that starts `#### Scenario` in any other form, naming its file and line, with one function,
+  `malformed` in `redline/links.py` (§4).
 - O-SPEC2 [build 9 part 16]: a scenario that can't be automated (visual, timing) has no form, so
   check-links fails it and its change can't close. The plan: a `[manual]` tag with a `Manual:
   <reason>` line, which the auditor may challenge at S; no test; and at C, check-close asks for a

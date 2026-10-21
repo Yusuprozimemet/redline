@@ -4,7 +4,9 @@ It fails on an open item that isn't `- <ID> [<step>]: <text>`, an ID given twice
 isn't one of the file's steps, or an item outside `## Open items`; on steps that aren't S, then R
 if there is one, then G1…Gn, then C, or a `## ` heading that is neither a step nor `## Open
 items`; on a step named twice; on an `Owns:` ID no delta of the change declares; and on a `new`
-scenario no G step owns. It reads the tree, and the deltas even once the change is closed.
+scenario no G step owns; and on a `#### Scenario` line in a delta that isn't a scenario heading
+(O-SPEC1), which check-links reads only from R on. It reads the tree, and the deltas even once the
+change is closed.
 `since` compares the file with the merge-base: an open item dropped, an item given to a merged step, a
 merged step or the PR's own removed (O-STEPS2).
 `pr` and `redline ci pr` run it on the step's change and on each change whose steps.md or deltas
@@ -15,6 +17,7 @@ import re
 from pathlib import Path
 
 from redline.close import tags
+from redline.links import FORM, malformed
 from redline.order import git, shown
 from redline.start import ITEM, merged_steps, scan
 
@@ -38,8 +41,12 @@ def check_steps(repo: Path, change: str) -> list[str]:
     kinds = tags(repo, change)  # ADDED and MODIFIED; a REMOVED entry is no heading
     bad += [f"steps.md:{step.owned_at[sid]}: {step.name} owns {sid}, which no delta of the change declares"
             for step in steps for sid in step.owns if sid not in kinds]
+    specs = repo / "redline/changes" / change / "specs"
+    bad += [f"{delta.relative_to(specs.parent).as_posix()}:{n}: {FORM}: {line}"
+            for delta in sorted(specs.glob("**/delta.md"))
+            for n, line in enumerate(delta.read_text(encoding="utf-8").splitlines(), 1) if malformed(line)]
     owned = {sid for step in steps if step.name.startswith("G") for sid in step.owns}
-    return bad + [f"{sid} is new, but no G step owns it" for sid, kind in kinds.items() if kind == "new" and sid not in owned]
+    return bad +[f"{sid} is new, but no G step owns it" for sid, kind in kinds.items() if kind == "new" and sid not in owned]
 
 
 def edited(repo: Path, base: str = "main") -> set[str]:
