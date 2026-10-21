@@ -210,3 +210,15 @@ def test_the_command_compares_with_base(change, capsys):
 def test_ci_compares_with_the_merge_base(change, capsys):
     out = step_pr(change, capsys, "add-greet/G1", ("S", "R"), {PATH: STEPS.replace(O2, "")})
     assert "check-steps: steps.md: open item O2 dropped since the merge-base: - O2 [G2]: names with spaces" in out
+
+
+def test_an_item_whose_text_another_change_already_had_is_dropped(change):
+    change.commit("wave", {WAVE: "## S: Spec\n\n## C: Close\n\n## Open items\n- O1 [C]: names with spaces\n"})
+    edit = {WAVE: "## S: Spec\n\n## C: Close\n\n## Open items\n- O1 [C]: names with spaces\n- O2 [C]: wave back\n"}
+    assert at(change, "G1", STEPS.replace(O2, ""), ("S", "R"), edit) == [
+        "check-steps: steps.md: open item O2 dropped since the merge-base: - O2 [G2]: names with spaces"]
+
+
+def test_a_step_merged_in_another_change_isnt_this_ones(change):
+    change.commit("wave G2 done\n\nRedline-Step: add-wave/G2")
+    assert at(change, "G1", STEPS + "- O3 [G2]: later\n", ("S", "R")) == []
