@@ -3,7 +3,7 @@
 A G step's track is the `Track:` line under its heading in steps.md, read at the merge-base with
 main (as the auditor saw it), not from the PR. Each file the step's diff adds, edits or deletes
 must match one of its globs, unless it is under redline/, a test file, a support file or a
-generated file. A file outside needs a `Redline-Track: <reason>` trailer and a maintainer's label
+generated file (those globs read at the merge-base too). A file outside needs a `Redline-Track: <reason>` trailer and a maintainer's label
 (approval.py). At critical every G step must have a track; below it, a track that is there is
 checked.
 """
@@ -28,7 +28,7 @@ def check_track(repo: Path, change: str, step: str, approvals: Approvals) -> lis
     if not globs:
         critical = rigor(repo, change) == "critical"
         return [f"check-track: {change}/{step} has no Track: line; at critical every G step names its track"] if critical else []
-    config = load_config(repo)
+    config = load_config(repo, fork)  # as the track: a PR can't exempt its own files
     exempt = [*TESTS, *config.support, *config.generated]
     diff = git(repo, "diff", "--name-only", "--no-renames", fork, "HEAD")
     outside = [p for p in diff.stdout.splitlines()

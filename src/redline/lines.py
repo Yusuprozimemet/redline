@@ -1,6 +1,7 @@
 """The 400-line gate: insertions plus deletions between a base and HEAD.
 
-Specs and tests count. Files matching a `generated` glob in redline/config.yaml don't. A glob
+Specs and tests count. Files matching a `generated` glob in redline/config.yaml, as it is at the
+base, don't. A glob
 without a slash matches the file name in any directory; one with a slash matches the whole path.
 """
 
@@ -35,7 +36,7 @@ def check_lines(repo: Path, base: str | None = None) -> LineCount:
     diff = git(repo, "diff", "--numstat", "-z", "-M", base, "HEAD")
     if diff.returncode:
         raise RuntimeError(diff.stderr.strip())
-    globs = load_config(repo).generated
+    globs = load_config(repo, base).generated  # at the base, so a PR can't exempt its own files
     result = LineCount(base)
     # -z records: "added\tdeleted\tpath\0", or "added\tdeleted\t\0old\0new\0" for a rename.
     fields = iter(diff.stdout.split("\0"))
