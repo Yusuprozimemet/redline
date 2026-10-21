@@ -4,6 +4,7 @@ Every scenario declared in a living spec or a change delta needs a test with a m
 marker, and every spec marker must name a declared scenario. An ID declared twice in specs/, or
 in more than one change, is a duplicate; a change may restate a living scenario (MODIFIED).
 A closed change's delta doesn't count: its C step is merged on main, so specs/ holds what it said.
+A `#### Scenario` line not in the form `HEADING` reads is a gap, not nothing (O-SPEC1).
 Tracked and untracked files count; ignored ones don't.
 """
 
@@ -16,6 +17,12 @@ from redline.runner import RUNNERS, markers
 
 SPEC_PATHS = [":(glob)redline/specs/**/spec.md", ":(glob)redline/changes/*/specs/**/delta.md"]
 HEADING = re.compile(r"^#### Scenario (\S+) \[(?:new|hold)\]:")
+FORM = "not a scenario heading `#### Scenario <ID> [new|hold]: <title>`"
+
+
+def malformed(line: str) -> bool:
+    """A `#### Scenario` line no gate would read as a scenario, so it would be none, silently (O-SPEC1)."""
+    return line.startswith("#### Scenario") and not HEADING.match(line)
 
 
 @dataclass
@@ -45,15 +52,18 @@ def closed(repo: Path) -> set[str]:
 def declarations(repo: Path) -> list[tuple[str, int, str]]:
     """Each scenario heading line in the living specs and the deltas of changes not closed."""
     done = closed(repo)
-    return [hit for hit in grep(repo, r"^#### Scenario ", *SPEC_PATHS)
+    return [hit for hit in grep(repo, r"^#### Scenario", *SPEC_PATHS)
             if not (hit[0].startswith("redline/changes/") and hit[0].split("/")[2] in done)]
 
 
 def check_links(repo: Path) -> LinkReport:
     declared: dict[str, list[tuple[str, int]]] = {}
+    bad = []
     for path, line, text in declarations(repo):
         if heading := HEADING.match(text):
             declared.setdefault(heading[1], []).append((path, line))
+        elif malformed(text):
+            bad.append(f"{FORM} ({path}:{line}): {text}")
     linked: dict[str, list[tuple[str, int]]] = {}
     unreadable = []
     for runner in RUNNERS:
@@ -66,7 +76,7 @@ def check_links(repo: Path) -> LinkReport:
             for mark in found:
                 linked.setdefault(mark.sid, []).append((path, mark.line))
 
-    report = LinkReport(len(declared), unreadable)
+    report = LinkReport(len(declared), unreadable + bad)
     for sid, places in sorted(declared.items()):
         living = [p for p in places if p[0].startswith("redline/specs/")]
         changes = {p.split("/")[2] for p, _ in places if p.startswith("redline/changes/")}
