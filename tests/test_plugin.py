@@ -40,3 +40,20 @@ def test_malformed_marker_is_a_usage_error(pytester, marker):
     result = pytester.runpytest("--strict-markers")
     assert result.ret == pytest.ExitCode.USAGE_ERROR
     result.stderr.fnmatch_lines(["*spec*ID*"])
+
+
+@pytest.mark.parametrize("source", [
+    '@pytest.mark.spec("TOY.S1")\nclass TestIt:\n    def test_it(self):\n        pass\n',
+    'pytestmark = pytest.mark.spec("TOY.S1")\n\ndef test_it():\n    pass\n',
+    '@pytest.mark.parametrize("x", [pytest.param(1, marks=pytest.mark.spec("TOY.S1"))])\ndef test_it(x):\n    pass\n',
+], ids=["class", "pytestmark", "param"])
+def test_a_spec_marker_not_on_the_test_function_is_a_usage_error(pytester, source):
+    pytester.makepyfile("import pytest\n\n" + source)
+    result = pytester.runpytest("--strict-markers")
+    assert result.ret == pytest.ExitCode.USAGE_ERROR
+    result.stderr.fnmatch_lines(["*spec marker*on the test function*"])
+
+
+def test_a_methods_own_spec_marker_is_read(pytester):
+    pytester.makepyfile('import pytest\n\nclass TestIt:\n    @pytest.mark.spec("TOY.S1", new=True)\n    def test_it(self):\n        assert False\n')
+    pytester.runpytest("--strict-markers").assert_outcomes(xfailed=1)
