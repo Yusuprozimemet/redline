@@ -12,7 +12,8 @@ permissions:
   contents: read  # each job says what it holds; only `note`, which runs no repository code, writes
 
 concurrency:
-  group: redline-${{ github.ref }}  # runs on main push notes one at a time
+  # a push run's own, so no merge's run is cancelled as a pending one; a PR's runs in turn, newest last
+  group: ${{ github.event_name == 'push' && format('redline-push-{0}', github.run_id) || format('redline-{0}', github.ref) }}
   cancel-in-progress: false
 
 jobs:
@@ -62,12 +63,16 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4  # the merged commit, to note; nothing in it runs
-      - name: Add the note to the merged commit and push it
+      - name: Add the note to the merged commit and push it, again over a push that overtook it
         run: |
-          git fetch --no-tags origin '+refs/notes/*:refs/notes/*'
           printf '%s' "$NOTE" | base64 -d > "$RUNNER_TEMP/note"
-          git -c user.name=redline-ci -c user.email=redline-ci@users.noreply.github.com notes --ref=redline-ci add -f -F "$RUNNER_TEMP/note" "$GITHUB_SHA"
-          git push origin refs/notes/redline-ci
+          for attempt in 1 2 3 4 5; do
+            git fetch --no-tags origin '+refs/notes/*:refs/notes/*'
+            git -c user.name=redline-ci -c user.email=redline-ci@users.noreply.github.com notes --ref=redline-ci add -f -F "$RUNNER_TEMP/note" "$GITHUB_SHA"
+            git push origin refs/notes/redline-ci && exit 0
+            sleep "$attempt"
+          done
+          exit 1
         env:
           NOTE: ${{ needs.redline.outputs.note }}  # through env, never ${{ }} in the script: the text is data
 

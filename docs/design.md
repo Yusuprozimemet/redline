@@ -1161,8 +1161,8 @@ So the workflow's default token is `contents: read`, and each job says what it h
   a failed run is still recorded, hands the file on as a job output, base64-encoded, since a claim
   trailer's text could hold the delimiter of a multi-line output.
 - **`note`**, on a push only, after `redline`, is the only job with `contents: write`. It checks
-  the merged commit out and runs git alone: fetch `refs/notes/*`, decode the output, `git notes
-  add -f` it on `$GITHUB_SHA`, push the ref. The output reaches it through an environment
+  the merged commit out and runs git alone: decode the output, then fetch `refs/notes/*`, `git
+  notes add -f` it on `$GITHUB_SHA` and push the ref, up to five times (below). The output reaches it through an environment
   variable, never a `${{ }}` inside a script, which would run the note's text as shell. A checked
   out tree can't make git run code: hooks and filter drivers come from git's config, which a
   repository doesn't carry. The commit it notes is the workflow's, not something `redline` said,
@@ -1171,8 +1171,27 @@ So the workflow's default token is `contents: read`, and each job says what it h
 
 A test reads the workflow and fails when any job but `note` holds `contents: write`, when a job
 that runs repository code keeps its credentials, and when `note` has a step that isn't
-`actions/checkout` or a line that isn't one of its git commands or the decode: `pip`, `python`,
-`redline`, a script in the repository or a local `uses: ./…` action would all be repository code.
+`actions/checkout` or a line that isn't one of its git commands, the decode or the retry loop's
+shell: `pip`, `python`, `redline`, a script in the repository or a local `uses: ./…` action would
+all be repository code.
+
+**Every merged commit gets its note.** GitHub keeps at most one running and one pending run per
+concurrency group, and cancels the pending one when another queues, whatever
+`cancel-in-progress` says. One group for every push to `main` would leave the middle of three
+quick merges without a run, so its red, green or break stayed `unverified` and check-close
+refused until someone re-ran it by hand. So a push run's group is its own run's
+(`github.run_id`), and nothing cancels it. A PR run's group is still its ref: only its newest
+head and labels count, and runs one at a time finish in order, so the check shows the newest
+answer. Nothing else needed push runs in order: each notes only its own `$GITHUB_SHA`, and the
+claims record reads only that commit's note.
+
+Push runs now race to push `refs/notes/redline-ci`. The push isn't forced, so a run whose fetch
+another run's push has overtaken is refused, and the `note` job tries again: it fetches the ref
+over its own, adds its note again and pushes, five times at most, waiting a second longer each
+time. Since a run adds one note, on its own commit, that is the same as merging the notes with
+its own winning, and every other run's note is kept. After five refusals the job fails, where it
+is seen. A test runs the job's own script, read from the workflow, against a bare repository
+whose hook writes another run's note and refuses the first push.
 
 What it doesn't prove: that GitHub enforces the permissions it is given, or that the actions the
 jobs use are sound (they are used by tag, not pinned); and the note's text, which merged code
@@ -1369,7 +1388,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    comment or a string (O-MARK2); part 7, text read and printed as UTF-8 on Windows, a Windows CI
    job, and paths from git unquoted (O-ENC1, O-ENC2); part 8, mutmut with Redline's settings
    only and the scenario's tests copied, proved on the real mutmut in CI (O-MUT1, O-MUT2); part 9,
-   the CI notes written by a job that runs no repository code, every other job read-only (O-CI5). The
+   the CI notes written by a job that runs no repository code, every other job read-only (O-CI5);
+part 10, every merged commit's note, none lost to a cancelled run or a raced push (O-CI6). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1419,6 +1439,12 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   token was read-only. Now every job that runs repository code holds `contents: read` and keeps no
   credentials; `redline ci push --note` hands the note's text on, and a `note` job that runs git
   alone writes it on the merged commit, which a workflow test checks line by line (§7).
+- O-CI6 [closed, build 9 part 10]: every push to `main` shared one concurrency group, and GitHub
+  cancels a group's pending run when another queues, so the middle of three quick merges got no
+  note: its evidence stayed `unverified` and check-close refused until a re-run by hand. Now a push
+  run's group is its own, and the `note` job, whose push then races, fetches the notes again,
+  re-adds its note and pushes, five times at most, which a test proves by running the job's script
+  against a bare repository that refuses its first push (§7).
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs

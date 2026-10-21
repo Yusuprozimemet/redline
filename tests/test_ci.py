@@ -1,3 +1,6 @@
+import base64
+import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -198,11 +201,15 @@ def test_a_push_with_note_still_writes_a_failed_run(change, capsys, remote, tmp_
 
 
 NOTE_LINES = {  # every line the job that writes the note may run: git alone, on the workflow's commit
-    "git fetch --no-tags origin '+refs/notes/*:refs/notes/*'",
     "printf '%s' \"$NOTE\" | base64 -d > \"$RUNNER_TEMP/note\"",
+    "for attempt in 1 2 3 4 5; do",
+    "git fetch --no-tags origin '+refs/notes/*:refs/notes/*'",
     'git -c user.name=redline-ci -c user.email=redline-ci@users.noreply.github.com '
     'notes --ref=redline-ci add -f -F "$RUNNER_TEMP/note" "$GITHUB_SHA"',
-    "git push origin refs/notes/redline-ci",
+    "git push origin refs/notes/redline-ci && exit 0",
+    'sleep "$attempt"',
+    "done",
+    "exit 1",
 }
 
 
@@ -221,7 +228,7 @@ def test_only_the_note_job_can_write_and_it_runs_no_repository_code():
             lines = [line.strip() for line in step["run"].splitlines() if line.strip()]
             assert all(line in NOTE_LINES for line in lines), lines
             assert "${{" not in step["run"]
-    assert {line for s in job["steps"] for line in s.get("run", "").splitlines() if line.strip()} == NOTE_LINES
+    assert {line.strip() for s in job["steps"] for line in s.get("run", "").splitlines() if line.strip()} == NOTE_LINES
     assert next(s for s in job["steps"] if "run" in s)["env"] == {"NOTE": "${{ needs.redline.outputs.note }}"}
 
 
@@ -240,3 +247,75 @@ def test_every_job_that_runs_repository_code_is_read_only_and_drops_its_credenti
     handed = next(s for s in steps if s.get("id") == "note")
     assert "always()" in handed["if"] and "base64 -w0" in handed["run"] and "GITHUB_OUTPUT" in handed["run"]
     assert flow["jobs"]["redline"]["outputs"] == {"note": "${{ steps.note.outputs.note }}"}
+
+
+def test_a_push_run_has_a_concurrency_group_of_its_own_and_a_pr_run_shares_its_refs():
+    group = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["concurrency"]["group"]
+    push, _, pr = group.partition("||")
+    assert "github.event_name == 'push'" in push and "github.run_id" in push and "github.ref" not in push, group
+    assert "github.ref" in pr and "github.run_id" not in pr, group
+
+
+def bash() -> str | None:
+    """Git's own bash, the shell the note job runs in; on Windows not WSL's, which `bash` may name."""
+    if os.name != "nt":
+        return shutil.which("bash")
+    found = shutil.which("git")  # Git\cmd\git.exe or Git\mingw64\bin\git.exe, beside Git\bin\bash.exe
+    shells = [parent / "bin" / "bash.exe" for parent in Path(found).resolve().parents] if found else []
+    return next((str(shell) for shell in shells if shell.is_file()), None)
+
+
+def git_in(where: Path, *args: str) -> str:
+    done = subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=where, capture_output=True, text=True, check=True)
+    return done.stdout.strip()
+
+
+def run_note_job(tmp_path: Path, hook: str) -> tuple[subprocess.CompletedProcess, Path, str, str]:
+    """The note job's own script, read from the workflow, on a clone of a bare origin whose pre-receive hook is `hook`.
+
+    `$OTHER` in the hook is a commit another run notes; the hook's git runs outside the push's quarantine."""
+    shell = bash()
+    if not shell:
+        pytest.skip("no Git bash to run the note job's script")
+    origin, work, job, bin_dir = (tmp_path / name for name in ("origin", "work", "job", "bin"))
+    git_in(tmp_path, "init", "-q", "--bare", str(origin))
+    git_in(tmp_path, "init", "-q", str(work))
+    git_in(work, "commit", "-q", "--allow-empty", "-m", "other run's merge")
+    other = git_in(work, "rev-parse", "HEAD")
+    git_in(work, "commit", "-q", "--allow-empty", "-m", "this run's merge")
+    git_in(work, "push", "-q", str(origin), "HEAD:refs/heads/main")
+    git_in(tmp_path, "clone", "-q", "--branch", "main", str(origin), str(job))
+    mine = git_in(job, "rev-parse", "HEAD")
+    quarantine = "env -u GIT_QUARANTINE_PATH -u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES"
+    (origin / "hooks" / "pre-receive").write_bytes(f"#!/bin/sh\nOTHER={other}\nQ='{quarantine}'\n{hook}".encode())
+    (origin / "hooks" / "pre-receive").chmod(0o755)
+    bin_dir.mkdir()
+    (bin_dir / "sleep").write_bytes(b'#!/bin/sh\necho "$1" >> "$SLEEPS"\n')  # no waiting, and each wait counted
+    (bin_dir / "sleep").chmod(0o755)
+    note = f"result: pass\nrun: {RUN}\n"
+    script = next(s["run"] for s in yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["note"]["steps"] if "run" in s)
+    env = {**os.environ, "NOTE": base64.b64encode(note.encode()).decode(), "RUNNER_TEMP": str(tmp_path),
+           "GITHUB_SHA": mine, "SLEEPS": str(tmp_path / "sleeps"), "PUSHES": str(tmp_path / "pushes")}
+    done = subprocess.run([shell, "-eo", "pipefail", "-c", f'export PATH="$(cygpath -u "{bin_dir}" 2>/dev/null || echo "{bin_dir}"):$PATH"\n{script}'],
+                          cwd=job, env=env, capture_output=True, text=True)
+    return done, origin, other, mine
+
+
+def test_the_note_job_overtaken_by_another_run_fetches_re_adds_and_keeps_both_notes(tmp_path):
+    hook = ('if [ -f "$PUSHES" ]; then echo x >> "$PUSHES"; exit 0; fi\n'
+            'echo x >> "$PUSHES"\n'
+            '$Q git -c user.name=o -c user.email=o@o notes --ref=redline-ci add -m "result: fail" "$OTHER"\n'
+            'exit 1\n')  # another run pushed between this run's fetch and its push
+    done, origin, other, mine = run_note_job(tmp_path, hook)
+    assert done.returncode == 0, done.stderr
+    assert git_in(origin, "notes", "--ref=redline-ci", "show", other) == "result: fail"
+    assert git_in(origin, "notes", "--ref=redline-ci", "show", mine) == f"result: pass\nrun: {RUN}"
+    assert (tmp_path / "pushes").read_text().count("x") == 2 and (tmp_path / "sleeps").read_text().split() == ["1"]
+
+
+def test_the_note_job_stops_after_five_refused_pushes_and_fails(tmp_path):
+    done, origin, _, _ = run_note_job(tmp_path, 'echo x >> "$PUSHES"\nexit 1\n')
+    assert done.returncode == 1
+    assert (tmp_path / "pushes").read_text().count("x") == 5
+    assert (tmp_path / "sleeps").read_text().split() == ["1", "2", "3", "4", "5"]
+    assert subprocess.run(["git", "show-ref", "refs/notes/redline-ci"], cwd=origin, capture_output=True).returncode == 1
