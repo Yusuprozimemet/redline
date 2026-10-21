@@ -45,6 +45,7 @@ class FakeMutator:
         self.unavailable_reason = None
         self.outcomes: dict[str, tuple[int, int]] = {}
         self.calls: list[tuple[list[str], str]] = []
+        self.tests: list[list[str]] = []  # each call's test files
 
     def __call__(self, repo):
         return self
@@ -52,8 +53,9 @@ class FakeMutator:
     def unavailable(self) -> str | None:
         return self.unavailable_reason
 
-    def kills(self, files: list[str], sid: str) -> tuple[int, int]:
+    def kills(self, files: list[str], sid: str, tests=()) -> tuple[int, int]:
         self.calls.append((files, sid))
+        self.tests.append(list(tests))
         return self.outcomes.get(sid, (3, 1))
 
 
