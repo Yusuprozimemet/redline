@@ -32,7 +32,7 @@ of being taken on the agent's word.
 2. **Red before green, proved on `main`.** A test for a `new` scenario lands as a *strict expected
    failure*, and CI confirms it really fails.
 3. **Every PR is ≤ 400 changed lines.** Specs and tests count; lockfiles and generated files
-   (declared in config) don't. A bigger PR needs an `Oversized: <reason>` trailer on one of its
+   (declared in config, as it is at the merge-base with `main`, §7) don't. A bigger PR needs an `Oversized: <reason>` trailer on one of its
    commits and a maintainer's `redline:oversized` label (§7).
 4. **One session per step.** A step is one PR. A merge ends the session.
 5. **An independent audit before code.** A read-only agent in a fresh context, on the strongest
@@ -290,6 +290,14 @@ searched, and every `reach` is what it was before. Adding a file to `support:` c
 `reach` of each critical test that imports from it, so for a locked test that is a departure,
 as editing a fixture is (§5); outside a step it can't be done at all (§7). Name support files
 before the R step that locks tests using them.
+
+`reach` reads `support:` from the tree being checked, not at the merge-base: the hash guards
+itself, since a glob added or removed changes the `reach` of every locked test it touches, and
+`redline lock` at R and check-lock on a later PR must read the same globs to agree. check-track
+reads `support:` and `generated:` at the merge-base (§5), and a glob added to either is a claim
+(§7, Approvals). A value of `generated:` or `support:` that isn't a list of strings, or of `rules:`
+that isn't a map of causes to lists of strings, is an error: a string would be read as its
+characters, and `*` matches every path.
 
 An entry that is a plain hash, as every lock written before this was, still reads: it is
 `{test: <hash>}` with no `reach`. Below critical, `redline lock` keeps writing plain hashes.
@@ -834,7 +842,8 @@ At a G step, `pr` and `redline ci pr` run check-track. It fails on:
   runner's, Runners above, and `support:` files, §4), and `generated:` files.
 
 The track is read from `steps.md` at the merge-base, as the auditor saw it, not from the PR: a
-step that widened its own `Track:` line would pass any diff. A file outside the track is a
+step that widened its own `Track:` line would pass any diff. The `support:` and `generated:` globs
+it exempts are read there too, from `redline/config.yaml`, as check-lines reads `generated:` (§7). A file outside the track is a
 claim, like `Oversized`: a `Redline-Track: <reason>` trailer among the step's commits and a
 maintainer's `redline:track` label (§7). Without the trailer, it fails.
 
@@ -1005,8 +1014,9 @@ Otherwise it runs the gates that hold for any PR, and prints every failure:
 - **check-lines**, with the `Oversized` rule (§7, Approvals): over 400 lines needs the trailer and
   a maintainer's `redline:oversized` label.
 - **check-plan** on every initiative.
-- **The rigor check**: a changed `rigor:` or `Rigor:` line, a deleted plan or a change taken out
-  of one needs `Redline-Rigor` and its label (Approvals, below).
+- **The rigor check**: a changed `rigor:` or `Rigor:` line, a glob added to `generated:` or
+  `support:`, a deleted plan or a change taken out of one needs `Redline-Rigor` and its label
+  (Approvals, below).
 - **check-lock** on every change the lock names, without `--base`. The PR can't touch the lock,
   so a locked test or (at critical) what it reaches can't change outside a step at all. A
   `Redline-Departure` trailer doesn't help: a departure is a step's, and re-locks the test.
@@ -1057,7 +1067,7 @@ says a maintainer agreed. Four claims need one:
 | `Redline-Departure: <test> approved-by @person: <reason>` | a frozen test's lock entry to change (§5) | `redline:departure` |
 | `Oversized: <reason>` | more than 400 changed lines (§2.3) | `redline:oversized` |
 | `Redline-Track: <reason>` | a G step changing files outside its track (§5) | `redline:track` |
-| `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml` or to a plan's `Rigor:` line; a plan deleted, or a change taken out of one | `redline:rigor` |
+| `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml` or to a plan's `Rigor:` line; a glob added to its `generated:` or `support:`; a plan deleted, or a change taken out of one | `redline:rigor` |
 
 `rigor:` sets the level of every change whose proposal names none, and so what all their gates
 require, so changing it, up or down, is a claim on any PR, in a step or outside one (§7). A plan's
@@ -1067,6 +1077,16 @@ each plan's `Rigor:` there to its line now (none, for a plan without one or one 
 each plan's changes there to its changes now (a deleted plan lists none, §4), and fails on a
 difference without the trailer, or, in CI, without the label. A new plan declares its level and
 its changes without a claim, as a new proposal does.
+
+`generated:` and `support:` say which files the gates don't count: check-lines leaves out
+generated files, and check-track exempts both (§5). Each gate reads them at the merge-base, so a
+PR can't widen them for itself, as a step can't widen its own `Track:` line. But a glob merged
+once holds for every PR after it: `generated: ["*"]` would end the 400-line gate. So the rigor
+check also fails on each glob in either list now that the config at the merge-base doesn't have,
+a new config's included; it names the glob. It is the same claim: what the maintainer approves
+is that later PRs face less. Removing a glob isn't a claim, and nothing judges whether one glob
+covers another: an added glob is a claim even when an old one already matched what it matches.
+The cost is that a PR adding a lockfile counts its lines unless an earlier PR declared its glob.
 
 A trailer without its reason (or, for a departure, without `approved-by @person:`) allows nothing.
 One label covers every claim of its kind in the PR. The labels are separate, so approving the size
@@ -1204,8 +1224,9 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    `reach` of Jest and JUnit tests (O-RUN3); runner configuration that can weaken tests outside
    a step (O-RUN4); Jest tests outside the root `package.json` (O-RUN9).
 9. **Fixes from the review of 2026-10-20**: part 1, a step's PR must be the change's next step
-   (O-CI2); part 2, `start`'s phase and plan-audit refusals in CI (O-CI3); text encoding on
-   Windows (O-ENC1). The
+   (O-CI2); part 2, `start`'s phase and plan-audit refusals in CI (O-CI3); part 3, the config's
+   `generated:` and `support:` read at the merge-base, a glob added to either a claim (O-CFG1);
+   text encoding on Windows (O-ENC1). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1248,6 +1269,12 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   and their levels from the working tree, which a step's PR may edit. Now one function makes both
   refusals, `start` reading `main` and `redline ci pr` the merge-base, before any gate (§7). A plan
   edited on `main` after a step's branch forked isn't read by that step's PR, by design (§7).
+- O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
+  from the PR's own tree, so a PR could exempt its own files, and a string such as
+  `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs
+  at the merge-base, a glob added to either needs the `Redline-Rigor` claim, and a value that
+  isn't a list of strings is an error (§4, §7). `reach` still reads `support:` from the tree, since
+  its hash guards itself (§4).
 - O-PLAN1 [closed, build 6 part 8]: an initiative was critical only through its changes' levels,
   and a change with no proposal yet takes the config's, so an initiative whose first S step
   declared `Rigor: critical` skipped that phase's start audit. Now the plan has its own `Rigor:`

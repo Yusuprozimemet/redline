@@ -54,6 +54,12 @@ def test_a_file_outside_the_track_fails_even_if_the_pr_widens_its_track(tracked)
     assert track(tracked) == [OUTSIDE_G1]  # the track is main's, as the auditor saw it
 
 
+def test_a_pr_that_widens_support_or_generated_does_not_exempt_its_own_files(tracked):
+    for widened in ('support:\n  - "web/*.py"\n', 'generated:\n  - "web/*"\n'):
+        tracked.commit("widen", {"web/app.py": "x\n", "redline/config.yaml": widened})
+        assert OUTSIDE_G1 in track(tracked)
+
+
 def test_deleting_a_file_outside_the_track_is_changing_it(tracked):
     tracked.git("checkout", "-q", "main")
     tracked.commit("a web app", {"web/app.py": "app = None\n"})

@@ -79,6 +79,24 @@ def test_cli_passes_at_the_limit_and_fails_above(branch, capsys):
     assert f"FAIL: {LIMIT + 1} changed lines" in capsys.readouterr().out
 
 
+def test_a_pr_that_widens_generated_still_counts_its_own_lines(branch):
+    branch.commit("widen", {"big.py": lines(900), "redline/config.yaml": 'generated:\n  - "*"\n'})
+    result = check_lines(branch.path)
+    assert result.total > LIMIT
+    assert "big.py" not in result.excluded
+
+
+@pytest.mark.parametrize("text", [
+    'generated: "*.lock"\n', 'support: "tests/*.py"\n', "generated:\n  - 1\n",
+    "rules:\n  - Cite the store\n", "rules:\n  premise: Cite the store\n",
+])
+def test_a_value_that_isnt_a_list_of_strings_is_an_error(tmp_path, text):
+    (tmp_path / "redline").mkdir()
+    (tmp_path / "redline" / "config.yaml").write_text(text)
+    with pytest.raises(RuntimeError, match="redline/config.yaml"):
+        load_config(tmp_path)
+
+
 def test_cli_reports_a_bad_base(branch, capsys):
     assert main(["check-lines", "--repo", str(branch.path), "--base", "no-such-ref"]) == 2
     assert "redline:" in capsys.readouterr().out

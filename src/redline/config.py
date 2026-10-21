@@ -21,14 +21,25 @@ class Config:
     support: list[str] = field(default_factory=list)  # globs for test-support files a critical reach follows (§4)
 
 
+def strings(value, key: str) -> list[str]:
+    """A list of strings, or an error: a string would be read as its characters, and `*` matches every path."""
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise RuntimeError(f"{PATH.as_posix()}: `{key}:` must be a list of strings")
+    return value
+
+
 def load_config(repo: Path, rev: str | None = None) -> Config:
     """The config in the working tree, or at `rev`."""
     path = repo / PATH
     text = shown(repo, PATH.as_posix(), rev) if rev else path.read_text() if path.is_file() else None
     data = (yaml.safe_load(text) if text is not None else None) or {}
-    rules = {str(cause): [str(r) for r in lines or []] for cause, lines in (data.get("rules") or {}).items()}
-    return Config(list(data.get("generated") or []), str(data.get("rigor") or "standard"), rules,
-                  list(data.get("support") or []))
+    if not isinstance(data, dict) or not isinstance(data.get("rules") or {}, dict):
+        raise RuntimeError(f"{PATH.as_posix()}: must be a map, and `rules:` a map of causes to lists of strings")
+    rules = {str(cause): strings(lines, f"rules.{cause}") for cause, lines in (data.get("rules") or {}).items()}
+    return Config(strings(data.get("generated"), "generated"), str(data.get("rigor") or "standard"), rules,
+                  strings(data.get("support"), "support"))
 
 
 def rigor(repo: Path, change: str, rev: str | None = None) -> str:

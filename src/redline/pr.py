@@ -7,8 +7,8 @@ and check-order run from the R step on: at S the delta declares scenarios that h
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
 check-lock runs on every change the lock names at every step, and on the step's change at R and G (against main's lock at G);
 at every step the whole lock is compared by test with main's (lock.check_frozen). check-track runs at G steps (track.py). check-close and check-specs run at C (close.py, specs.py).
-A changed `rigor:` in the config or `Rigor:` line in a plan, a deleted plan, or a change taken out of
-one, needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
+A changed `rigor:` in the config or `Rigor:` line in a plan, a glob added to `generated:` or `support:`,
+a deleted plan, or a change taken out of one, needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
 <reason>` trailer needs a maintainer's label, as a departure does (approval.py); locally, where
 the PR doesn't exist yet, `pr` only reports that CI will need it.
 If every gate passes, each commit of the step gets the `Redline-Step: <change>/<step>` trailer
@@ -17,8 +17,6 @@ If every gate passes, each commit of the step gets the `Redline-Step: <change>/<
 
 import subprocess
 from pathlib import Path
-
-import yaml
 
 from redline.approval import OVERSIZED, RIGOR, Approvals, claims
 from redline.audit import check_audit
@@ -94,13 +92,15 @@ def size(repo: Path, approvals: Approvals) -> list[str]:
 
 
 def rigor_claim(repo: Path, approvals: Approvals) -> list[str]:
-    """A changed `rigor:` in the config or `Rigor:` line in a plan, a deleted plan, or a change taken out of
-    one, needs an approved `Redline-Rigor` claim."""
+    """A changed `rigor:` in the config or `Rigor:` line in a plan, a glob added to the config's `generated:`
+    or `support:`, a deleted plan, or a change taken out of one, needs an approved `Redline-Rigor` claim."""
     fork = git(repo, "merge-base", "main", "HEAD").stdout.strip()
-    shown = git(repo, "show", f"{fork}:redline/config.yaml")
-    old = str(((yaml.safe_load(shown.stdout) if shown.returncode == 0 else None) or {}).get("rigor") or "standard")
-    changed = [] if old == (new := load_config(repo).rigor) else [
-        f"rigor: `rigor:` in redline/config.yaml changed from {old} to {new}"]
+    old, new = load_config(repo, fork), load_config(repo)
+    changed = [] if old.rigor == new.rigor else [
+        f"rigor: `rigor:` in redline/config.yaml changed from {old.rigor} to {new.rigor}"]
+    for key in ("generated", "support"):  # each gate reads them at the fork, but they hold for every later PR
+        changed += [f"rigor: `{glob}` was added to `{key}:` in redline/config.yaml"
+                    for glob in getattr(new, key) if glob not in getattr(old, key)]
     listed = git(repo, "ls-tree", "-r", "--name-only", fork, "--", ROOT).stdout.split()
     for path in (p for p in listed if p.endswith("/plan.md") and p.count("/") == 3):  # a new plan isn't a change
         before = parse_plan("", git(repo, "show", f"{fork}:{path}").stdout)
