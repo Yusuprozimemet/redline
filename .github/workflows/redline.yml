@@ -9,24 +9,32 @@ on:
     branches: [main]
 
 permissions:
-  contents: write  # push refs/notes/redline-ci after a run on main
-  issues: read  # who applied a PR's approval labels
-  pull-requests: read
+  contents: read  # each job says what it holds; only `note`, which runs no repository code, writes
 
 concurrency:
   group: redline-${{ github.ref }}  # runs on main push notes one at a time
   cancel-in-progress: false
 
 jobs:
-  redline:
+  redline:  # runs the repository's code, the PR's own on a PR, so it can't write the notes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read  # who applied a PR's approval labels
+      pull-requests: read
+    outputs:
+      note: ${{ steps.note.outputs.note }}  # the push run's note, base64, for the `note` job
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # the ledger and check-order read the whole history
           ref: ${{ github.event.pull_request.head.sha || github.sha }}  # the PR's own commits, not a merge
+          persist-credentials: false
       - name: Fetch main and the CI notes
-        run: git fetch --no-tags origin '+refs/heads/main:refs/heads/main' '+refs/notes/*:refs/notes/*'
+        run: |
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" fetch --no-tags origin '+refs/heads/main:refs/heads/main' '+refs/notes/*:refs/notes/*'
+        env:
+          GH_TOKEN: ${{ github.token }}  # for this fetch alone, since the checkout keeps no credentials
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -36,16 +44,41 @@ jobs:
         run: redline ci pr --base main --pr ${{ github.event.pull_request.number }}
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Run the suite and note the result on the merged commit
+      - name: Run the suite and write the note for the merged commit
         if: github.event_name == 'push'
-        run: redline ci push --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: redline ci push --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --note "$RUNNER_TEMP/note"
         env:
           GH_TOKEN: ${{ github.token }}  # the merged PR's claim labels, recorded in the note
+      - name: Hand the note on, a failed run's too
+        id: note
+        if: always() && github.event_name == 'push'
+        run: if [ -f "$RUNNER_TEMP/note" ]; then echo "note=$(base64 -w0 "$RUNNER_TEMP/note")" >> "$GITHUB_OUTPUT"; fi
+
+  note:  # the only job that can write refs/notes/redline-ci, so it runs git alone (docs/design.md, section 7)
+    needs: redline
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.redline.outputs.note != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4  # the merged commit, to note; nothing in it runs
+      - name: Add the note to the merged commit and push it
+        run: |
+          git fetch --no-tags origin '+refs/notes/*:refs/notes/*'
+          printf '%s' "$NOTE" | base64 -d > "$RUNNER_TEMP/note"
+          git -c user.name=redline-ci -c user.email=redline-ci@users.noreply.github.com notes --ref=redline-ci add -f -F "$RUNNER_TEMP/note" "$GITHUB_SHA"
+          git push origin refs/notes/redline-ci
+        env:
+          NOTE: ${{ needs.redline.outputs.note }}  # through env, never ${{ }} in the script: the text is data
 
   runners:  # the real Jest, Stryker and mutmut on toys, which the suite fakes (docs/design.md, section 5)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read  # records nothing
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -66,6 +99,8 @@ jobs:
       contents: read  # records nothing
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

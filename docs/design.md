@@ -1412,10 +1412,13 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   and their levels from the working tree, which a step's PR may edit. Now one function makes both
   refusals, `start` reading `main` and `redline ci pr` the merge-base, before any gate (§7). A plan
   edited on `main` after a step's branch forked isn't read by that step's PR, by design (§7).
-- O-CI5 [build 9 part 9]: the workflow gave every job `contents: write`, and `actions/checkout`
-  kept the token in `.git/config`, so a PR's own code (`pip install -e .`, its `conftest.py`, its
-  tests) could push `refs/notes/redline-ci` and write `result: pass` or a `break:` map on any
-  commit, and so could merged code on every push run; §7 said the push run's token was read-only.
+- O-CI5 [closed, build 9 part 9]: the workflow gave every job `contents: write`, and
+  `actions/checkout` kept the token in `.git/config`, so a PR's own code (`pip install -e .`, its
+  `conftest.py`, its tests) could push `refs/notes/redline-ci` and write `result: pass` or a
+  `break:` map on any commit, and so could merged code on every push run; §7 said the push run's
+  token was read-only. Now every job that runs repository code holds `contents: read` and keeps no
+  credentials; `redline ci push --note` hands the note's text on, and a `note` job that runs git
+  alone writes it on the merged commit, which a workflow test checks line by line (§7).
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs
