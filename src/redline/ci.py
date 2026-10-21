@@ -15,7 +15,8 @@ When the push merged an R step, check-break runs too, and the note gets each `ho
 result under `break:`; a failed break fails the run. When the merged commits carry claim trailers,
 the note also gets `claims:`, each claim with its label on the merged PR, who applied it last and their
 role, read through `GitHub` (claims.record); a re-run keeps an earlier record, and a failed read
-writes none and fails the run.
+writes none and fails the run. With `--note <file>` the note goes to the file, and nothing is added or
+pushed: the workflow's read-only job runs it so, and a job that runs no repository code writes the note.
 Pushing sits behind `Remote`, which tests replace.
 """
 
@@ -123,7 +124,8 @@ def ci_pr(repo: Path, base: str, number: int | None = None) -> tuple[str, list[s
     return name, failures
 
 
-def ci_push(repo: Path, run_url: str, rev: str = "HEAD") -> list[str]:
+def ci_push(repo: Path, run_url: str, rev: str = "HEAD", to: Path | None = None) -> list[str]:
+    """`to`: write the note there instead, for a job that runs no repository code to add and push."""
     failures = suite(repo)
     message = f"result: {'fail' if failures else 'pass'}\nrun: {run_url}\n"
     change, _, step = pr_step(repo, f"{rev}^").partition("/")  # "" when no step merged here
@@ -139,6 +141,9 @@ def ci_push(repo: Path, run_url: str, rev: str = "HEAD") -> list[str]:
         except RuntimeError as error:
             failures.append(f"claims: could not read the merged PR's labels: {error}")
     message += yaml.safe_dump({"claims": made}, sort_keys=False, width=1000) if made else ""
+    if to:
+        to.write_text(message, encoding="utf-8", newline="\n")
+        return failures
     noted = git(repo, "-c", "user.name=redline-ci", "-c", "user.email=redline-ci@users.noreply.github.com",
                 "notes", f"--ref={NOTES}", "add", "-f", "-m", message, rev)
     if noted.returncode:

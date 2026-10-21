@@ -99,10 +99,11 @@ def main(argv: list[str] | None = None) -> int:
     ci.add_argument("--base", default="main", help="pr: the PR's base ref")
     ci.add_argument("--run-url", default="", help="push: the CI run to record in the note")
     ci.add_argument("--pr", type=int, help="pr: the PR's number, to read its approval labels")
+    ci.add_argument("--note", type=Path, help="push: write the note to this file instead of adding and pushing it")
     ci.add_argument("--repo", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
     if args.command == "ci":
-        return run_ci(args.repo, args.event, args.base, args.run_url, args.pr)
+        return run_ci(args.repo, args.event, args.base, args.run_url, args.pr, args.note)
     if args.command == "install":
         print(f"ok: wrote {install(args.repo, args.runner)}")
         return 0
@@ -400,15 +401,15 @@ def run_ledger(repo: Path, change: str, main: str, check: bool) -> int:
     return 0
 
 
-def run_ci(repo: Path, event: str, base: str, run_url: str, number: int | None) -> int:
+def run_ci(repo: Path, event: str, base: str, run_url: str, number: int | None, to: Path | None = None) -> int:
     try:
         if event == "pr":
             name, failures = ci_pr(repo, base, number)
             done = (f"ok: {name} passes the gates, the test suite and check-ledger" if name else
                     "ok: a PR outside any step passes check-lines, check-plan, check-lock and the test suite")
         else:
-            failures = ci_push(repo, run_url)
-            done = "ok: the test suite passed; noted on refs/notes/redline-ci"
+            failures = ci_push(repo, run_url, to=to)
+            done = f"ok: the test suite passed; {f'the note is in {to}' if to else 'noted on refs/notes/redline-ci'}"
     except Refused as reason:
         print(f"refused: {reason}")
         return 1
