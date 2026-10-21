@@ -685,11 +685,27 @@ The mutation tools sit behind the `Mutator` seam in `redline/breaks.py`: `MUTATO
 keyed by runner name, holds one tool per runner, mutmut for pytest and Stryker for Jest. It is a
 registry and not a field of `Runner`, so a runner stays plain data, and a test replaces every tool
 by replacing one dict, built from the registry's own keys, so a runner added later is replaced
-too. A test fails if a runner has no tool. The tests always use the fake. mutmut doesn't run on
-Windows (3.8 refuses and points at WSL), so the real mutmut runs only in CI on Linux. On Windows,
+too. A test fails if a runner has no tool. The gates' tests always use the fake; the real tools
+are proved on toys in the `runners` CI job (§7). mutmut doesn't run on Windows (3.8 refuses and
+points at WSL), so the real mutmut runs only in CI on Linux. On Windows,
 check-break still checks each scenario's tests and their unmutated run. It reports each scenario
 whose mutation it couldn't run as skipped, with the reason, because CI runs it; in CI a skip fails
 the run. Stryker runs on Windows too, so a test that skipped the fake would start it.
+
+mutmut runs in a throwaway copy of the repository, with Redline's settings and no others, written
+to the copy's `setup.cfg` under `[mutmut]`: `source_paths`, the cited files; `pytest_add_cli_args`,
+`--redline-spec=<ID>`, so only the scenario's tests run against a mutant and a kill by any other
+test can't count; and `also_copy`, below. mutmut reads `[tool.mutmut]` from `pyproject.toml`
+when that table exists, and then never reads `setup.cfg`, so the repository's own settings would
+name other files and drop the filter, crediting the scenario with every other test's kills. So the
+table is taken out of the copy's `pyproject.toml` by text, and Python's TOML parser checks that the
+result is the original without `tool.mutmut`, so pytest's own settings there stay as they were. A
+table it can't take out that way, such as an inline `tool = { mutmut = … }`, is an error, not a
+guess. mutmut copies only `tests/`, `test/`, root `test*.py` files and a few config files into
+its `mutants/` directory, so `also_copy` adds the directory of each of the scenario's tests, of each
+`conftest.py` from the root down to them, and of each `support:` file (§4), or the file itself at
+the root: mutmut copies a listed file without making its directory. `support:` is read from the
+tree, as `reach` reads it, since check-break counts as evidence only on `main`.
 
 Stryker mutates in its own sandbox, so no copy of the repository is made (copying `node_modules`
 is costly): `npx --no-install stryker run --mutate <files> --testRunner jest --reporters json`,
@@ -1014,7 +1030,9 @@ does: no count refuses or fails.
 
 CI is `.github/workflows/redline.yml`, a thin wrapper around `redline ci`; every rule lives in the
 CLI. It checks out the full history, `main` and `refs/notes/*`. A second job, `runners`, runs the
-real Jest and Stryker on a toy project (§5) and records nothing. A repository with Jest tests
+real Jest and Stryker on a toy project, and the real mutmut on toy repositories (§5), and records
+nothing. The mutmut toys hold a scenario whose test kills no mutant beside a test that kills them
+all, so a kill credited to the wrong test shows. A repository with Jest tests
 installs Node and runs `npm ci` in its workflow before `redline ci`, so the suite can run them. A
 third job, `windows`, runs Redline's own suite on Windows with a read-only token, and records
 nothing either. It runs pytest, not `redline ci`: mutmut doesn't run on Windows, and a skipped
@@ -1313,7 +1331,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    part 4, a change's level lowered is a claim (O-CI4); part 5, a pytest marker counts only as a
    decorator, read with Python's parser (O-MARK1); part 6, a Jest marker only in code, not in a
    comment or a string (O-MARK2); part 7, text read and printed as UTF-8 on Windows, a Windows CI
-   job, and paths from git unquoted (O-ENC1, O-ENC2). The
+   job, and paths from git unquoted (O-ENC1, O-ENC2); part 8, mutmut with Redline's settings
+   only and the scenario's tests copied, proved on the real mutmut in CI (O-MUT1, O-MUT2). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1475,6 +1494,17 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   `"\303\274…"`: a living spec under `redline/specs/grüße/` vanished at the merge-base, and
   check-specs reported its scenarios as changes no delta names. Now `git()` runs with
   `core.quotePath=false` (§7).
+- O-MUT1 [closed, build 9 part 8]: mutmut reads `[tool.mutmut]` in `pyproject.toml` before `setup.cfg`,
+  where Redline wrote its settings, so in a repository with that table mutmut mutated the files the
+  repository names and ran every test against each mutant: a kill by any test was the scenario's
+  break. And a scenario's test outside `tests/`, `test/` and root `test*.py` never reached the
+  mutant run, which failed. Now Redline's settings are the only ones, `[tool.mutmut]` is taken out
+  of the copy, and the scenario's tests, their `conftest.py` files and the `support:` files are
+  copied (§5).
+- O-MUT2 [closed, build 9 part 8]: no test ran the real mutmut; every check-break test used the fake, so
+  how mutmut reads its settings went unseen. Now the `runners` CI job runs `Mutmut` on toy
+  repositories, one with `[tool.mutmut]`, and checks each scenario's kills against a test that
+  kills every mutant (§7).
 - O-RUN5 [closed, build 5 part 7]: the helper had been checked under real Jest by hand only, and
   Stryker not at all. Now the `runners` CI job runs both on a toy project (§5). It found that Jest
   took the helper, then `redline/runners/spec.js`, for a test file and failed every run, so the
