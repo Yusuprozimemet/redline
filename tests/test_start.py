@@ -100,6 +100,17 @@ def test_scenario_found_in_the_living_specs(change, capsys):
     assert "#### Scenario GREET.S0 [hold]: says hi\n- THEN hi" in out
 
 
+def test_a_manual_scenario_is_briefed_with_its_reason(change, capsys):
+    change.commit("living", {"redline/specs/greet/spec.md": "#### Scenario GREET.M0 [manual]: looks right\n"
+                                                            "Manual: by eye\n- THEN it looks right\n"})
+    change.commit("own it", {f"{CHANGE}/steps.md": STEPS.replace("Owns: GREET.S1, GREET.S2", "Owns: GREET.M0")})
+    merge_step(change, "S")
+    fresh_branch(change, "r")
+    code, out = start(change, capsys, "add-greet/R")
+    assert code == 0, out
+    assert "#### Scenario GREET.M0 [manual]: looks right\nManual: by eye\n- THEN it looks right" in out
+
+
 def test_refuses_when_the_previous_step_is_not_merged_on_main(change, capsys):
     merge_step(change, "S")
     change.git("checkout", "-q", "-b", "unmerged-r")

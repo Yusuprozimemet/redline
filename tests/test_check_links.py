@@ -101,12 +101,12 @@ def test_only_well_formed_headings_declare_scenarios(repo, capsys, line):
     assert run(repo, capsys)[0] == 0
 
 
-FORM = "not a scenario heading `#### Scenario <ID> [new|hold]: <title>`"
+FORM = "not a scenario heading `#### Scenario <ID> [new|hold|manual]: <title>`"
 
 
 @pytest.mark.parametrize("line", [
     "#### Scenario TOY.S2: no tag",
-    "#### Scenario TOY.S2 [manual]: unknown tag",
+    "#### Scenario TOY.S2 [later]: unknown tag",
     "#### Scenario TOY.S2 [New]: capital",
     "#### Scenario TOY.S2 [new] no colon",
     "#### Scenario: TOY.S2",
@@ -121,7 +121,47 @@ def test_a_malformed_scenario_heading_is_a_gap(repo, capsys, line, path):
 
 def test_a_closed_changes_malformed_heading_isnt_read(repo, capsys):
     repo.commit("closed\n\nRedline-Step: add-bye/C", {
-        SPEC: scenarios("TOY.S1"), DELTA: "#### Scenario TOY.S2 [manual]: looks right\n",
+        SPEC: scenarios("TOY.S1"), DELTA: "#### Scenario TOY.S2 [later]: looks right\n",
+        "tests/test_toy.py": marked("TOY.S1")})
+    assert run(repo, capsys)[0] == 0
+
+
+MANUAL = "#### Scenario TOY.M1 [manual]: looks right\nManual: a person reads the layout\n- THEN it looks right\n\n"
+
+
+@pytest.mark.parametrize("path", [SPEC, DELTA])
+def test_a_manual_scenario_with_its_reason_needs_no_test(repo, capsys, path):
+    repo.commit("manual", {path: scenarios("TOY.S1") + MANUAL, "tests/test_toy.py": marked("TOY.S1")})
+    assert run(repo, capsys) == (0, ["ok: 2 scenarios, each linked to a test, except 1 manual"])
+
+
+def test_a_test_linked_to_a_manual_scenario_is_a_gap(repo, capsys):
+    repo.commit("manual", {SPEC: scenarios("TOY.S1") + MANUAL, "tests/test_toy.py": marked("TOY.S1", "TOY.M1")})
+    assert run(repo, capsys) == (1, [
+        f"manual scenario TOY.M1 ({SPEC}:6): a test links it (tests/test_toy.py:7); tag it new or hold"])
+
+
+@pytest.mark.parametrize("text, failure", [
+    (scenarios("TOY.S1") + "#### Scenario TOY.M1 [manual]: looks right\n- THEN it looks right\n",
+     "manual scenario TOY.M1 has no `Manual: <reason>` line ({path}:6)"),
+    (scenarios("TOY.S1") + "#### Scenario TOY.M1 [manual]: looks right\nManual:  \n- THEN it looks right\n",
+     "`Manual:` line with no reason ({path}:7)"),
+    (scenarios("TOY.S1") + "#### Scenario TOY.M1 [manual]: looks right\nManual: by eye\nManual: again\n",
+     "manual scenario TOY.M1 has a second `Manual:` line ({path}:8)"),
+    (scenarios("TOY.S1").replace("- GIVEN x", "Manual: a person checks it\n- GIVEN x"),
+     "`Manual:` line outside a manual scenario ({path}:4)"),
+    ("# Toy\nManual: not under any scenario\n\n" + scenarios("TOY.S1"),
+     "`Manual:` line outside a manual scenario ({path}:2)"),
+])
+@pytest.mark.parametrize("path", [SPEC, DELTA])
+def test_a_manual_line_missing_repeated_or_out_of_place_is_a_gap(repo, capsys, text, failure, path):
+    repo.commit("manual", {path: text, "tests/test_toy.py": marked("TOY.S1")})
+    assert run(repo, capsys) == (1, [failure.format(path=path)])
+
+
+def test_a_closed_changes_manual_lines_arent_read(repo, capsys):
+    repo.commit("closed\n\nRedline-Step: add-bye/C", {
+        SPEC: scenarios("TOY.S1"), DELTA: "#### Scenario TOY.M1 [manual]: no reason\n",
         "tests/test_toy.py": marked("TOY.S1")})
     assert run(repo, capsys)[0] == 0
 

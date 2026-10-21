@@ -95,7 +95,7 @@ def test_a_new_scenario_no_g_step_owns_fails(change, capsys):
     assert code == 1 and "GREET.S2 is new, but no G step owns it" in out, out  # R owning it isn't enough
 
 
-@pytest.mark.parametrize("line", ["#### Scenario GREET.S3 [manual]: looks right",
+@pytest.mark.parametrize("line", ["#### Scenario GREET.S3 [later]: looks right",
                                   "#### Scenario GREET.S3: no tag"])
 def test_a_malformed_scenario_heading_in_a_delta_fails(change, capsys, line):
     change.commit("manual", {f"{CHANGE}/specs/greet/delta.md": DELTA + "\n" + line + "\n- THEN it looks right\n"})
@@ -103,15 +103,38 @@ def test_a_malformed_scenario_heading_in_a_delta_fails(change, capsys, line):
     line_no = DELTA.count("\n") + 2
     assert code == 1, out
     assert (f"specs/greet/delta.md:{line_no}: not a scenario heading "
-            f"`#### Scenario <ID> [new|hold]: <title>`: {line}") in out, out
+            f"`#### Scenario <ID> [new|hold|manual]: <title>`: {line}") in out, out
 
 
 def test_the_gate_fails_a_malformed_heading_at_s(change):
     fresh_branch(change, "add-greet-S")
-    change.commit("manual", {f"{CHANGE}/specs/greet/delta.md": DELTA + "#### Scenario GREET.S3 [manual]: blue\n"})
+    change.commit("manual", {f"{CHANGE}/specs/greet/delta.md": DELTA + "#### Scenario GREET.S3 [later]: blue\n"})
     assert [f for f in gates(change.path, "add-greet", "S") if "not a scenario heading" in f] == [
         f"check-steps: specs/greet/delta.md:{DELTA.count(chr(10)) + 1}: not a scenario heading "
-        "`#### Scenario <ID> [new|hold]: <title>`: #### Scenario GREET.S3 [manual]: blue"]
+        "`#### Scenario <ID> [new|hold|manual]: <title>`: #### Scenario GREET.S3 [later]: blue"]
+
+
+MANUAL = "\n#### Scenario GREET.M1 [manual]: looks right\nManual: a person reads it\n- THEN it looks right\n"
+
+
+@pytest.mark.parametrize("steps", [STEPS, STEPS.replace("## G2: Greet a crowd\nOwns: GREET.S2\n",
+                                                        "## G2: Greet a crowd\nOwns: GREET.S2, GREET.M1\n")])
+def test_a_manual_scenario_needs_no_owner_and_may_have_a_g_step(change, capsys, steps):
+    change.commit("manual", {f"{CHANGE}/specs/greet/delta.md": DELTA + MANUAL, PATH: steps})
+    code, out = check(change, capsys)
+    assert code == 0, out
+
+
+@pytest.mark.parametrize("delta, failure", [
+    (DELTA + MANUAL.replace("Manual: a person reads it\n", ""),
+     f"specs/greet/delta.md:{DELTA.count(chr(10)) + 2}: manual scenario GREET.M1 has no `Manual: <reason>` line"),
+    (DELTA.replace('- GIVEN the name "Ada"', 'Manual: by eye\n- GIVEN the name "Ada"'),
+     "specs/greet/delta.md:6: `Manual:` line outside a manual scenario"),
+])
+def test_a_manual_line_missing_or_out_of_place_in_a_delta_fails(change, capsys, delta, failure):
+    change.commit("manual", {f"{CHANGE}/specs/greet/delta.md": delta})
+    code, out = check(change, capsys)
+    assert code == 1 and failure in out, out
 
 
 def test_a_closed_change_still_reads_its_own_delta(change, capsys):
