@@ -5,7 +5,7 @@ isn't one of the file's steps, or an item outside `## Open items`; on steps that
 if there is one, then G1…Gn, then C, or a `## ` heading that is neither a step nor `## Open
 items`; on a step named twice; on an `Owns:` ID no delta of the change declares; and on a `new`
 scenario no G step owns; and on a `#### Scenario` line in a delta that isn't a scenario heading
-(O-SPEC1), which check-links reads only from R on. It reads the tree, and the deltas even once the
+(O-SPEC1), or a `Manual:` line missing, repeated or out of place (O-SPEC2), which check-links reads only from R on. It reads the tree, and the deltas even once the
 change is closed.
 `since` compares the file with the merge-base: an open item dropped, an item given to a merged step, a
 merged step or the PR's own removed (O-STEPS2).
@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 
 from redline.close import tags
-from redline.links import FORM, malformed
+from redline.links import FORM, malformed, unreasoned
 from redline.order import git, shown
 from redline.start import ITEM, merged_steps, scan
 
@@ -42,9 +42,10 @@ def check_steps(repo: Path, change: str) -> list[str]:
     bad += [f"steps.md:{step.owned_at[sid]}: {step.name} owns {sid}, which no delta of the change declares"
             for step in steps for sid in step.owns if sid not in kinds]
     specs = repo / "redline/changes" / change / "specs"
-    bad += [f"{delta.relative_to(specs.parent).as_posix()}:{n}: {FORM}: {line}"
-            for delta in sorted(specs.glob("**/delta.md"))
-            for n, line in enumerate(delta.read_text(encoding="utf-8").splitlines(), 1) if malformed(line)]
+    for delta in sorted(specs.glob("**/delta.md")):
+        where, lines = delta.relative_to(specs.parent).as_posix(), list(enumerate(delta.read_text(encoding="utf-8").splitlines(), 1))
+        bad += [f"{where}:{n}: {FORM}: {line}" for n, line in lines if malformed(line)]
+        bad += [f"{where}:{n}: {why}" for n, why in unreasoned(lines)]
     owned = {sid for step in steps if step.name.startswith("G") for sid in step.owns}
     return bad +[f"{sid} is new, but no G step owns it" for sid, kind in kinds.items() if kind == "new" and sid not in owned]
 

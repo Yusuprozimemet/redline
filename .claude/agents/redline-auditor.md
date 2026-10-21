@@ -19,7 +19,7 @@ REFUSED: the auditor runs only on a Claude Fable model; it never falls back to a
 A change id `<id>`. Read, from the repository root:
 
 - `redline/changes/<id>/proposal.md`: why, scope, non-goals and the declared rigor level;
-- every `redline/changes/<id>/specs/**/delta.md`: scenarios tagged `[new]` or `[hold]`, and the
+- every `redline/changes/<id>/specs/**/delta.md`: scenarios tagged `[new]`, `[hold]` or `[manual]`, and the
   `### Premises` with their `file:line` citations;
 - `redline/changes/<id>/audit.md`, if it exists: the findings of your earlier runs;
 - whatever code the premises cite, and whatever else you need to test their claims.
@@ -47,8 +47,8 @@ For each scenario, can every THEN clause be checked by a test?
 - A `[new]` scenario must fail on today's code. If the code already does what it says, it is
   `[hold]` or its premise is wrong.
 - A `[hold]` scenario must pass on today's code.
-- A clause that can't be automated needs a recorded manual check with a reason (design.md §12);
-  challenge the reason if it is weak.
+- A scenario that can't be automated is `[manual]`, with a `Manual: <reason>` line (design.md §4).
+  Challenge it if a test could check it: then it is `[new]` or `[hold]`, and the reason is weak.
 
 ## 3. Rigor
 

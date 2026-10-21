@@ -230,7 +230,7 @@ def run_check_links(repo: Path) -> int:
         print(gap)
     if report.gaps:
         return 1
-    print(f"ok: {report.scenarios} scenarios, each linked to a test")
+    print(f"ok: {report.scenarios} scenarios, each linked to a test" + (f", except {report.manual} manual" if report.manual else ""))
     return 0
 
 

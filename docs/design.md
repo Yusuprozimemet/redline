@@ -1575,10 +1575,12 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   check-links reported `0 scenarios` without a gap. Now check-links and check-steps fail a line
   that starts `#### Scenario` in any other form, naming its file and line, with one function,
   `malformed` in `redline/links.py` (§4).
-- O-SPEC2 [build 9 part 16]: a scenario that can't be automated (visual, timing) has no form, so
-  check-links fails it and its change can't close. The plan: a `[manual]` tag with a `Manual:
-  <reason>` line, which the auditor may challenge at S; no test, a linked one a gap; a ledger
-  entry with no evidence; and check-close refusing it until O-SPEC3 (§4).
+- O-SPEC2 [closed, build 9 part 16]: a scenario that can't be automated (visual, timing) had no
+  form, so check-links failed it as a malformed heading. Now it is `[manual]`, with one `Manual:
+  <reason>` line in its block, which the auditor may challenge at S; it has no test, and a linked
+  one is a gap; check-links and check-steps fail the line missing, empty, repeated or under
+  another tag, with one function, `unreasoned` in `redline/links.py`; check-specs carries it into
+  `specs/`; its ledger entry has no evidence; and check-close refuses it until O-SPEC3 (§4).
 - O-SPEC3 [build 9 part 17]: a `[manual]` scenario can't close, since check-close has no way to
   record a person's check of it (§5). The plan: a fifth claim, `Redline-Manual: <ID> checked-by
   @person: <what was seen>`, one per manual scenario in the C PR's own commits, with a

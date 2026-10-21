@@ -11,7 +11,7 @@ from pathlib import Path
 
 from redline.order import git
 
-SCENARIO = re.compile(r"^#### Scenario (\S+) \[(?:new|hold)\]:")
+SCENARIO = re.compile(r"^#### Scenario (\S+) \[(?:new|hold|manual)\]:")
 SECTION = re.compile(r"^## (ADDED|MODIFIED|REMOVED) Requirements\s*$")
 REQUIREMENT = re.compile(r"^### Requirement: (.+?)\s*$")
 REMOVAL = re.compile(r"^- ([^\s:]+): \S")
