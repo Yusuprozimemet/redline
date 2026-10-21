@@ -1570,10 +1570,12 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
   step owns, found only at C by check-close. Now check-steps fails on each, at every step, on the
   step's change and each change whose `steps.md` or deltas the PR changes, from one parser,
   `scan`, which `parse_steps` uses too (§4).
-- O-STEPS2 [build 9 part 14]: check-steps reads one `steps.md`, so an open item deleted, an item
-  given to a step already merged, which progress never prints, or a step removed since the
-  merge-base, isn't seen (§4). It will compare each change's `steps.md` with the merge-base's, by
-  item ID and step name, an item moved to another change's by its text.
+- O-STEPS2 [closed, build 9 part 14]: check-steps read one `steps.md`, so an open item deleted, an
+  item given to a step already merged, which progress never prints, or a step removed since the
+  merge-base, passed it. Now the same gate compares each change's `steps.md` with the merge-base's,
+  items by ID and steps by name, and fails on an item dropped, at its owning step too, unless the
+  PR adds its text to another change's; on an item given to a merged step; and on a merged step,
+  or the PR's own, removed (§4).
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs

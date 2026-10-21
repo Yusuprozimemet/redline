@@ -24,7 +24,7 @@ from redline.relabel import blind, check_relabel
 from redline.runner import HELPERS, install
 from redline.specs import check_specs
 from redline.start import Refused, read_steps, start
-from redline.steps import check_steps
+from redline.steps import check_steps, since
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -58,6 +58,8 @@ def main(argv: list[str] | None = None) -> int:
         logged = commands.add_parser(name, help=help)
         logged.add_argument("change", help="the change, e.g. add-greet")
         logged.add_argument("--repo", type=Path, default=Path.cwd())
+        if name == "check-steps":
+            logged.add_argument("--base", default="main", help="also fail on what left steps.md since the merge-base with this ref")
     closed = commands.add_parser("check-close", help="fail unless main's evidence closes the change, as at the C step")
     closed.add_argument("change", help="the change, e.g. add-greet")
     closed.add_argument("--repo", type=Path, default=Path.cwd())
@@ -128,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "check-defects":
         return run_check_defects(args.repo, args.change)
     if args.command == "check-steps":
-        return run_check_steps(args.repo, args.change)
+        return run_check_steps(args.repo, args.change, args.base)
     if args.command in ("retro", "blind"):
         return run_retro(args.repo, args.change, retro if args.command == "retro" else blind)
     if args.command == "claims":
@@ -292,8 +294,8 @@ def run_check_defects(repo: Path, change: str) -> int:
     return 0
 
 
-def run_check_steps(repo: Path, change: str) -> int:
-    if bad := check_steps(repo, change):
+def run_check_steps(repo: Path, change: str, base: str = "main") -> int:
+    if bad := check_steps(repo, change) + since(repo, change, base):
         for line in bad:
             print(line)
         return 1
