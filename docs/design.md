@@ -968,7 +968,7 @@ the PR with `gh`.
 `main` and refuses if it isn't there. Once it is, it switches to `main` (the next step starts fresh
 from it, so uncommitted changes refuse before anything syncs), clears the open-step record if the
 step it names is merged, and prints the next step's brief, or that the change is complete after C
-and that `redline retro <change>` comes next (§10).
+and that `redline retro <change>` comes next (§10), then its progress (below).
 When that completes the change's phase, it also prints that the initiative is at a stopping
 point, and the phase's `Stop:` line. Then it prints the next phase and its changes, or that the
 initiative is complete. It starts nothing: going on is the maintainer's call. In a critical
@@ -980,6 +980,28 @@ The brief (goal, owned scenario IDs, cited files, open items, the rules of `redl
 is generated from the spec, the ledger, the open items and the config. For a change in an initiative, it also gives the initiative's goal,
 the phase and its `Stop:` line, so a session knows what its change is for. It's the whole
 hand-off: a new session needs nothing from the old one.
+
+**Progress.** The brief ends with how far the work has come, from what `main` holds, so `start`
+and `merged` both show it, once each; after C, where no brief follows, `merged` prints it alone.
+One function, `progress` in `redline/progress.py`, writes it for both:
+
+```
+## Progress
+add-greet: [████░░░░░░░░░░░░░░░░] 1 of 5 steps merged · next: add-greet/R
+Phase 1 of 2 (Greet): [██████████░░░░░░░░░░] 1 of 2 changes complete
+greetings: [░░░░░░░░░░░░░░░░░░░░] 0 of 2 phases complete
+Open items later steps own:
+- O2 [G2]: names with spaces
+```
+
+The first line counts the change's steps of `steps.md` merged on `main` and names the first that
+isn't, or says `the change is complete`. A change in an initiative adds its phase's changes
+complete and the plan's phases complete, as `start` reads completeness (§4): a change with no
+`steps.md` yet isn't. Without an initiative those two lines are left out. Then the open items whose
+owning step isn't merged, or `(none)`. An item owned by a merged step isn't printed: whether it was
+done is the auditor's to say, not the bar's. A bar is 20 characters, filled `n × 20 ÷ total`
+rounded down, so it is full only when everything is done. It prints and judges nothing, as `merged`
+does: no count refuses or fails.
 
 ## 7. Trust model
 
@@ -1007,7 +1029,9 @@ runs with `-c core.quotePath=false`, so a path outside ASCII reads as itself, no
 `"t\303\274.py"` that names no file. `main()` reconfigures stdout and stderr to UTF-8 with
 `errors="replace"`, so a brief printed into a pipe, as an agent session reads it, never fails on a
 "≤". A reader that decodes the pipe in its console's code page shows those characters wrongly, but
-nothing is lost or fails. In a console, Python already writes Unicode.
+nothing is lost or fails. In a console, Python already writes Unicode. So the progress bar (§6)
+prints `█` and `░` with no ASCII fallback, which would never run: its counts are digits, and read
+without the bar.
 
 On a pull request, `redline ci pr --base main` works out the step from the `Redline-Step`
 trailers of the PR's own commits (`main..HEAD`), which `pr` added. It refuses if they name more
