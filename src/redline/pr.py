@@ -7,7 +7,7 @@ and check-order run from the R step on: at S the delta declares scenarios that h
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
 check-lock runs on every change the lock names at every step, and on the step's change at R and G (against main's lock at G);
 at every step the whole lock is compared by test with main's (lock.check_frozen). check-track runs at G steps (track.py). check-close and check-specs run at C (close.py, specs.py).
-A changed `rigor:` in the config or `Rigor:` line in a plan, a glob added to `generated:` or `support:`,
+A changed `rigor:` in the config or `Rigor:` line in a plan, a change's level lowered, a glob added to `generated:` or `support:`,
 a deleted plan, or a change taken out of one, needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
 <reason>` trailer needs a maintainer's label, as a departure does (approval.py); locally, where
 the PR doesn't exist yet, `pr` only reports that CI will need it.
@@ -22,7 +22,7 @@ from redline.approval import OVERSIZED, RIGOR, Approvals, claims
 from redline.audit import check_audit
 from redline.breaks import check_break, holds
 from redline.close import check_close
-from redline.config import load_config
+from redline.config import LEVELS, load_config, rigor
 from redline.defects import check_defects
 from redline.lines import LIMIT, check_lines
 from redline.links import check_links
@@ -92,8 +92,9 @@ def size(repo: Path, approvals: Approvals) -> list[str]:
 
 
 def rigor_claim(repo: Path, approvals: Approvals) -> list[str]:
-    """A changed `rigor:` in the config or `Rigor:` line in a plan, a glob added to the config's `generated:`
-    or `support:`, a deleted plan, or a change taken out of one, needs an approved `Redline-Rigor` claim."""
+    """A changed `rigor:` in the config or `Rigor:` line in a plan, a change's level lowered, a glob added to
+    the config's `generated:` or `support:`, a deleted plan, or a change taken out of one, needs an approved
+    `Redline-Rigor` claim. An unknown level fails whatever the trailer."""
     fork = git(repo, "merge-base", "main", "HEAD").stdout.strip()
     old, new = load_config(repo, fork), load_config(repo)
     changed = [] if old.rigor == new.rigor else [
@@ -113,9 +114,19 @@ def rigor_claim(repo: Path, approvals: Approvals) -> list[str]:
         else:
             kept = {c for phase in now.phases for c in phase.changes}
             changed += [f"rigor: {c} was taken out of {path}" for c in had if c not in kept]
+    bad = []
+    proposals = git(repo, "ls-tree", "-r", "--name-only", fork, "--", "redline/changes").stdout.split()
+    for change in (p.split("/")[2] for p in proposals if p.endswith("/proposal.md") and p.count("/") == 3):
+        try:  # a new proposal declares its level; a raise asks more of every gate (§8)
+            before, level = rigor(repo, change, fork), rigor(repo, change)
+        except RuntimeError as error:
+            bad.append(f"rigor: {error}")
+            continue
+        if LEVELS.index(level) < LEVELS.index(before):
+            changed.append(f"rigor: {change}'s level was lowered from {before} to {level}")
     if changed and not claims(repo, fork, "Redline-Rigor"):
-        return [f"{what}, with no Redline-Rigor trailer" for what in changed]
-    return [why for what in changed if (why := approvals.approve(RIGOR, what))]
+        return bad + [f"{what}, with no Redline-Rigor trailer" for what in changed]
+    return bad + [why for what in changed if (why := approvals.approve(RIGOR, what))]
 
 
 def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None) -> list[str]:
