@@ -27,7 +27,7 @@ STEP = re.compile(r"^## (S|R|G\d+|C): (.+)$")
 OWNS = re.compile(r"^Owns: (.+)$")
 TRACK = re.compile(r"^Track:(.*)$")
 ITEM = re.compile(r"^- (\S+) \[(\S+)\]: (.+)$")
-HEADING = re.compile(r"^#### Scenario (\S+) \[(?:new|hold)\]:")
+HEADING = re.compile(r"^#### Scenario (\S+) \[(?:new|hold|manual)\]:")
 TRAILER = "Redline-Step"
 
 

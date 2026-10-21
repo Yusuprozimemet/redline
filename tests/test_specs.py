@@ -37,6 +37,17 @@ def test_a_delta_merged_as_it_says_passes(repo, capsys):
     assert specs(repo, capsys) == (0, ["ok: 1 added, 1 modified, 1 removed, as the deltas say; nothing else in redline/specs changed"])
 
 
+M1 = "#### Scenario GREET.M1 [manual]: looks right\nManual: by eye\n- THEN it looks right\n"
+
+
+def test_a_manual_scenario_reaches_the_living_spec_with_its_reason(repo, capsys):
+    on_c_branch(repo, DELTA.replace(f"{S1}\n", f"{S1}\n{M1}\n"))
+    repo.commit("merge the delta", {SPEC: living(S0_LOUD, S1, M1.replace("Manual: by eye\n", ""), S4)})
+    assert specs(repo, capsys) == (1, [f"GREET.M1: {SPEC} has it with text other than the delta's"])
+    repo.commit("with its reason", {SPEC: living(S0_LOUD, S1, M1, S4)})
+    assert specs(repo, capsys) == (0, ["ok: 2 added, 1 modified, 1 removed, as the deltas say; nothing else in redline/specs changed"])
+
+
 def test_a_delta_not_merged_names_each_scenario(repo, capsys):
     on_c_branch(repo)
     assert specs(repo, capsys) == (1, [

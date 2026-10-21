@@ -66,7 +66,7 @@ redline/
 │                                   # initiative-<side>.md: end-of-initiative audits (critical)
 └── changes/<id>/
     ├── proposal.md                 # why, scope, non-goals, rigor level
-    ├── specs/<domain>/delta.md     # ADDED/MODIFIED/REMOVED; scenarios tagged new | hold; premises
+    ├── specs/<domain>/delta.md     # ADDED/MODIFIED/REMOVED; scenarios tagged new | hold | manual; premises
     ├── design.md                   # how (optional at lite)
     ├── steps.md                    # S, R, G1..Gn, C, and the scenario IDs each step owns
     ├── audit.md                    # auditor findings and their resolution
@@ -84,13 +84,33 @@ A scenario:
 - THEN login fails AND no session is created
 ```
 
-A scenario's heading is exactly `#### Scenario <ID> [new|hold]: <title>`. Every gate finds
-scenarios by that form, so a line that starts `#### Scenario` in any other (no tag, an unknown one
-such as `[manual]`, no `: ` after the tag) would be no scenario to any of them: it would need no
-test, no evidence at C and no place in `specs/`, and nothing would say so. So check-links fails
-such a line in the living specs and the deltas of changes not closed, and check-steps in its
-change's deltas, at every step from S on, each naming the file and line (O-SPEC1). A scenario
-that can't be automated has no form yet (O-SPEC2, §12), so it fails, where it is seen.
+A scenario's heading is exactly `#### Scenario <ID> [new|hold|manual]: <title>`. Every gate finds
+scenarios by that form, so a line that starts `#### Scenario` in any other (no tag, an unknown one,
+no `: ` after the tag) would be no scenario to any of them: it would need no test, no evidence at C
+and no place in `specs/`, and nothing would say so. So check-links fails such a line in the living
+specs and the deltas of changes not closed, and check-steps in its change's deltas, at every step
+from S on, each naming the file and line (O-SPEC1).
+
+A scenario that can't be automated, such as how a page looks or how long a wait feels, is
+`[manual]`, and its block (heading to the next `#` line) says why in one `Manual: <reason>` line:
+
+```markdown
+#### Scenario AUTH.2FA.S4 [manual]: the code field is readable on a phone
+Manual: legibility is a person's judgment; no assertion reads it
+- GIVEN the login page on a 360px-wide screen
+- THEN the code field and its label fit without zooming
+```
+
+It has no test: a test linked to it is a gap in check-links (tag it `new` or `hold`, since a
+scenario a test can check is proved by the test, not by a person's word), and unlinked it is
+none. Its block is checked by the same two gates that check headings, naming file and line: a
+`[manual]` scenario without one `Manual:` line with a reason, or with two, fails, and so does a
+`Manual:` line under a `new` or `hold` scenario, where a tag was likely forgotten. The auditor may
+challenge at S that it can't be automated (§12). check-specs carries it into `specs/` like any
+other, `Manual:` line included, so the living spec keeps the reason; the brief prints it. A G
+step may own it, where its code is written, but needn't, as with `hold`: nothing is lost, since
+check-close asks for its check at C. Its ledger entry has no red, green or break (all `null`):
+its evidence is a person's check, recorded at C (§5), not CI's (O-SPEC2).
 
 A delta's scenarios sit under its `## ` sections, which say what the C step does to the living
 spec of the same domain, `redline/specs/<domain>/spec.md`:
@@ -189,7 +209,8 @@ the line, on:
   needs no test, so no step owns it.
 - **A `new` scenario no G step owns.** Without this it is found only at C, by check-close, as a
   scenario with no green.
-- **A malformed scenario heading** in one of the change's deltas (above). check-links reads
+- **A malformed scenario heading**, or a `Manual:` line missing, repeated or out of place, in
+  one of the change's deltas (above). check-links reads
   every delta too, but only from R on.
 
 `pr` and `redline ci pr` run it at every step, on the step's change and on each other change
@@ -985,8 +1006,10 @@ on:
   `pass`. The red's result is the suite's on its merged commit, which passes because the test
   failed strictly, as it should.
 - **A `hold` scenario without a break**, or one whose `result` isn't `pass`.
+- **A `manual` scenario**, until a person's check of it can be recorded (O-SPEC3): it has no
+  evidence CI can give, and none from history stands in for it.
 
-A scenario is `new` or `hold` by its tag in the delta, and its evidence is only what its own
+A scenario is `new`, `hold` or `manual` by its tag in the delta, and its evidence is only what its own
 steps made (§4, a change's window): a scenario a closed change proved doesn't close a later
 change that MODIFIES it. It runs at C only, since at G a scenario
 owned by a later step has no green yet by design; run on its own, it checks as at C.
@@ -1502,8 +1525,8 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    checked at every step, an open item without an ID or an owner a failure (O-STEPS1); part 14,
    `steps.md` compared with the merge-base, so no item or step leaves it silently (O-STEPS2); part
    15, every known limit given an O-ID and an owner or a reason it stays a judgment, and a
-   scenario heading not in its form a failure (O-SPEC1); part 16, a recorded manual check
-   (O-SPEC2). Later parts take O-CLOSE7, O-CI9, O-APPR1, O-APPR2 and O-GH1. The review's other
+   scenario heading not in its form a failure (O-SPEC1); part 16, a `[manual]` scenario and its
+   `Manual:` line (O-SPEC2); part 17, its check recorded at C as a claim (O-SPEC3). Later parts take O-CLOSE7, O-CI9, O-APPR1, O-APPR2 and O-GH1. The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 11. **Per-scenario outcomes from CI** (O-CLOSE6, the review's item 19): each linked test's
@@ -1522,6 +1545,10 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   fails its break. A test that asserts some clauses and not others passes both. Whether it covers
   them all is the maintainer's, reviewing the R PR, and at critical the architecture auditor's
   (§4), which asks what a test could pass while violating.
+- **Whether a scenario really can't be automated** (§4): a `[manual]` scenario needs no test, so
+  the tag is a way around red and green. No gate can tell a scenario no assertion can read from
+  one nobody tried to test; the auditor challenges each at S, and the maintainer reviewing the S
+  PR sees its `Manual:` line.
 - **Mutation cost on large codebases** is a cost, never a gate passed: only the files the change's
   premises cite are mutated, at the R step only, each scenario's runners stopping at the first
   kill (§5). A run that takes too long fails CI where it is seen. How much to cite is the
@@ -1548,11 +1575,17 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   check-links reported `0 scenarios` without a gap. Now check-links and check-steps fail a line
   that starts `#### Scenario` in any other form, naming its file and line, with one function,
   `malformed` in `redline/links.py` (§4).
-- O-SPEC2 [build 9 part 16]: a scenario that can't be automated (visual, timing) has no form, so
-  check-links fails it and its change can't close. The plan: a `[manual]` tag with a `Manual:
-  <reason>` line, which the auditor may challenge at S; no test; and at C, check-close asks for a
-  fifth claim, `Redline-Manual: <ID> checked-by @person: <what was seen>`, with a maintainer's
-  `redline:manual` label (§7), which `redline claims` prints.
+- O-SPEC2 [closed, build 9 part 16]: a scenario that can't be automated (visual, timing) had no
+  form, so check-links failed it as a malformed heading. Now it is `[manual]`, with one `Manual:
+  <reason>` line in its block, which the auditor may challenge at S; it has no test, and a linked
+  one is a gap; check-links and check-steps fail the line missing, empty, repeated or under
+  another tag, with one function, `unreasoned` in `redline/links.py`; check-specs carries it into
+  `specs/`; its ledger entry has no evidence; and check-close refuses it until O-SPEC3 (§4).
+- O-SPEC3 [build 9 part 17]: a `[manual]` scenario can't close, since check-close has no way to
+  record a person's check of it (§5). The plan: a fifth claim, `Redline-Manual: <ID> checked-by
+  @person: <what was seen>`, one per manual scenario in the C PR's own commits, with a
+  maintainer's `redline:manual` label (§7), which `redline ci push` records under `claims:` and
+  `redline claims` prints; a trailer that names no manual scenario of the change fails.
 - O-CLOSE6 [build 11]: check-close takes a scenario's red, green or break from the whole suite's
   result on the merged commit, so a test skipped or not collected there passes with it (§5). The
   plan: each linked test's outcome in the note, red the first commit where the scenario's `new`

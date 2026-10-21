@@ -68,6 +68,14 @@ def test_a_hold_scenario_needs_a_break_that_passed(change, capsys):
     assert close(change, capsys) == (0, "ok: 3 scenarios, each with its evidence on main\n")
 
 
+def test_a_manual_scenario_refuses_until_its_check_can_be_recorded(change, capsys):
+    change.commit("a manual scenario", {f"{CHANGE}/specs/greet/delta.md": DELTA +
+                  "\n#### Scenario GREET.M1 [manual]: looks right\nManual: by eye\n- THEN it looks right\n"})
+    for merged in red_and_green(change):
+        note(change, merged, "pass")
+    assert close(change, capsys) == (1, "GREET.M1: manual, and a person's check of it can't be recorded yet (O-SPEC3)\n")
+
+
 def test_pr_runs_it_at_the_c_step_only(change, capsys):
     assert "check-close: GREET.S1: no red on main" in gates(change.path, "add-greet", "C")
     assert not [f for f in gates(change.path, "add-greet", "G1") if f.startswith("check-close")]

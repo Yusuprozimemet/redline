@@ -2,7 +2,8 @@
 
 check-ledger only says the committed ledger matches main's history. This rebuilds it and asks
 whether that history is enough to close: each `new` scenario a red and a green, each `hold`
-scenario a break, each with `result: pass`. A scenario is `new` or `hold` by its tag in the delta.
+scenario a break, each with `result: pass`. A scenario is `new`, `hold` or `manual` by its tag in the delta;
+a `manual` one refuses until a person's check of it can be recorded (O-SPEC3).
 `unverified` refuses too, with a line saying the PR is waiting for CI's note, not wrong.
 """
 
@@ -11,7 +12,7 @@ from pathlib import Path
 
 from redline.ledger import rebuild
 
-TAG = re.compile(r"^#### Scenario (\S+) \[(new|hold)\]:")
+TAG = re.compile(r"^#### Scenario (\S+) \[(new|hold|manual)\]:")
 
 
 def tags(repo: Path, change: str) -> dict[str, str]:
@@ -28,6 +29,9 @@ def check_close(repo: Path, change: str, main: str = "main") -> list[str]:
     kinds = tags(repo, change)
     bad, waiting = [], False
     for sid, entry in scenarios.items():
+        if kinds.get(sid) == "manual":
+            bad.append(f"{sid}: manual, and a person's check of it can't be recorded yet (O-SPEC3)")
+            continue
         for kind in ("break",) if kinds.get(sid) == "hold" else ("red", "green"):
             if (evidence := entry[kind]) is None:
                 bad.append(f"{sid}: no {kind} on main")

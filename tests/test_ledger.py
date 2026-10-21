@@ -44,6 +44,13 @@ def test_every_scenario_of_the_change_is_listed_with_no_evidence_yet(change, cap
     assert (change.path / LEDGER).read_text(encoding="utf-8").startswith("# A cache of evidence")
 
 
+def test_a_manual_scenario_is_listed_with_no_evidence(change, capsys):
+    delta = (change.path / f"{CHANGE}/specs/greet/delta.md").read_text(encoding="utf-8")
+    change.commit("manual", {f"{CHANGE}/specs/greet/delta.md": delta + "\n#### Scenario GREET.M1 [manual]: looks right\n"
+                                                                     "Manual: by eye\n- THEN it looks right\n"})
+    assert rebuilt(change, capsys)["scenarios"] == {"GREET.S1": NOTHING, "GREET.S2": NOTHING, "GREET.M1": NOTHING}
+
+
 def test_red_evidence_is_the_red_commit_the_merge_ci_ran_on_and_its_result(change, capsys):
     red, merge = land(change, "red", {"tests/test_greet.py": RED})
     note(change, merge, "pass")
