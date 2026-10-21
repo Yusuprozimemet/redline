@@ -2,7 +2,7 @@
 
 Each knows its test files, where each of its tests starts and ends, and the spec markers on each (the
 scenario ID, and whether it is `new`): pytest's from Python's own parser, a marker counting only as a
-test function's decorator; Jest's from a scanner that skips strings, template literals and comments;
+test function's decorator; Jest's from `spec(` calls in code, found by a scanner that blanks comments, strings and templates;
 and the command that runs them. check-links, check-order and the lock all read markers through it. `redline install jest`
 writes the Jest helper tests import; `check_helpers`, run by every gate, fails on one that differs
 from the copy Redline ships.
@@ -87,55 +87,91 @@ def python_tests(path: str, text: str) -> Iterator[tuple[str, str, tuple[Mark, .
         yield name, source(lines, node), tuple(mark for d in node.decorator_list if (mark := spec_mark(d)))
 
 
-def closing(text: str, start: int, path: str) -> int:
-    """The index of the bracket that closes the one at `start`, skipping strings, templates and comments."""
-    stack, i = [], start  # closers expected; "`" while inside a template literal
+def line(text: str, at: int) -> int:
+    return text.count("\n", 0, at) + 1
+
+
+def blank(text: str, path: str) -> str:
+    """The text with its comments and the contents of its strings and templates as spaces, each offset and
+    newline kept; a template's `${…}` stays code. A template or block comment that never closes is an error."""
+    out, stack, i = list(text), [], 0  # (opener, offset): "`" a template, "${" its code, "{" a brace
+
+    def space(a: int, b: int) -> None:
+        for k in range(a, min(b, len(text))):
+            if out[k] != "\n":
+                out[k] = " "
+
     while i < len(text):
         c = text[i]
-        if stack and stack[-1] == "`":
-            if c == "\\":
-                i += 1
-            elif c == "`":
+        if stack and stack[-1][0] == "`":
+            if c == "`":
                 stack.pop()
             elif text.startswith("${", i):
-                stack.append("}")
+                stack.append(("${", i))
                 i += 1
+            else:
+                space(i, i + (2 if c == "\\" else 1))
+                i += 1 if c == "\\" else 0
         elif c in "\"'":
-            i += 1
-            while i < len(text) and text[i] not in (c, "\n"):
-                i += 2 if text[i] == "\\" else 1
+            j = i + 1
+            while j < len(text) and text[j] not in (c, "\n"):
+                j += 2 if text[j] == "\\" else 1
+            space(i + 1, j)
+            i = j
         elif c == "`":
-            stack.append("`")
+            stack.append(("`", i))
         elif text.startswith("//", i):
-            i = text.find("\n", i) % (len(text) + 1)
+            j = text.find("\n", i) % (len(text) + 1)
+            space(i, j)
+            i = j
+            continue
         elif text.startswith("/*", i):
-            i = text.find("*/", i + 2) % (len(text) + 1) + 1
-        elif c in CLOSE:
+            if (j := text.find("*/", i + 2)) < 0:
+                raise RuntimeError(f"{path}:{line(text, i)}: the comment opened here never closes")
+            space(i, j + 2)
+            i = j + 1
+        elif c == "{":
+            stack.append(("{", i))
+        elif c == "}" and stack:
+            stack.pop()
+        i += 1
+    if templates := [at for opener, at in stack if opener == "`"]:
+        raise RuntimeError(f"{path}:{line(text, templates[0])}: the template opened here never closes")
+    return "".join(out)
+
+
+def closing(code: str, start: int, path: str) -> int:
+    """The index of the bracket that closes the one at `start`, in text `blank` has read."""
+    stack = []  # closers expected
+    for i in range(start, len(code)):
+        if (c := code[i]) in CLOSE:
             stack.append(CLOSE[c])
         elif c in ")]}":
             if stack.pop() != c:
-                raise RuntimeError(f"{path}:{text.count(chr(10), 0, i) + 1}: `{c}` closes nothing opened")
+                raise RuntimeError(f"{path}:{line(code, i)}: `{c}` closes nothing opened")
             if not stack:
                 return i
-        i += 1
-    raise RuntimeError(f"{path}:{text.count(chr(10), 0, start) + 1}: the brackets opened here never close")
+    raise RuntimeError(f"{path}:{line(code, start)}: the brackets opened here never close")
 
 
+SPEC_CALL = re.compile(r"(?<![\w.$])spec\(")
 TEST_CALL = re.compile(r"""\s*\.test\(\s*(["'])((?:\\.|(?!\1).)*)\1""")
 JEST_MARK = re.compile(r"""(?<![\w.$])spec\(\s*["']([^"']+)["']\s*(,\s*\{\s*new\s*:\s*true\s*\}\s*)?\)""")
 
 
 def jest_tests(path: str, text: str) -> Iterator[tuple[str, str, tuple[Mark, ...]]]:
-    """Each `spec(...).test("name", ...)`, its source from `spec(` to the `)` closing its `test(` call."""
-    names = set()
-    for found in JEST_MARK.finditer(text):
-        line = text.count("\n", 0, found.start()) + 1
-        if not (call := TEST_CALL.match(text, found.end())):
-            raise RuntimeError(f"{path}:{line}: a spec marker must be followed by .test(\"name\", ...)")
-        if call[2] in names:
-            raise RuntimeError(f"{path}:{line}: two tests named {call[2]!r}")
-        names.add(call[2])
-        yield call[2], text[found.start():closing(text, text.index("(", found.end()), path) + 1], (Mark(found[1], bool(found[2]), line),)
+    """Each `spec(...).test("name", ...)` in code, its source from `spec(` to the `)` closing its `test(` call."""
+    names, code = set(), blank(text, path)
+    for call in SPEC_CALL.finditer(code):
+        if not (found := JEST_MARK.match(text, call.start())):
+            continue
+        at = line(text, found.start())
+        if not (test := TEST_CALL.match(text, found.end())):
+            raise RuntimeError(f"{path}:{at}: a spec marker must be followed by .test(\"name\", ...)")
+        if test[2] in names:
+            raise RuntimeError(f"{path}:{at}: two tests named {test[2]!r}")
+        names.add(test[2])
+        yield test[2], text[found.start():closing(code, text.index("(", found.end()), path) + 1], (Mark(found[1], bool(found[2]), at),)
 
 
 def pytest_command(sid: str | None) -> tuple[list[str], dict[str, str]]:

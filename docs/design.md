@@ -146,8 +146,8 @@ Waived-by: @maintainer: timing is a manual check (O2)
 `Resolution:` or a `[waived]` one has no `Waived-by:`.
 
 A test is linked to its scenario with a marker, e.g. `@pytest.mark.spec("AUTH.2FA.S1")`. A marker
-counts only where its runner reads one: pytest's as a decorator of a test function, never in a
-comment or a string (§5, Runners).
+counts only where its runner reads one: pytest's as a decorator of a test function, Jest's as a
+`spec(` call in code, never in a comment or a string (§5, Runners).
 
 Steps, in order, with the scenarios each owns and the deferred items each step owns:
 
@@ -721,8 +721,11 @@ pytest's is a decorator of a test function (at module level, or a method), read 
 parser: a commented-out `# @pytest.mark.spec("X", new=True)`, or a marker inside a string, is no
 marker, so it makes no red and links nothing. The plugin refuses a `spec` marker pytest would
 apply from anywhere else, a class decorator, `pytestmark` or `pytest.param(marks=…)`, since
-Redline doesn't read it there. Jest's is still read from the file's text, comments and strings
-included, until build 9 part 6 (O-MARK2). A marked function pytest doesn't collect still counts
+Redline doesn't read it there. Jest's is a `spec(` call in code, found by one scanner (below)
+that blanks comments and the contents of strings and template literals, keeping each offset and
+newline: a `// spec("X", { new: true })`, or one inside a string or a template, is no marker. The
+code of a template's `${…}` is code, and Jest runs a test written there, so a marker in it counts.
+The ID and `{ new: true }` are read from the original text at the offset found. A marked function pytest doesn't collect still counts
 (O-RUN6). Jest's test files are its default `testMatch`, by extension only, so an
 `openapi.spec.json` stays code.
 
@@ -768,9 +771,14 @@ about `adult` survives all 6 mutants and fails.
 A Jest test is `path::name`, where the name is the first argument of its `test` call, a string
 literal. Two tests in one file with the same name are an error, since a `describe` around them
 isn't part of the name. Its hash covers its source from `spec(` to the `)` that closes its `test(`
-call. A scanner finds that `)`, skipping strings, template literals (with `${…}`) and comments. A
-regex literal with an unbalanced bracket misreads it. Brackets that don't balance by the end of
-the file are an error, never a shorter hash.
+call. The same scanner finds that `)`, counting brackets in the blanked text, so its strings,
+templates and comments hold none, while a `${…}` balances its own. The scanner doesn't know regex
+literals (O-MARK3): one with an unbalanced bracket misreads the count, and one with a quote, a
+backtick or `/*` is read as opening a string, a template or a comment, which hides code, never
+shows a marker that isn't there. A string ends at the end of its line, so `/"/g` hides the rest
+of that line only. Brackets that don't balance, or a template or block comment still open, by the
+end of the file are an error, never a shorter hash or a file blanked to its end: check-links
+reports it as a gap, check-order skips the file at that commit with a note, and the lock refuses.
 
 At critical, a Jest entry has no `reach` (O-RUN3), so check-lock reports
 it as a critical entry without one: a critical change can't lock a Jest test yet.
@@ -1259,7 +1267,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    (O-CLOSE4); part 5 a closed change's lock entry when a later change edits its test (O-CLOSE5).
 8. **More runners**, once Jest is complete and verified: JUnit 5 and PIT (O-RUN2); the critical
    `reach` of Jest and JUnit tests (O-RUN3); runner configuration that can weaken tests outside
-   a step (O-RUN4); Jest tests outside the root `package.json` (O-RUN9).
+   a step (O-RUN4); Jest tests outside the root `package.json` (O-RUN9); Jest files read with a
+   JavaScript parser, regex literals included (O-MARK3).
 9. **Fixes from the review of 2026-10-20**: part 1, a step's PR must be the change's next step
    (O-CI2); part 2, `start`'s phase and plan-audit refusals in CI (O-CI3); part 3, the config's
    `generated:` and `support:` read at the merge-base, a glob added to either a claim (O-CFG1);
@@ -1327,9 +1336,15 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   with Python's parser, check-order's by blob hash; a file that doesn't parse at a commit is
   skipped with a note; and the plugin refuses a `spec` marker from a class, `pytestmark` or
   `pytest.param` (§5).
-- O-MARK2 [build 9 part 6]: Jest markers are still read from the whole text, comments and strings
-  included, by check-order, check-links and the lock. The fix: one scanner that blanks comments,
-  strings and templates, used to find `spec(` in code and by `closing`.
+- O-MARK2 [closed, build 9 part 6]: Jest markers were read from the whole text, so a `new` marker
+  in a comment, a string or a template made a red in check-order, linked its scenario in
+  check-links and could be locked. Now one scanner blanks comments and the contents of strings and
+  templates, keeping `${…}` as code; `spec(` is found in the blanked text, its ID read from the
+  original, and the `)` closing a test is counted on the blanked text, so hashes are unchanged. A
+  template or block comment never closed is an error (§5).
+- O-MARK3 [build 8]: the Jest scanner doesn't know regex literals, so one with a quote, a backtick,
+  `/*` or an unbalanced bracket misreads a file: it hides code or fails, never adds a marker (§5).
+  A real JavaScript parser would read them, which O-RUN3's `reach` needs too.
 - O-PLAN1 [closed, build 6 part 8]: an initiative was critical only through its changes' levels,
   and a change with no proposal yet takes the config's, so an initiative whose first S step
   declared `Rigor: critical` skipped that phase's start audit. Now the plan has its own `Rigor:`

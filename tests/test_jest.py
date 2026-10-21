@@ -71,6 +71,53 @@ def test_check_order_reads_jest_red_and_green(repo):
     assert (result.scenario, result.status, result.red, result.green) == ("TOY.S1", "ok", red, green)
 
 
+UNREAD = {
+    "line comment": '// spec("TOY.S1", { new: true }).test("t", () => {});\n',
+    "block comment": '/* a draft:\n  spec("TOY.S1", { new: true }).test("t", () => {});\n*/\n',
+    "string": 'const draft = \'spec("TOY.S1", { new: true }).test("t", () => {})\';\n',
+    "template": 'const draft = `\n  spec("TOY.S1", { new: true }).test("t", () => {});\n`;\n',
+}
+TOY_SPEC = {"redline/specs/toy/spec.md": "#### Scenario TOY.S1 [new]: toy\n- THEN it works\n"}
+
+
+@pytest.mark.parametrize("red", UNREAD.values(), ids=UNREAD.keys())
+def test_a_jest_marker_in_a_comment_or_a_string_makes_no_red(repo, red):
+    repo.commit("no red", {"greet.test.js": red})
+    assert check_order(repo.path) == []
+    repo.commit("green", {"greet.test.js": 'spec("TOY.S1").test("t", () => {});\n'})
+    [result] = check_order(repo.path)
+    assert (result.scenario, result.status) == ("TOY.S1", "fail")
+
+
+@pytest.mark.parametrize("text", UNREAD.values(), ids=UNREAD.keys())
+def test_a_jest_marker_in_a_comment_or_a_string_links_nothing(repo, capsys, text):
+    repo.commit("unlinked", {**TOY_SPEC, "greet.test.js": text})
+    assert main(["check-links", "--repo", str(repo.path)]) == 1
+    assert "unlinked scenario TOY.S1 (redline/specs/toy/spec.md:1): no test has a spec marker for it" in capsys.readouterr().out
+
+
+def test_a_jest_marker_in_a_templates_code_counts(repo):
+    red = repo.commit("red", {"greet.test.js": 'const all = `${spec("TOY.S1", { new: true }).test("t", () => {})}`;\n'})
+    green = repo.commit("green", {"greet.test.js": 'spec("TOY.S1").test("t", () => {});\n'})
+    [result] = check_order(repo.path)
+    assert (result.status, result.red, result.green) == ("ok", red, green)
+
+
+@pytest.mark.parametrize("text, kind", [("const re = /`/;\n", "template"), ("const re = /x\\/*/;\n", "comment")],
+                         ids=["template", "block comment"])
+def test_a_template_or_block_comment_never_closed_is_a_gap(repo, capsys, text, kind):
+    repo.commit("unclosed", {**TOY_SPEC, "greet.test.js": text + 'spec("TOY.S1").test("t", () => {});\n'})
+    assert main(["check-links", "--repo", str(repo.path)]) == 1
+    out = capsys.readouterr().out
+    assert f"unreadable test file greet.test.js: greet.test.js:1: the {kind} opened here never closes" in out
+
+
+def test_a_commented_out_jest_hold_marker_locks_nothing(holds, capsys):
+    holds.commit("jest", {"greet.test.ts": JEST.replace(H1, f"/*\n{H1}\n*/")})
+    lock(holds, capsys)
+    assert "greet.test.ts" not in (holds.path / LOCK).read_text(encoding="utf-8")
+
+
 def test_lock_hashes_a_jest_test_from_spec_to_the_end_of_its_test_call(holds, capsys):
     holds.commit("jest", {"greet.test.ts": JEST})
     lock(holds, capsys)
