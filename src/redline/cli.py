@@ -23,7 +23,8 @@ from redline.premises import check_premises
 from redline.relabel import blind, check_relabel
 from redline.runner import HELPERS, install
 from redline.specs import check_specs
-from redline.start import Refused, start
+from redline.start import Refused, read_steps, start
+from redline.steps import check_steps
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -49,7 +50,8 @@ def main(argv: list[str] | None = None) -> int:
     audit = commands.add_parser("check-audit", help="fail on a missing audit or an unresolved finding")
     audit.add_argument("change", help="the change, e.g. add-greet")
     audit.add_argument("--repo", type=Path, default=Path.cwd())
-    for name, help in (("check-defects", "check the form of a change's defect log, as at the C step"),
+    for name, help in (("check-steps", "check the form of a change's steps.md against its deltas"),
+                       ("check-defects", "check the form of a change's defect log, as at the C step"),
                        ("retro", "group a change's defects by cause and propose rules; writes nothing"),
                        ("blind", "print a change's defect log without its causes, for the relabeller"),
                        ("check-relabel", "compare the blind relabel with the defect log, as at the C step")):
@@ -125,6 +127,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_break(args.repo, args.change)
     if args.command == "check-defects":
         return run_check_defects(args.repo, args.change)
+    if args.command == "check-steps":
+        return run_check_steps(args.repo, args.change)
     if args.command in ("retro", "blind"):
         return run_retro(args.repo, args.change, retro if args.command == "retro" else blind)
     if args.command == "claims":
@@ -285,6 +289,17 @@ def run_check_defects(repo: Path, change: str) -> int:
         return 1
     n = len(report.defects)
     print(f"ok: {n} defect{'' if n == 1 else 's'}, each with a cause and what found it")
+    return 0
+
+
+def run_check_steps(repo: Path, change: str) -> int:
+    if bad := check_steps(repo, change):
+        for line in bad:
+            print(line)
+        return 1
+    steps = read_steps(repo, change)
+    n, items = len(steps), sum(len(s.items) for s in steps)
+    print(f"ok: {n} step{'' if n == 1 else 's'}, {items} open item{'' if items == 1 else 's'}")
     return 0
 
 

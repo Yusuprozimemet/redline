@@ -1538,11 +1538,13 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
   a commit's merge is found in one `rev-list` (§4): 2 calls and 0.3 s on the same 196 commits, the
   same output. The two rebuilds at C stay separate: each is a
   few calls now, and a result shared by ref could go stale within a process.
-- O-STEPS1 [build 9 part 13]: `parse_steps` kept only `- <ID> [<step>]: <text>` lines under
+- O-STEPS1 [closed, build 9 part 13]: `parse_steps` kept only `- <ID> [<step>]: <text>` lines under
   `## Open items`, so an item with no ID, or with an ID and no owner, was dropped without a word,
   though §1 said CI fails on any item without one. Nothing checked `steps.md` as a whole either:
   steps out of order or named twice, an `Owns:` ID no delta declares, and a `new` scenario no G
-  step owns, found only at C by check-close. Now check-steps fails on each, at every step (§4).
+  step owns, found only at C by check-close. Now check-steps fails on each, at every step, on the
+  step's change and each change whose `steps.md` or deltas the PR changes, from one parser,
+  `scan`, which `parse_steps` uses too (§4).
 - O-STEPS2 [build 9 part 14]: check-steps reads one `steps.md`, so an open item deleted, an item
   given to a step already merged, which progress never prints, or a step removed since the
   merge-base, isn't seen (§4).

@@ -3,7 +3,8 @@
 A change's steps come from redline/changes/<change>/steps.md, in order: a `## <step>: <goal>`
 heading for each, with an `Owns: ID, ID` line for the scenarios it owns and, for a G step, a
 `Track: glob, glob` line for the code it may change (track.py). Under `## Open items`,
-each `- <ID> [<step>]: <text>` line is a deferred item owned by that step.
+each `- <ID> [<step>]: <text>` line is a deferred item owned by that step. Any other line there,
+and the rest of what check-steps fails on line by line, `scan` collects (steps.py).
 
 A step is merged on main when a commit reachable from main carries the trailer
 `Redline-Step: <change>/<step>`. The open step is kept in the git directory, and stops being open
@@ -41,6 +42,7 @@ class Step:
     owns: list[str] = field(default_factory=list)
     items: list[str] = field(default_factory=list)
     track: list[str] | None = None  # None: no Track: line
+    owned_at: dict[str, int] = field(default_factory=dict)  # each owned ID's line
 
 
 def read_steps(repo: Path, change: str, rev: str | None = None) -> list[Step]:
@@ -50,24 +52,51 @@ def read_steps(repo: Path, change: str, rev: str | None = None) -> list[Step]:
     return parse_steps(text)
 
 
-def parse_steps(text: str) -> list[Step]:
+def scan(text: str) -> tuple[list[Step], list[str], list[str]]:
+    """The steps, what check-steps fails on line by line, and each open item's line that names no step."""
     steps: list[Step] = []
+    items, bad = [], []
     in_items = False
-    for line in text.splitlines():
+    for n, line in enumerate(text.splitlines(), 1):
         if heading := STEP.match(line):
+            if any(s.name == heading[1] for s in steps):
+                bad.append(f"steps.md:{n}: step {heading[1]} named twice")
             steps.append(Step(heading[1], heading[2]))
             in_items = False
         elif line.startswith("## "):
             in_items = line == "## Open items"
-        elif in_items and (item := ITEM.match(line)):
-            owner = next((s for s in steps if s.name == item[2]), None)
-            if owner is None:
-                raise RuntimeError(f"open item {item[1]} names no step: {line}")
-            owner.items.append(f"- {item[1]}: {item[3]}")
-        elif steps and not in_items and (owns := OWNS.match(line)):
-            steps[-1].owns += [sid.strip() for sid in owns[1].split(",") if sid.strip()]
-        elif steps and not in_items and (track := TRACK.match(line)):
+            if not in_items:
+                bad.append(f"steps.md:{n}: neither a step nor `## Open items`: {line}")
+        elif in_items:
+            if item := ITEM.match(line):
+                items.append((n, line, item))
+            elif line.strip():
+                bad.append(f"steps.md:{n}: not an open item `- <ID> [<step>]: <text>`: {line}")
+        elif ITEM.match(line):
+            bad.append(f"steps.md:{n}: an open item outside `## Open items`: {line}")
+        elif steps and (owns := OWNS.match(line)):
+            for sid in (sid.strip() for sid in owns[1].split(",") if sid.strip()):
+                steps[-1].owns.append(sid)
+                steps[-1].owned_at.setdefault(sid, n)
+        elif steps and (track := TRACK.match(line)):
             steps[-1].track = [glob.strip() for glob in track[1].split(",") if glob.strip()]
+    seen, orphans = set(), []
+    for n, line, item in items:  # after every step, so an item may come before the step that owns it
+        if item[1] in seen:
+            bad.append(f"steps.md:{n}: open item {item[1]} given twice")
+        seen.add(item[1])
+        if (owner := next((s for s in steps if s.name == item[2]), None)) is None:
+            bad.append(f"steps.md:{n}: open item {item[1]} names no step of steps.md: [{item[2]}]")
+            orphans.append(f"open item {item[1]} names no step: {line}")
+        else:
+            owner.items.append(f"- {item[1]}: {item[3]}")
+    return steps, bad, orphans
+
+
+def parse_steps(text: str) -> list[Step]:
+    steps, _, orphans = scan(text)
+    if orphans:
+        raise RuntimeError(orphans[0])
     return steps
 
 
