@@ -1494,14 +1494,14 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   `"\303\274…"`: a living spec under `redline/specs/grüße/` vanished at the merge-base, and
   check-specs reported its scenarios as changes no delta names. Now `git()` runs with
   `core.quotePath=false` (§7).
-- O-MUT1 [build 9 part 8]: mutmut reads `[tool.mutmut]` in `pyproject.toml` before `setup.cfg`,
+- O-MUT1 [closed, build 9 part 8]: mutmut reads `[tool.mutmut]` in `pyproject.toml` before `setup.cfg`,
   where Redline wrote its settings, so in a repository with that table mutmut mutated the files the
   repository names and ran every test against each mutant: a kill by any test was the scenario's
   break. And a scenario's test outside `tests/`, `test/` and root `test*.py` never reached the
   mutant run, which failed. Now Redline's settings are the only ones, `[tool.mutmut]` is taken out
   of the copy, and the scenario's tests, their `conftest.py` files and the `support:` files are
   copied (§5).
-- O-MUT2 [build 9 part 8]: no test ran the real mutmut; every check-break test used the fake, so
+- O-MUT2 [closed, build 9 part 8]: no test ran the real mutmut; every check-break test used the fake, so
   how mutmut reads its settings went unseen. Now the `runners` CI job runs `Mutmut` on toy
   repositories, one with `[tool.mutmut]`, and checks each scenario's kills against a test that
   kills every mutant (§7).
