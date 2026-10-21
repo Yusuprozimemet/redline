@@ -74,3 +74,40 @@ def test_claims_finds_each_claims_merge_in_as_many_calls_however_long_main_is(tm
         counted.append(calls(monkeypatch, lambda: claims(repo.path, "greetings")))
         assert f"no CI note on {merge[:7]}" in claims(repo.path, "greetings")
     assert counted[0] == counted[1], f"git calls for 3 and 30 merges before the claim's: {counted}"
+
+
+def test_a_merges_files_are_its_first_parents_with_its_branch_applied(repo):
+    red = repo.commit("red", {"test_toy.py": RED})
+    repo.git("checkout", "-q", "-b", "green-branch")
+    green = repo.commit("green", {"test_toy.py": GREEN})
+    repo.git("checkout", "-q", "main")
+    repo.git("merge", "-q", "--no-ff", "--no-edit", "green-branch")
+    repo.commit("edited", {"test_toy.py": GREEN + "# edited\n"})
+    [result] = check_order(repo.path)
+    assert (result.status, result.red, result.green) == ("ok", red, green), "the edit isn't a new green"
+
+
+def test_a_deleted_test_files_markers_go_with_it(repo):
+    repo.commit("red", {"test_toy.py": RED})
+    repo.commit("green", {"test_toy.py": GREEN})
+    (repo.path / "test_toy.py").unlink()
+    repo.commit("gone")
+    back = repo.commit("back", {"test_toy.py": GREEN})
+    [result] = check_order(repo.path)
+    assert (result.status, result.green) == ("ok", back)
+
+
+def test_the_root_commits_files_are_read_whatever_log_showroot_says(repo):
+    repo.git("config", "log.showRoot", "false")
+    red = repo.commit("red", {"test_toy.py": RED})
+    green = repo.commit("green", {"test_toy.py": GREEN})
+    [result] = check_order(repo.path)
+    assert (result.status, result.red, result.green) == ("ok", red, green)
+
+
+def test_a_submodule_named_like_a_test_file_is_no_blob(repo):
+    repo.commit("red", {"test_toy.py": RED})
+    repo.git("update-index", "--add", "--cacheinfo", f"160000,{'1' * 40},vendor.py")
+    repo.git("commit", "-q", "-m", "a submodule, its commit not in this repository")
+    repo.commit("green", {"test_toy.py": GREEN})
+    assert [(r.scenario, r.status) for r in check_order(repo.path)] == [("TOY.S1", "ok")]
