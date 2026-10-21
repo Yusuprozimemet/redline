@@ -1208,9 +1208,13 @@ Tests read the workflow: every `uses:` is a 40-hex SHA with a `# vX.Y.Z` tag, ev
 `python-version` and `node-version` is `X.Y.Z`, and every `pip install` has `-c constraints.txt`
 and no `==`; and every dependency and extra in `pyproject.toml`, and pytest-xdist, has an `==`
 line in the file. A constraints file pins only what it names, so a release that adds a dependency
-would install it unpinned. So one more test, which runs only in GitHub Actions, where the
-environment is a job's own, fails on any installed distribution but Redline and pip that isn't in
-the file at the version installed; it runs with the suite, in the `redline` and `windows` jobs.
+would install it unpinned. So one more test, which runs only in GitHub Actions, follows what the
+pip lines pull in, from the installed metadata: Redline's requirements, its `mutation` extra where
+mutmut is installed and pytest-xdist where it is, and their requirements in turn. It fails on any
+of those that isn't in the file at the version installed. It runs with the suite, in the `redline`
+and `windows` jobs. It follows requirements, not every installed distribution, because a runner
+image brings tools of its own that no job installs or runs: Windows' Python carries pipx and its
+dependencies.
 The pins are kept current by hand: the file's header gives the command that regenerates it, and a
 bump is a PR outside any step, gated like any other.
 
@@ -1479,7 +1483,7 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
   `python-version: "3.12"` gave two patch versions in one run, so a new release could change what
   CI's evidence says with no commit. Now Python is exact in every job (`3.12.15`, and `3.12.10` on Windows), every pip line installs from
   `constraints.txt`, setuptools is pinned in `[build-system]`, and a test in CI fails on an
-  installed distribution the file doesn't pin at its version (§7).
+  installed package the pip lines pull in that the file doesn't pin at its version (§7).
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs

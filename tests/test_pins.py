@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from packaging.requirements import Requirement
 
 ROOT = Path(__file__).parent.parent
 WORKFLOW = ROOT / ".github/workflows/redline.yml"
@@ -60,8 +61,26 @@ def test_the_constraints_pin_every_dependency_and_extra_and_xdist_and_the_build_
     assert [re.fullmatch(r"setuptools==[\d.]+", spec) is not None for spec in project["build-system"]["requires"]] == [True]
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") != "true", reason="a job's environment is its pip line's alone in CI")
-def test_every_installed_distribution_is_pinned_at_its_version():
-    pinned = pins()
-    loose = {(name(d.metadata["Name"]), d.version) for d in distributions()} - {(n, v) for n, v in pinned.items()}
-    assert {(n, v) for n, v in loose if n not in ("redline", "pip")} == set(), pinned
+def pulled_in() -> dict[str, str]:
+    """Each installed distribution the pip lines pull in, by name, at its version: Redline's requirements, its `mutation`
+    extra and pytest-xdist where installed, and theirs in turn. A runner image's own tools, such as Windows' pipx, aren't."""
+    installed = {name(d.metadata["Name"]): d for d in distributions()}
+    found, todo = {}, [("redline", ("", "mutation")), ("pytest-xdist", ("",))]
+    while todo:
+        wanted, extras = todo.pop(0)
+        dist = installed.get(wanted)
+        if dist is None or name(dist.metadata["Name"]) in found:
+            continue
+        found[name(dist.metadata["Name"])] = dist.version
+        for spec in dist.requires or []:
+            requirement = Requirement(spec)
+            if not requirement.marker or any(requirement.marker.evaluate({"extra": extra}) for extra in extras):
+                todo.append((name(requirement.name), ("", *requirement.extras)))
+    return found
+
+
+@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") != "true", reason="a job's environment is its pip lines' in CI")
+def test_every_package_the_pip_lines_pull_in_is_pinned_at_its_version():
+    pinned, pulled = pins(), pulled_in()
+    assert {"redline", "pytest"} <= set(pulled), pulled
+    assert {n: v for n, v in pulled.items() if n != "redline" and pinned.get(n) != v} == {}, pinned
