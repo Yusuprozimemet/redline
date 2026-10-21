@@ -21,7 +21,7 @@ of being taken on the agent's word.
 | The agent reviews its own work and misses its own errors | Engine | Independent read-only auditor, always |
 | PRs too big to review | Engine (the gate forced splits 46 times) | 400-line gate, always |
 | Context bloat and drift | Engine (64% of tokens were read after a session passed 300k) | One session per step, always, with a generated brief |
-| Gaps where work is handed between steps | Engine | Every deferred item gets an ID and an owning step; CI fails on any item without one |
+| Gaps where work is handed between steps | Engine | Every deferred item gets an ID and an owning step; check-steps fails, on every step's PR, on any item without one |
 | Safety-net tests weakened quietly | Engine | Frozen tests locked by hash; an edit needs a departure a person approves |
 | Specs drift away from the code | OpenSpec | Every scenario is linked to a test, checked both ways |
 | Verify can be ignored | OpenSpec | The close is checked, not reported: check-close against CI's evidence, check-specs against the living specs, and the C step can't merge without both |
@@ -162,6 +162,37 @@ Track: auth/login.py, auth/codes/*.py
 
 A step is named `<change>/<step>` (e.g. `add-2fa/G1`). It counts as merged on `main` when a commit
 reachable from `main` carries the trailer `Redline-Step: add-2fa/G1`.
+
+`redline check-steps <change>` checks the form of `steps.md` against the change's own deltas,
+which it reads even once the change is closed, as the change's other checks do. It fails, naming
+the line, on:
+
+- **A malformed open item**: a line under `## Open items`, blank lines aside, that isn't `- <ID>
+  [<step>]: <text>`, so an item with no ID or no owner, or one wrapped onto a second line the
+  brief wouldn't print; an ID given twice; an owner that isn't a step of this `steps.md`; or an
+  item's line outside `## Open items`. An item moves to another change as a line in that change's
+  `steps.md`.
+- **Steps out of order**: not S, then R if there is one, then G1…Gn numbered from 1, then C. S
+  and C are required, R and the G steps aren't: a change that only REMOVES scenarios is S and C,
+  one with only `hold` scenarios S, R and C. A `## ` heading that is neither a step nor `## Open
+  items`, such as `## G1 Greet by name`, fails too, since it isn't read as a step.
+- **A step named twice.**
+- **An `Owns:` ID no delta of the change declares** under ADDED or MODIFIED. A REMOVED entry
+  needs no test, so no step owns it.
+- **A `new` scenario no G step owns.** Without this it is found only at C, by check-close, as a
+  scenario with no green.
+
+`pr` and `redline ci pr` run it at every step, on the step's change and on each other change
+whose `steps.md` or deltas the PR changes since the merge-base: nothing else stops a step from
+editing another change's. It reads the tree, not the merge-base. It checks the form of what will
+land on `main`, which the next step's PR then reads at its merge-base for its order and its
+`Track:` (§5, §7); those read the merge-base so that a PR can't widen what it may do, and this
+one so that what it lands is well formed. At S, where `steps.md` and the delta land together,
+it is the first check of either.
+
+What it doesn't prove: anything across steps. A later step may edit `steps.md`, and an open item
+deleted, an item given to a step already merged, which progress never prints, or a step removed
+since the merge-base passes it (O-STEPS2).
 
 The ledger has one entry for each scenario the change's deltas declare:
 
@@ -979,7 +1010,8 @@ they list, the levels that make an initiative critical (each proposal's `Rigor:`
 fresh from `main`. `start` runs on the agent's machine, so `redline ci pr` repeats all three on
 every step's PR: the step must be the change's next, and its phase must be ready (§7).
 
-`pr` runs check-lines and check-plan always, check-premises and check-audit at S (on the step's own change: an
+`pr` runs check-lines and check-plan always, check-steps at every step (on the step's change and each change whose
+`steps.md` or deltas the PR changes, §4), check-premises and check-audit at S (on the step's own change: an
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
 which have no red by design), check-break at the R step only, check-lock at every step (on the
@@ -1428,7 +1460,9 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    the CI notes written by a job that runs no repository code, every other job read-only (O-CI5);
 part 10, every merged commit's note, none lost to a cancelled run or a raced push (O-CI6); part
    11, the actions pinned to commits and the toolchain to versions (O-CI7, O-CI8); part 12,
-   history read in a fixed number of git calls, not two a commit (O-PERF1). The
+   history read in a fixed number of git calls, not two a commit (O-PERF1); part 13, `steps.md`
+   checked at every step, an open item without an ID or an owner a failure (O-STEPS1); part 14,
+   `steps.md` compared with the merge-base, so no item or step leaves it silently (O-STEPS2). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1504,6 +1538,16 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
   a commit's merge is found in one `rev-list` (§4): 2 calls and 0.3 s on the same 196 commits, the
   same output. The two rebuilds at C stay separate: each is a
   few calls now, and a result shared by ref could go stale within a process.
+- O-STEPS1 [closed, build 9 part 13]: `parse_steps` kept only `- <ID> [<step>]: <text>` lines under
+  `## Open items`, so an item with no ID, or with an ID and no owner, was dropped without a word,
+  though §1 said CI fails on any item without one. Nothing checked `steps.md` as a whole either:
+  steps out of order or named twice, an `Owns:` ID no delta declares, and a `new` scenario no G
+  step owns, found only at C by check-close. Now check-steps fails on each, at every step, on the
+  step's change and each change whose `steps.md` or deltas the PR changes, from one parser,
+  `scan`, which `parse_steps` uses too (§4).
+- O-STEPS2 [build 9 part 14]: check-steps reads one `steps.md`, so an open item deleted, an item
+  given to a step already merged, which progress never prints, or a step removed since the
+  merge-base, isn't seen (§4).
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs
