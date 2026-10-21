@@ -1457,10 +1457,11 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   and check-order count them. Taking Jest from tracked `*.spec.ts` files instead would fail every
   repository whose `.spec` files are another tool's, Redline's own toy among them. It is O-RUN6's
   problem, a linked test that never runs, and belongs with the runner configuration of O-RUN4.
-- O-PROG1 [build 10]: `merged` doesn't show how far the work has come. It should print, as a text
-  bar from what git holds, the change's steps merged on `main` out of its `steps.md`, and the next
-  step; in an initiative, the phase's changes complete and the plan's phases complete; and the open
-  items later steps still own. It prints and judges nothing, as `merged` does (§6).
+- O-PROG1 [closed, build 10]: `merged` didn't show how far the work had come. Now every brief ends
+  with the change's progress from `main`, and `merged` prints it alone after C: its steps merged out
+  of its `steps.md` and the next step; in an initiative, the phase's changes complete and the plan's
+  phases complete; and the open items later steps still own, as 20-character `█`/`░` bars. It prints
+  and judges nothing (§6).
 - O-RUN7 [closed, build 5 part 8]: a `Redline-Departure` trailer's test was read up to its first
   space, so a locked Jest test named by a sentence couldn't be edited with an approved departure.
 - O-ENC1 [closed, build 9 part 7]: on Windows, Python decoded text as cp1252. `git()`,

@@ -87,7 +87,7 @@ def test_brief_has_goal_owned_scenarios_cited_files_and_open_items(change, capsy
     assert "- P1: Only a placeholder exists so far — `greet.py:1` (`placeholder`)" in out
     assert "- O1: decide on the punctuation" in out
     assert "GREET.S2" not in out  # owned by G2
-    assert "O2" not in out
+    assert "O2" not in out.split("## Progress")[0]  # the progress lists it as a later step's
 
 
 def test_scenario_found_in_the_living_specs(change, capsys):

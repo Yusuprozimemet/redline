@@ -5,7 +5,8 @@ The step is merged when its `Redline-Step` trailer is reachable from main; if no
 happens. Once it is, the checkout switches to main (the step branch is done, and the next step
 starts fresh from main) and the open-step record is cleared if the step it names is merged. Then
 the next step's brief is printed, or, after the last step, that the change is complete, and, if
-that completes its initiative's phase, the stopping point and the next phase.
+that completes its initiative's phase, the stopping point and the next phase, then the change's
+progress, which every brief ends with too (progress.py).
 Uncommitted changes refuse before anything syncs. Fetching sits behind `Remote`, which tests
 replace.
 """
@@ -16,6 +17,7 @@ from pathlib import Path
 from redline.order import git
 from redline.plan import placed
 from redline.planaudit import due
+from redline.progress import progress
 from redline.start import Refused, brief, complete, find_step, merged_steps, open_step_file
 
 
@@ -74,9 +76,10 @@ def merged(repo: Path, name: str) -> str:
     said = f"ok: {name} is merged on main; switched to main.\n"
     if index == len(steps) - 1:
         retro = f"Run `redline retro {change}` to propose rule changes from its defect log.\n"
-        return said + f"The change {change} is complete.\n" + retro + stopping_point(repo, change, done)
+        return (said + f"The change {change} is complete.\n" + retro + stopping_point(repo, change, done)
+                + "\n" + progress(repo, change, done))
     following = steps[index + 1]
     return said + (
         f"This session is over. In a new session, on a new branch fresh from main, run "
-        f"`redline start {change}/{following.name}`. Its brief:\n\n" + brief(repo, change, following)
+        f"`redline start {change}/{following.name}`. Its brief:\n\n" + brief(repo, change, following, done)
     )
