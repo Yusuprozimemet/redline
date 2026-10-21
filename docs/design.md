@@ -1193,8 +1193,36 @@ its own winning, and every other run's note is kept. After five refusals the job
 is seen. A test runs the job's own script, read from the workflow, against a bare repository
 whose hook writes another run's note and refuses the first push.
 
+**What CI runs is pinned.** CI's runs are the evidence, so two runs of one commit run the same
+tools unless a commit changes them. Each action is used by its full commit SHA, its release tag in
+a comment (`actions/checkout@11d5960…  # v4.4.0`), since a tag can be moved to other code; an
+action has one SHA throughout. Python and Node are exact versions: `3.12` gave Linux 3.12.15 and
+Windows 3.12.10 in one run, so Linux is `3.12.15` and Windows `3.12.10`, the last 3.12 GitHub
+builds for Windows (3.12's later releases are source-only security fixes); Node is `22.23.3`.
+Every `pip install` takes `-c constraints.txt`, which pins with `==` every package any job
+installs, on Linux and Windows, and no pip line pins a version of its own. The build backend is pinned in `pyproject.toml`'s `[build-system]` itself
+(`setuptools==84.2.1`), since whether `-c` reaches pip's isolated build environment depends on
+pip's version. `npm ci` already installs from the toy's `package-lock.json`.
+
+Tests read the workflow: every `uses:` is a 40-hex SHA with a `# vX.Y.Z` tag, every
+`python-version` and `node-version` is `X.Y.Z`, and every `pip install` has `-c constraints.txt`
+and no `==`; and every dependency and extra in `pyproject.toml`, and pytest-xdist, has an `==`
+line in the file. A constraints file pins only what it names, so a release that adds a dependency
+would install it unpinned. So one more test, which runs only in GitHub Actions, follows what the
+pip lines pull in, from the installed metadata: Redline's requirements, its `mutation` extra where
+mutmut is installed and pytest-xdist where it is, and their requirements in turn. It fails on any
+of those that isn't in the file at the version installed. It runs with the suite, in the `redline`
+and `windows` jobs. It follows requirements, not every installed distribution, because a runner
+image brings tools of its own that no job installs or runs: Windows' Python carries pipx and its
+dependencies.
+The pins are kept current by hand: the file's header gives the command that regenerates it, and a
+bump is a PR outside any step, gated like any other.
+
 What it doesn't prove: that GitHub enforces the permissions it is given, or that the actions the
-jobs use are sound (they are used by tag, not pinned); and the note's text, which merged code
+jobs use are sound: a pin stops a moved tag from changing them, but the pinned commit is trusted as
+it is. The toolchain is pinned by version, not by hash, so an index serving other files under a
+version isn't caught; the runner images (`ubuntu-latest`, `windows-latest`), and pip, which comes
+with the pinned Python, change with GitHub's updates. Nor does it prove the note's text, which merged code
 still writes for its own merge commit, as it runs the suite that says `pass`. A token with
 `contents: write` held elsewhere, a maintainer's or an agent's given one, still writes any note
 (§4).
@@ -1389,7 +1417,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    job, and paths from git unquoted (O-ENC1, O-ENC2); part 8, mutmut with Redline's settings
    only and the scenario's tests copied, proved on the real mutmut in CI (O-MUT1, O-MUT2); part 9,
    the CI notes written by a job that runs no repository code, every other job read-only (O-CI5);
-part 10, every merged commit's note, none lost to a cancelled run or a raced push (O-CI6). The
+part 10, every merged commit's note, none lost to a cancelled run or a raced push (O-CI6); part
+   11, the actions pinned to commits and the toolchain to versions (O-CI7, O-CI8). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1445,6 +1474,16 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
   run's group is its own, and the `note` job, whose push then races, fetches the notes again,
   re-adds its note and pushes, five times at most, which a test proves by running the job's script
   against a bare repository that refuses its first push (§7).
+- O-CI7 [closed, build 9 part 11]: the workflow used its actions by tag (`actions/checkout@v4`),
+  which the action's owner, or whoever takes over its repository, can move to other code, and §7
+  said so as a limit. The security auditor checks other repositories for the same thing. Now each
+  action is used by its full commit SHA with its tag in a comment, which a test checks (§7).
+- O-CI8 [closed, build 9 part 11]: `pip install -e ".[mutation]"` resolved pytest, pyyaml, mutmut
+  and their dependencies afresh on every run, beside a pinned pytest-xdist on Windows, and
+  `python-version: "3.12"` gave two patch versions in one run, so a new release could change what
+  CI's evidence says with no commit. Now Python is exact in every job (`3.12.15`, and `3.12.10` on Windows), every pip line installs from
+  `constraints.txt`, setuptools is pinned in `[build-system]`, and a test in CI fails on an
+  installed package the pip lines pull in that the file doesn't pin at its version (§7).
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs

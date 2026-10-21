@@ -1,0 +1,26 @@
+# Every package CI installs, pinned (docs/design.md, section 7). Every `pip install` in the workflow takes `-c constraints.txt`.
+# Regenerate on Linux, then keep colorama, which Windows adds:
+#   docker run --rm -v "$PWD:/src" -w /src python:3.12.15-slim sh -c 'pip install -e ".[mutation]" pytest-xdist && pip freeze --exclude-editable'
+# A bump is a PR outside any step. A package CI installs that this file lacks fails test_pins.py in CI.
+click==8.5.0
+colorama==0.4.6
+coverage==7.16.2
+execnet==2.1.2
+iniconfig==2.3.1
+libcst==1.9.0
+linkify-it-py==2.2.0
+markdown-it-py==4.2.0
+mdit-py-plugins==0.6.1
+mdurl==0.1.2
+mutmut==3.8.0
+packaging==26.3
+platformdirs==4.13.5
+pluggy==1.7.0
+Pygments==2.21.0
+pytest==9.1.1
+pytest-xdist==3.8.0
+PyYAML==6.0.3
+rich==15.0.0
+setproctitle==1.3.8
+textual==8.2.8
+typing_extensions==4.16.0

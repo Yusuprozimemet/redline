@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools==84.2.1"]  # exact, as constraints.txt pins the rest
 build-backend = "setuptools.build_meta"
 
 [project]
