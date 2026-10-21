@@ -1469,13 +1469,16 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
   run's group is its own, and the `note` job, whose push then races, fetches the notes again,
   re-adds its note and pushes, five times at most, which a test proves by running the job's script
   against a bare repository that refuses its first push (§7).
-- O-CI7 [build 9 part 11]: the workflow used its actions by tag (`actions/checkout@v4`), which
-  the action's owner, or whoever takes over its repository, can move to other code, and §7 said so
-  as a limit. The security auditor checks other repositories for the same thing.
-- O-CI8 [build 9 part 11]: `pip install -e ".[mutation]"` resolved pytest, pyyaml, mutmut and
-  their dependencies afresh on every run, beside a pinned pytest-xdist on Windows, and
+- O-CI7 [closed, build 9 part 11]: the workflow used its actions by tag (`actions/checkout@v4`),
+  which the action's owner, or whoever takes over its repository, can move to other code, and §7
+  said so as a limit. The security auditor checks other repositories for the same thing. Now each
+  action is used by its full commit SHA with its tag in a comment, which a test checks (§7).
+- O-CI8 [closed, build 9 part 11]: `pip install -e ".[mutation]"` resolved pytest, pyyaml, mutmut
+  and their dependencies afresh on every run, beside a pinned pytest-xdist on Windows, and
   `python-version: "3.12"` gave two patch versions in one run, so a new release could change what
-  CI's evidence says with no commit.
+  CI's evidence says with no commit. Now Python is `3.12.15`, every pip line installs from
+  `constraints.txt`, setuptools is pinned in `[build-system]`, and a test in CI fails on an
+  installed distribution the file doesn't pin at its version (§7).
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs

@@ -26,7 +26,7 @@ jobs:
     outputs:
       note: ${{ steps.note.outputs.note }}  # the push run's note, base64, for the `note` job
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
           fetch-depth: 0  # the ledger and check-order read the whole history
           ref: ${{ github.event.pull_request.head.sha || github.sha }}  # the PR's own commits, not a merge
@@ -36,10 +36,10 @@ jobs:
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" fetch --no-tags origin '+refs/heads/main:refs/heads/main' '+refs/notes/*:refs/notes/*'
         env:
           GH_TOKEN: ${{ github.token }}  # for this fetch alone, since the checkout keeps no credentials
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version: "3.12"
-      - run: pip install -e ".[mutation]"  # mutmut, for check-break
+          python-version: "3.12.15"  # exact: "3.12" gave Linux and Windows different patches
+      - run: pip install -e ".[mutation]" -c constraints.txt  # mutmut, for check-break; every package pinned
       - name: Gates, suite and ledger for the PR's step, or the gates for a PR outside any step
         if: github.event_name == 'pull_request'
         run: redline ci pr --base main --pr ${{ github.event.pull_request.number }}
@@ -62,7 +62,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4  # the merged commit, to note; nothing in it runs
+      # the merged commit, to note; nothing in it runs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
       - name: Add the note to the merged commit and push it, again over a push that overtook it
         run: |
           printf '%s' "$NOTE" | base64 -d > "$RUNNER_TEMP/note"
@@ -81,18 +82,18 @@ jobs:
     permissions:
       contents: read  # records nothing
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
+          python-version: "3.12.15"  # exact: "3.12" gave Linux and Windows different patches
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
         with:
           node-version: "22.23.3"  # pinned, as the toy's package-lock.json pins Jest and Stryker
       - run: npm ci --no-audit --no-fund
         working-directory: tests/toys/jest
-      - run: pip install -e ".[mutation]"  # mutmut, proved here as Jest and Stryker are
+      - run: pip install -e ".[mutation]" -c constraints.txt  # mutmut, proved here as Jest and Stryker are
       - name: Prove the Jest helper, REDLINE_SPEC, Stryker's counts and mutmut's credit on the real tools
         run: python -m pytest -v -p no:cacheprovider tests/test_runners.py tests/test_mutmut.py
         env:
@@ -103,11 +104,11 @@ jobs:
     permissions:
       contents: read  # records nothing
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version: "3.12"
-      - run: pip install -e . pytest-xdist==3.8.0  # pytest, not `redline ci`: mutmut doesn't run on Windows
+          python-version: "3.12.15"  # exact: "3.12" gave Linux and Windows different patches
+      - run: pip install -e . pytest-xdist -c constraints.txt  # pytest, not `redline ci`: mutmut doesn't run on Windows
       - run: python -m pytest -n auto -p no:cacheprovider
