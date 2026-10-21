@@ -216,7 +216,8 @@ that. After a run on a merged commit, CI records the outcome as a git note on th
 `refs/notes/redline-ci` (`result: pass` or `result: fail`, then `run: <url>`), and the rebuild
 reads that note. Until the note exists, the result is `unverified`. Once it lands, the committed
 ledger is stale, and the next step's PR refreshes it. A note is only as trustworthy as the people
-who can push to `refs/notes/redline-ci`, because branch protection doesn't cover that ref.
+who can push to `refs/notes/redline-ci`, because branch protection doesn't cover that ref. CI's
+own code isn't among them: the job that writes the note runs none of the repository's code (§7).
 
 The contract lock, `redline/contracts/lock.yaml`, freezes each change's `hold` tests:
 
@@ -1114,8 +1115,9 @@ It doesn't run check-links (on `main` an S step's scenarios have no tests yet, b
 check-ledger or check-defects (they are a change's, and the PR can't touch a change).
 
 On a push to `main`, `redline ci push` runs the suite on the merged commit and writes the note
-(`result: pass|fail`, `run: <url>`) on it under `refs/notes/redline-ci`, then pushes that ref. A
-failed suite is still recorded, and the run fails. This is the only evidence Redline writes, and
+(`result: pass|fail`, `run: <url>`) on it under `refs/notes/redline-ci`, then pushes that ref;
+with `--note <file>` it writes the note's text to the file instead, which is how the workflow runs
+it (below). A failed suite is still recorded, and the run fails. This is the only evidence Redline writes, and
 the next PR's `check-ledger` picks it up.
 
 When the merged commits (`<merged>^..<merged>`: the PR's own commits under a merge commit, the
@@ -1142,7 +1144,41 @@ maintainer is recorded as it is. A merge without claims gets no `claims:`, and `
 and `break:` are as before, so the ledger reads the note as it did. If GitHub can't be read, the
 note is written without the record and the run fails, so the result is kept and the gap is seen.
 A re-run of the push job keeps a record an earlier run wrote: labels read later are what the
-record exists to avoid. The workflow gives the push run the same read-only token as a PR run.
+record exists to avoid.
+
+**Only a job that runs no repository code can write the notes.** A run executes the code it
+checks out: `pip install -e .`, every `conftest.py`, every test, the PR's own on a PR and the
+merged ones on a push. A token that can write `refs/notes/redline-ci` there would let that code
+write `result: pass` or a `break:` map on any commit, which is the evidence this section trusts.
+So the workflow's default token is `contents: read`, and each job says what it holds:
+
+- **`redline`**, on both events, holds `contents: read`, with `issues: read` and `pull-requests:
+  read` for the labels. Its checkout sets `persist-credentials: false`, and the step that fetches
+  `main` and the notes passes the token to that one `git fetch` itself, so a private repository
+  still fetches. On a push it runs `redline ci push --note <file>`: the suite, check-break at R
+  and the claims record as above, but the note's text goes to the file, nothing is added under
+  `refs/notes/redline-ci` and nothing is pushed. A step that runs even when the suite failed, so
+  a failed run is still recorded, hands the file on as a job output, base64-encoded, since a claim
+  trailer's text could hold the delimiter of a multi-line output.
+- **`note`**, on a push only, after `redline`, is the only job with `contents: write`. It checks
+  the merged commit out and runs git alone: fetch `refs/notes/*`, decode the output, `git notes
+  add -f` it on `$GITHUB_SHA`, push the ref. The output reaches it through an environment
+  variable, never a `${{ }}` inside a script, which would run the note's text as shell. A checked
+  out tree can't make git run code: hooks and filter drivers come from git's config, which a
+  repository doesn't carry. The commit it notes is the workflow's, not something `redline` said,
+  so merged code can choose only the text of its own merge commit's note, as before.
+- **`runners`** and **`windows`** hold `contents: read` and set `persist-credentials: false`.
+
+A test reads the workflow and fails when any job but `note` holds `contents: write`, when a job
+that runs repository code keeps its credentials, and when `note` has a step that isn't
+`actions/checkout` or a line that isn't one of its git commands or the decode: `pip`, `python`,
+`redline`, a script in the repository or a local `uses: ./…` action would all be repository code.
+
+What it doesn't prove: that GitHub enforces the permissions it is given, or that the actions the
+jobs use are sound (they are used by tag, not pinned); and the note's text, which merged code
+still writes for its own merge commit, as it runs the suite that says `pass`. A token with
+`contents: write` held elsewhere, a maintainer's or an agent's given one, still writes any note
+(§4).
 
 ### Approvals
 
@@ -1332,7 +1368,8 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
    decorator, read with Python's parser (O-MARK1); part 6, a Jest marker only in code, not in a
    comment or a string (O-MARK2); part 7, text read and printed as UTF-8 on Windows, a Windows CI
    job, and paths from git unquoted (O-ENC1, O-ENC2); part 8, mutmut with Redline's settings
-   only and the scenario's tests copied, proved on the real mutmut in CI (O-MUT1, O-MUT2). The
+   only and the scenario's tests copied, proved on the real mutmut in CI (O-MUT1, O-MUT2); part 9,
+   the CI notes written by a job that runs no repository code, every other job read-only (O-CI5). The
    review's other code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 
@@ -1375,6 +1412,10 @@ Its output is a proposal, never evidence (§7), and CI doesn't run it.
   and their levels from the working tree, which a step's PR may edit. Now one function makes both
   refusals, `start` reading `main` and `redline ci pr` the merge-base, before any gate (§7). A plan
   edited on `main` after a step's branch forked isn't read by that step's PR, by design (§7).
+- O-CI5 [build 9 part 9]: the workflow gave every job `contents: write`, and `actions/checkout`
+  kept the token in `.git/config`, so a PR's own code (`pip install -e .`, its `conftest.py`, its
+  tests) could push `refs/notes/redline-ci` and write `result: pass` or a `break:` map on any
+  commit, and so could merged code on every push run; §7 said the push run's token was read-only.
 - O-CFG1 [closed, build 9 part 3]: check-lines and check-track read `generated:` and `support:`
   from the PR's own tree, so a PR could exempt its own files, and a string such as
   `generated: "*.lock"` was read as its characters, `*` among them. Now both gates read the globs
