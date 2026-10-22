@@ -17,7 +17,7 @@ AGENTS = Path(__file__).parent.parent / ".claude/agents"
 
 
 def resolved(repo, side: str) -> str:
-    return stamped(repo, f"# Initiative audit: greetings {side}\n\nNo findings.\n")
+    return stamped(repo, f"# Initiative audit: greetings {side}\nModel: claude-opus-5-5\n\nNo findings.\n")
 
 
 def every_phase_audited(repo) -> None:
@@ -34,8 +34,8 @@ def test_each_end_auditor_is_read_only_on_the_strongest_model(side):
     assert front["name"] == f"redline-{side}-auditor"
     tools = {tool.strip() for tool in front.get("tools", "").split(",")} - {""}
     assert tools and tools <= {"Read", "Grep", "Glob"}, tools
-    assert front["model"] == "fable"
-    assert f"REFUSED: the {side} auditor runs only on a Claude Fable model" in body
+    assert (front["model"], front["effort"]) == ("fable", "max")
+    assert f"REFUSED: the {side} auditor runs only on a Claude Fable or Opus model" in body
     assert f"initiative-{side}.md" in front["description"]
 
 
@@ -73,7 +73,7 @@ def test_an_unresolved_finding_fails(critical, capsys):
     files[f"{AUDITS}/initiative-security.md"] = CLEAN.replace("[closed]", "[open]")
     critical.commit("audits", files)
     code, out = check_plan(critical, capsys)
-    assert code == 1 and "initiative-security.md:3: F1 is open" in out, out
+    assert code == 1 and "initiative-security.md:4: F1 is open" in out, out
 
 
 def test_an_initiative_with_a_phase_left_needs_none(critical, capsys):

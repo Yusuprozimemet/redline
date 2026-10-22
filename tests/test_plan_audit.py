@@ -13,8 +13,8 @@ from test_start import CHANGE, change, fresh_branch, merge_step, start  # noqa: 
 
 AGENT = Path(__file__).parent.parent / ".claude/agents/redline-plan-auditor.md"
 AUDITS = "redline/initiatives/greetings/audits"
-CLEAN = "# Plan audit: greetings phase 1 start\n\n## F1 [closed]: the stop names no test\nResolution: it names GREET.S1\n"
-NONE = "# Plan audit: greetings phase 1 end\n\nNo findings.\n"
+CLEAN = "# Plan audit: greetings phase 1 start\nModel: claude-fable-5-1\n\n## F1 [closed]: the stop names no test\nResolution: it names GREET.S1\n"
+NONE = "# Plan audit: greetings phase 1 end\nModel: claude-fable-5-1\n\nNo findings.\n"
 
 
 def stamped(repo, text: str) -> str:
@@ -40,8 +40,8 @@ def test_the_plan_auditor_is_read_only_on_the_strongest_model():
     assert front["name"] == "redline-plan-auditor"
     tools = {tool.strip() for tool in front.get("tools", "").split(",")} - {""}
     assert tools and tools <= {"Read", "Grep", "Glob"}, tools
-    assert front["model"] == "fable"
-    assert "REFUSED: the plan-auditor runs only on a Claude Fable model" in body
+    assert (front["model"], front["effort"]) == ("fable", "max")
+    assert "REFUSED: the plan-auditor runs only on a Claude Fable or Opus model" in body
     for duty in ("## At the phase's start", "## At the phase's end"):
         assert duty in body
 
