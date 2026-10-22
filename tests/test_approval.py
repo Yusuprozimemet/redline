@@ -69,6 +69,35 @@ def test_ci_needs_a_maintainers_label_on_a_departure(holds, capsys, github, appl
     assert ("check-lock" in out) is not approved
 
 
+ALICE = "Redline-Departure: test_hold.py::test_h1 approved-by @alice: the old bound was wrong"
+DEPARTED = "check-lock: GREET.H1: test_hold.py::test_h1: its lock entry changed since main: "
+
+
+@pytest.mark.parametrize(("trailers", "applier", "failures"), [
+    (APPROVED, "Maintainer", []),  # logins compare without case, as GitHub's do
+    (APPROVED, "alice", ["`redline:departure` was applied by @alice, but the trailer names @maintainer: "
+                         "only @maintainer's label approves it"]),
+    (f"{APPROVED}\n{ALICE}", "maintainer", ["`redline:departure` was applied by @maintainer, but the trailer names "
+                                             "@alice: only @alice's label approves it"]),
+    (ALICE.replace("@alice", "@bob"), "bob", ["`redline:departure` was applied by @bob, who isn't a maintainer"]),
+])
+def test_a_departures_label_counts_only_when_applied_by_the_person_its_trailer_names(
+        holds, capsys, github, trailers, applier, failures):
+    merge_step(holds, "S")
+    holds.commit("red tests", {"tests/test_greet.py": RED_TESTS, "test_hold.py": PASSING})
+    lock(holds, capsys)
+    holds.commit("R\n\nRedline-Step: add-greet/R")
+    fresh_branch(holds, "g1")
+    holds.commit("weaken", {"test_hold.py": WEAKENED})
+    lock(holds, capsys)
+    holds.commit(f"relock\n\nRedline-Step: add-greet/G1\n{trailers}")
+    github.roles.update({"Maintainer": "admin", "alice": "admin"})
+    github.applied["redline:departure"] = applier
+    code, out = ci(holds, capsys, "pr", "--base", "main", "--pr", "1")
+    assert out.count("check-lock") == len(failures), out
+    assert all(DEPARTED + failure in out for failure in failures), out
+
+
 BEFORE = "2026-10-22T09:59:59Z"
 
 

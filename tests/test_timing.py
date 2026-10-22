@@ -146,4 +146,4 @@ def test_a_green_step_changes_what_a_test_reaches_only_with_an_approved_departur
     critical.git("commit", "-q", "--amend", "-m", f"relock\n\n{approved}")
     code, out = pr(critical, capsys)
     assert code == 0, out
-    assert "CI will need the `redline:departure` label from a maintainer" in out
+    assert "CI will need the `redline:departure` label applied by @maintainer, a maintainer" in out

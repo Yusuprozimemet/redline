@@ -132,9 +132,9 @@ def test_a_push_records_each_claim_of_the_merged_pr_in_the_ci_note(planned, caps
     assert text.startswith(f"result: pass\nrun: {RUN}\nclaims:\n"), text
     assert recorded(planned, merge)["claims"] == [
         {"commit": track, "claim": "Redline-Track: the helper moved", "pr": 12, "label": "redline:track",
-         "by": "alice", "role": "admin", "at": LABELLED, "pushed": PUSHED},
+         "by": "alice", "role": "admin", "at": LABELLED, "pushed": PUSHED, "named": None},
         {"commit": big, "claim": "Oversized: one change", "pr": 12, "label": "redline:oversized",
-         "by": None, "role": None, "at": None, "pushed": PUSHED},
+         "by": None, "role": None, "at": None, "pushed": PUSHED, "named": None},
     ]
 
 
@@ -147,16 +147,21 @@ def test_a_manual_check_is_recorded_at_the_merge_and_printed(planned, capsys, gi
     planned.git("merge", "-q", "--no-ff", "--no-edit", "c")
     merge = planned.git("rev-parse", "HEAD")
     github.pulled = {checked: [14]}
-    github.applied = {14: {"redline:manual": "alice"}}
+    github.applied = {14: {"redline:manual": "bob"}}
     code, out = push(planned, capsys)
-    assert code == 0, out
+    assert code == 0, "the record judges nothing"
     assert recorded(planned, merge)["claims"] == [
         {"commit": checked, "claim": "Redline-Manual: GREET.M1 checked-by @alice: it fits", "pr": 14,
-         "label": "redline:manual", "by": "alice", "role": "admin", "at": LABELLED, "pushed": PUSHED}]
+         "label": "redline:manual", "by": "bob", "role": "write", "at": LABELLED, "pushed": PUSHED, "named": "alice"}]
     code, out = claims(planned, capsys)
     assert code == 0, out
     assert f"## {checked[:7]} add-greet/C (PR #14): close\nRedline-Manual: GREET.M1 checked-by @alice: it fits\n" \
-           f"Label at the merge: redline:manual, applied by @alice, admin, at {LABELLED}, head pushed at {PUSHED} (CI note on {merge[:7]})\n" in out
+           f"Label at the merge: redline:manual, applied by @bob, write, at {LABELLED}, head pushed at {PUSHED}, " \
+           f"trailer names @alice (CI note on {merge[:7]})\n" in out
+    old = {k: v for k, v in recorded(planned, merge)["claims"][0].items() if k != "named"}  # before build 9 part 22
+    planned.git("notes", "--ref=redline-ci", "add", "-f", "-m",
+                yaml.safe_dump({"result": "pass", "run": RUN, "claims": [old]}, sort_keys=False), merge)
+    assert f"head pushed at {PUSHED} (CI note on {merge[:7]})\n" in claims(planned, capsys)[1]
 
 
 def test_a_re_run_keeps_the_record_and_a_failed_read_writes_none(planned, capsys, github):

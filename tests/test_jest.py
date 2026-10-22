@@ -239,7 +239,7 @@ def test_a_departure_can_name_a_jest_test_whose_name_has_spaces(holds, capsys):
     holds.commit(f"relock\n\nRedline-Departure: {NAME} approved-by @maintainer: a space after the assertion")
     code, out = check_lock(holds, capsys, "--base", "main")
     assert code == 0, out
-    assert "CI will need the `redline:departure` label from a maintainer" in out
+    assert "CI will need the `redline:departure` label applied by @maintainer, a maintainer" in out
 
 
 PACKAGE = '{"devDependencies": {"jest": "29.7.0"}}\n'
