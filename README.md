@@ -41,7 +41,8 @@ the tests import.
 
 2. **The agents**: copy the six files of [.claude/agents/](.claude/agents/) into the repository's
    `.claude/agents/`. They are the read-only auditors and the blind relabeller of §9, for Claude
-   Code, and refuse to run on a weaker model than the one they name.
+   Code. They run on Fable, or on Opus at max effort when Fable isn't available (run them with
+   `model: opus` then), refuse any weaker model, and name the model they ran on in their reply.
 3. **CI**: a workflow that checks out the full history with `main` and `refs/notes/*`, runs
    `redline ci pr --base main --pr <number>` on each PR (and on `labeled` and `unlabeled`), and on
    a push to `main` runs `redline ci push --note <file>` in a read-only job and hands the note to a
