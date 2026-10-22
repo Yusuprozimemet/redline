@@ -1645,11 +1645,12 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   result on the merged commit, so a test skipped or not collected there passes with it (§5). The
   plan: each linked test's outcome in the note, red the first commit where the scenario's `new`
   tests failed strictly, green where they passed without `new`.
-- O-CLOSE7 [build 9]: check-specs compares scenarios only, so a requirement's prose, a
-  `### Requirement:` heading with no scenario, or text before the first requirement changes unseen
-  at C (§5). The plan: a delta's prose under a requirement is copied as its scenarios are, and
-  without it the prose stays; a requirement or spec file left with no scenario goes; text under no
-  requirement changes only in a file C creates or deletes (§4).
+- O-CLOSE7 [closed, build 9 part 18]: check-specs compared scenarios only, so a requirement's
+  prose, a `### Requirement:` heading with no scenario, or text before the first requirement
+  changed unseen at C (§5). Now a delta's prose under an ADDED or MODIFIED requirement is copied as
+  its scenarios are, and without it the living prose stays; a requirement or spec file left with no
+  scenario goes; text under no requirement changes only in a file C creates or deletes (§4); each
+  is compared with the merge-base by `prose_changes` in `redline/specs.py`.
 - O-SPEC4 [build 9]: only C runs check-specs, and check-track exempts `redline/`, so an S, R or G
   PR may change anything under `redline/specs/`, scenarios included, and check-specs at C, which
   compares with C's own merge-base, never sees it (§5). The plan: at S, R and every G step,
