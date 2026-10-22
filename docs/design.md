@@ -1078,11 +1078,23 @@ and fails, naming the requirement or the file, on:
 - **Text under no requirement changed** in a spec file that is in both the merge-base and the tree.
 
 It compares with the merge-base, so it is the C PR's gate; run on its own it takes `--base`
-(default `main`), and run on `main` after the merge it has no diff to read and fails. What it
-doesn't prove: that `redline/specs/` was untouched before C. An S, R or G PR may edit it, and an
-edit merged before C's branch forks is part of the merge-base it compares with (O-SPEC4). Nor what
-a new spec file says under no requirement, or the order of requirements in a file, neither of
-which a delta has a form for (§12, Judgments).
+(default `main`), and run on `main` after the merge it has no diff to read and fails.
+
+**Nothing reaches `specs/` before C.** S writes its delta under `redline/changes/<id>/specs/`, R
+and G write tests and code, so none of them writes `redline/specs/`, and one that did would edit
+the merge-base the C step compares with, unseen. So at S, R and every G step, `pr` and `redline ci
+pr` run check-specs too, and it fails on each file under `redline/specs/` that differs from the
+merge-base with `main`, naming it: `<path> changed since the merge-base with main; only the C step
+writes redline/specs/, from its delta`. A rename is a file deleted and one added, both named. At
+lite, where S and R may share a PR, neither writes there, so nothing changes. Outside any step a
+PR touching `specs/` is refused (§7), and both find the files with one function, `touched` in
+`redline/pr.py`. So the merge-base a C step compares with holds only what earlier C steps wrote.
+The lock needs no such rule: at every step it is compared by test with the merge-base's (above),
+so a frozen test changed at S or C is a departure there as at R and G, and an entry added must
+match the code, as check-lock asks of every change the lock names.
+
+What it doesn't prove: what a new spec file says under no requirement, or the order of
+requirements in a file, neither of which a delta has a form for (§12, Judgments).
 
 At **lite** rigor, S and R may share one PR, so the smallest change is two sessions.
 
@@ -1112,7 +1124,7 @@ every step's PR: the step must be the change's next, and its phase must be ready
 older change's premises may go stale as the code moves on), and check-links and check-order from
 the R step on (at S the delta's scenarios have no tests yet; check-order skips `hold` scenarios,
 which have no red by design), check-break at the R step only, check-lock at every step (on the
-whole lock, by test, against `main`'s; G steps with `--base main`, §5), check-track at G steps (§5), check-close and check-specs at the C step (§5), check-defects and check-relabel at every step on the
+whole lock, by test, against `main`'s; G steps with `--base main`, §5), check-track at G steps (§5), check-close at the C step, check-specs at every step (at S, R and G, that `redline/specs/` is untouched; at C, against the delta, §5), check-defects and check-relabel at every step on the
 step's change (the log is required only at C, the relabel only at C and critical), and the rigor
 check at every step (§7). A departure, an `Oversized` trailer or a manual check doesn't refuse:
 the PR and its labels don't exist yet, so `pr` prints that CI will need the label, one note per
@@ -1231,7 +1243,8 @@ not on `main` yet.
 A PR whose commits carry no `Redline-Step` trailer is **outside any step**: a rule PR from
 `retro` (§10), a plan edit, or a change to Redline itself. It is opened with `gh`, not `pr`.
 `redline ci pr` refuses it, before anything runs, if it touches `redline/changes/`,
-`redline/contracts/` or `redline/specs/`, and names each such file. Those files belong to steps:
+`redline/contracts/` or `redline/specs/`, and names each such file, found by `touched` in
+`redline/pr.py`, the function a step's check-specs uses to keep `specs/` untouched before C (§5). Those files belong to steps:
 a proposal, delta, audit, defect log and ledger are written at S, R and C; the lock is rewritten
 only at R, or at G with an approved departure; deltas reach `specs/` at C. Outside a step, none
 of those gates would run, so a step could dodge them by leaving its trailer off.
