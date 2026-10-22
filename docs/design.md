@@ -1705,10 +1705,14 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
 - O-LOCK4 [build 8]: the lock reads no timing from outside its files: environment variables
   (`PYTEST_TIMEOUT`, `PYTEST_ADDOPTS`), flags in the CI workflow, or data files a test reads (§5).
   It is runner configuration outside a step, with O-RUN4.
-- O-CI9 [build 9]: the toolchain is pinned by version, not hash, so an index serving other files
-  under a version isn't caught; pip comes with the pinned Python, and the runner images
-  (`ubuntu-latest`, `windows-latest`) move with GitHub's updates (§7). The plan: `pip install
-  --require-hashes`, pip pinned, and the images by version label.
+- O-CI9 [closed, build 9 part 20]: the toolchain was pinned by version, not hash, so an index
+  serving other files under a version wasn't caught; pip came with the pinned Python, and the
+  runner images (`ubuntu-latest`, `windows-latest`) moved with GitHub's updates. Now every job
+  installs pip from `requirements-pip.txt`, then `requirements.txt`, both with `--require-hashes`
+  and `--force-reinstall`, then Redline with `--no-deps --no-index`, building with the hashed
+  setuptools; the hashes are those of the wheels for CI's Pythons, written by `scripts/hashes.py`;
+  and the jobs run on `ubuntu-24.04` and `windows-2025-vs2026` (§7). What a hosted runner still
+  brings under the pins is a judgment, above.
 - O-APPR1 [build 9]: a label isn't tied to a commit, so commits pushed after it, with new claims,
   are covered by it until someone removes it (§7). The plan: a claim's label counts only when it
   was applied after the PR's head commit was pushed.
