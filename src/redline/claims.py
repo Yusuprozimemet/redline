@@ -5,7 +5,7 @@ change taken out of the plan keeps its claims; those it no longer lists are name
 The commits are main's non-merge commits whose `Redline-Step` names a step of one of those, or that
 touch the initiative's directory or redline/config.yaml, oldest first. Each with a claim trailer
 (approval.py) is printed with its merged PR and, per claim, its label, who applied it last and their
-role at the merge, from the record `redline ci push` left in the CI note on the commit where it merged
+role at the merge, and the person a departure or a manual check names, from the record `redline ci push` left in the CI note on the commit where it merged
 (`record`). Without a note or a record it says so, and reads them now through the `GitHub` seam
 (pr.py). It writes nothing and judges nothing.
 """
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import yaml
 
-from redline.approval import DEPARTURE, MANUAL, OVERSIZED, RIGOR, TRACK
+from redline.approval import DEPARTURE, MANUAL, OVERSIZED, RIGOR, TRACK, named
 from redline.ledger import NOTES
 from redline.order import git, merged_into
 from redline.plan import ROOT, parse_plan
@@ -58,7 +58,7 @@ def record(repo: Path, rev: str, github) -> list[dict]:
         who, at = applied.get(LABELS[key], (None, None))
         entries.append({"commit": sha, "claim": f"{key}: {value}", "pr": number, "label": LABELS[key],
                         "by": who, "role": github.role(who) if who else None, "at": at,
-                        "pushed": head[1] if head else None})
+                        "pushed": head[1] if head else None, "named": named(key, value)})
     return entries
 
 
@@ -89,6 +89,8 @@ def at_merge(entry: dict, merged: str) -> str:
     if entry.get("at"):
         pushed = entry.get("pushed")
         when = f", at {entry['at']}, " + (f"head pushed at {pushed}" if pushed else "no push of the head found")
+    if entry.get("named"):  # nor before part 22 a named person
+        when += f", trailer names @{entry['named']}"
     return f"Label at the merge: {entry.get('label')}, applied by @{entry['by']}, {entry.get('role')}{when} {where}\n"
 
 

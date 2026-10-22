@@ -76,7 +76,7 @@ MANUAL = DELTA + "\n#### Scenario GREET.M1 [manual]: looks right\nManual: by eye
 CHECKED = "Redline-Manual: GREET.M1 checked-by @alice: the greeting fits a 360px screen"
 UNCHECKED = ("GREET.M1: manual, with no person's check in this PR: add "
              "`Redline-Manual: GREET.M1 checked-by @person: <what was seen>` to one of its commits\n")
-PENDING = "note: GREET.M1: manual, checked by @alice: CI will need the `redline:manual` label from a maintainer\n"
+PENDING = "note: GREET.M1: manual, checked by @alice: CI will need the `redline:manual` label applied by @alice, a maintainer\n"
 CLOSED = "ok: 3 scenarios, each with its evidence: 2 on main, 1 checked by a person\n"
 
 
@@ -132,13 +132,18 @@ def test_in_ci_a_manual_check_needs_a_maintainers_label(change, capsys):
     change.commit(f"checked\n\n{CHECKED}")
 
     def closing(applied: dict) -> list[str]:
-        github = FakeGitHub(change, applied=applied, roles={"maintainer": "admin"})
+        github = FakeGitHub(change, applied=applied, roles={"maintainer": "admin", "alice": "admin"})
         return [f for f in gates(change.path, "add-greet", "C", Approvals(github, 1)) if f.startswith("check-close")]
 
     assert closing({}) == ["check-close: GREET.M1: manual, checked by @alice: needs the `redline:manual` label from a maintainer"]
     assert closing({"redline:manual": "bob"}) == [
         "check-close: GREET.M1: manual, checked by @alice: `redline:manual` was applied by @bob, who isn't a maintainer"]
-    assert closing({"redline:manual": "maintainer"}) == []
+    assert closing({"redline:manual": "maintainer"}) == [
+        "check-close: GREET.M1: manual, checked by @alice: `redline:manual` was applied by @maintainer, "
+        "but the trailer names @alice: only @alice's label approves it"]
+    assert closing({"redline:manual": "ALICE"}) == [
+        "check-close: GREET.M1: manual, checked by @alice: `redline:manual` was applied by @ALICE, who isn't a maintainer"]
+    assert closing({"redline:manual": "alice"}) == []
     local = Approvals()
     assert not [f for f in gates(change.path, "add-greet", "C", local) if f.startswith("check-close")]
     assert local.pending == [PENDING[len("note: "):-1]]
