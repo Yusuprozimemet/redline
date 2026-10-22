@@ -37,7 +37,7 @@ from redline.order import git
 from redline.approval import Approvals
 from redline.plan import check_plan
 from redline.planaudit import check_plan_audits
-from redline.pr import GitHub, gates, rigor_claim, size
+from redline.pr import GitHub, gates, rigor_claim, size, touched
 from redline.runner import JEST, RUNNERS, Runner, check_helpers, run
 from redline.start import TRAILER, Refused, may_begin, merged_steps, next_step
 
@@ -99,12 +99,8 @@ def pr_step(repo: Path, base: str) -> str:
 
 def outside(repo: Path, base: str, approvals: Approvals) -> list[str]:
     """A PR outside any step: refused if it touches a step's files, else the gates for any PR."""
-    fork = git(repo, "merge-base", base, "HEAD")
-    if fork.returncode:
-        raise RuntimeError(f"no merge-base with {base}: {fork.stderr.strip()}")
-    diff = git(repo, "diff", "--name-only", "--no-renames", fork.stdout.strip(), "HEAD")
-    if touched := [p for p in diff.stdout.splitlines() if p.startswith(STEPS_ONLY)]:
-        raise Refused(f"outside any step a PR can't touch a change, the lock or the specs: {', '.join(touched)}")
+    if files := touched(repo, base, STEPS_ONLY):
+        raise Refused(f"outside any step a PR can't touch a change, the lock or the specs: {', '.join(files)}")
     failures = size(repo, approvals) + rigor_claim(repo, approvals) + misplaced(repo, base)
     failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad + check_plan_audits(repo)]
     failures += [f"check-helpers: {bad}" for bad in check_helpers(repo)]

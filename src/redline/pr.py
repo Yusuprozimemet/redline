@@ -8,6 +8,7 @@ and check-order run from the R step on: at S the delta declares scenarios that h
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
 check-lock runs on every change the lock names at every step, and on the step's change at R and G (against main's lock at G);
 at every step the whole lock is compared by test with main's (lock.check_frozen). check-track runs at G steps (track.py). check-close and check-specs run at C (close.py, specs.py);
+before C, check-specs fails on each file under redline/specs/ that differs from the merge-base (`touched`), as only C writes there;
 a `Redline-Manual` trailer, a manual scenario's check, needs a maintainer's label there and fails at any other step.
 A changed `rigor:` in the config or `Rigor:` line in a plan, a change's level lowered, a glob added to `generated:` or `support:`,
 a deleted plan, or a change taken out of one, needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
@@ -132,6 +133,15 @@ def rigor_claim(repo: Path, approvals: Approvals) -> list[str]:
     return bad + [why for what in changed if (why := approvals.approve(RIGOR, what))]
 
 
+def touched(repo: Path, base: str, prefixes: tuple[str, ...]) -> list[str]:
+    """Each file under `prefixes` that differs from the merge-base with `base`; a rename is a delete and an add."""
+    fork = git(repo, "merge-base", base, "HEAD")
+    if fork.returncode:
+        raise RuntimeError(f"no merge-base with {base}: {fork.stderr.strip()}")
+    diff = git(repo, "diff", "--name-only", "--no-renames", fork.stdout.strip(), "HEAD")
+    return [p for p in diff.stdout.splitlines() if p.startswith(prefixes)]
+
+
 def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None) -> list[str]:
     approvals = approvals or Approvals()
     failures = size(repo, approvals) + rigor_claim(repo, approvals)
@@ -165,8 +175,10 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
         failures += [f"check-lock: {other}: {bad}" for bad in check_lock(repo, other).bad]
     if step.startswith("G"):
         failures += check_track(repo, change, step, approvals)
-    if step != "C":  # a person's check is read at C only
+    if step != "C":  # a person's check is read at C only, and only C carries a delta into specs/
         failures += misplaced(repo, "main")
+        failures += [f"check-specs: {path} changed since the merge-base with main; only the C step writes "
+                     "redline/specs/, from its delta" for path in touched(repo, "main", ("redline/specs/",))]
     if step == "C":  # earlier, a scenario a later step owns has no green yet by design
         for name, check in (("check-close", lambda r, c: check_close(r, c, approvals=approvals)),
                             ("check-specs", lambda r, c: check_specs(r, c)[0])):

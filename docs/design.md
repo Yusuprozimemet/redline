@@ -1664,10 +1664,13 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   its scenarios are, and without it the living prose stays; a requirement or spec file left with no
   scenario goes; text under no requirement changes only in a file C creates or deletes (§4); each
   is compared with the merge-base by `prose_changes` in `redline/specs.py`.
-- O-SPEC4 [build 9]: only C runs check-specs, and check-track exempts `redline/`, so an S, R or G
-  PR may change anything under `redline/specs/`, scenarios included, and check-specs at C, which
-  compares with C's own merge-base, never sees it (§5). The plan: at S, R and every G step,
-  `redline/specs/` must be as it is at the merge-base, each file that differs named.
+- O-SPEC4 [closed, build 9 part 19]: only C ran check-specs, and check-track exempts `redline/`, so
+  an S, R or G PR could change anything under `redline/specs/`, scenarios included, and check-specs
+  at C, which compares with C's own merge-base, never saw it. Now at S, R and every G step
+  check-specs fails on each file under `redline/specs/` that differs from the merge-base with
+  `main`, naming it, found by `touched` in `redline/pr.py`, which the refusal of a PR outside any
+  step uses too (§5, §7). The lock needed no such rule: it is compared by test with the
+  merge-base's at every step, S and C included (§5).
 - O-LOCK4 [build 8]: the lock reads no timing from outside its files: environment variables
   (`PYTEST_TIMEOUT`, `PYTEST_ADDOPTS`), flags in the CI workflow, or data files a test reads (§5).
   It is runner configuration outside a step, with O-RUN4.
