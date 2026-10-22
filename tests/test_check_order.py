@@ -1,5 +1,6 @@
 import pytest
 
+from redline import order
 from redline.cli import main
 from redline.order import check_order
 
@@ -70,3 +71,32 @@ def test_a_file_that_doesnt_parse_at_a_commit_is_skipped_with_a_note(repo, capsy
     assert (result.status, result.red, result.green) == ("ok", red, green)
     assert main(["check-order", "--repo", str(repo.path)]) == 0
     assert f"skipped test_toy.py at {broken[:7]}: invalid syntax" in capsys.readouterr().out
+
+
+def test_a_scenario_no_test_links_any_more_is_skipped_not_failed(repo, capsys):
+    green = repo.commit("green", {"test_toy.py": GREEN})
+    (repo.path / "test_toy.py").unlink()
+    repo.commit("test gone")
+    [result] = check_order(repo.path)
+    assert (result.status, result.linked) == ("fail", False)
+    assert order.failed([result], set()) == []
+    assert main(["check-order", "--repo", str(repo.path)]) == 0
+    assert f"skipped TOY.S1: no test at HEAD links it; its green {green[:7]} had no red" in capsys.readouterr().out
+
+
+def test_a_scenario_linked_again_fails_again(repo):
+    repo.commit("green", {"test_toy.py": GREEN})
+    (repo.path / "test_toy.py").unlink()
+    repo.commit("test gone")
+    repo.commit("back", {"test_toy.py": GREEN})
+    [result] = check_order(repo.path)
+    assert result.linked and order.failed([result], set()) == [result]
+
+
+def test_the_command_skips_a_hold_scenario_as_the_gate_does(repo, capsys):
+    repo.commit("hold", {"redline/specs/toy/spec.md": "#### Scenario TOY.S1 [hold]: holds\n- THEN it holds\n",
+                         "test_toy.py": GREEN})
+    [result] = check_order(repo.path)
+    assert result.status == "fail" and order.failed([result], {"TOY.S1"}) == []
+    assert main(["check-order", "--repo", str(repo.path)]) == 0
+    assert "hold TOY.S1: no red by design" in capsys.readouterr().out
