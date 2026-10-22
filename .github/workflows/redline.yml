@@ -80,10 +80,12 @@ jobs:
         env:
           NOTE: ${{ needs.redline.outputs.note }}  # through env, never ${{ }} in the script: the text is data
 
-  runners:  # the real Jest, Stryker and mutmut on toys, which the suite fakes (docs/design.md, section 5)
+  runners:  # the real Jest, Stryker, mutmut and gh api calls, which the suite fakes (docs/design.md, sections 5 and 7)
     runs-on: ubuntu-24.04  # by version: -latest moves to a new OS
-    permissions:
-      contents: read  # records nothing
+    permissions:  # the redline job's, so the real gh api calls read what its token can; records nothing
+      contents: read
+      issues: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
@@ -104,6 +106,11 @@ jobs:
         run: python -m pytest -v -p no:cacheprovider tests/test_runners.py tests/test_mutmut.py
         env:
           REDLINE_REAL_RUNNERS: "1"  # without it these tests are skipped
+      - name: Make the GitHub seam's real gh api calls on this repository's merged PR
+        run: python -m pytest -v -p no:cacheprovider tests/test_github.py
+        env:
+          REDLINE_REAL_GITHUB: "1"  # here, not in redline ci's suite: GitHub down fails this job, not the gates
+          GH_TOKEN: ${{ github.token }}
 
   windows:  # Redline's suite where Python's own encoding isn't UTF-8 (docs/design.md, section 7)
     runs-on: windows-2025-vs2026  # windows-2025 changed its Visual Studio once

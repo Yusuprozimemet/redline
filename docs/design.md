@@ -1811,15 +1811,19 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   locally check-lock and check-close say who must apply it; and `redline ci push` records `named:`
   under `claims:`, which `redline claims` prints (§4, §7). That one label approves every claim of
   its kind, read or not, stays a limit (§7).
-- O-GH1 [build 9 part 23]: the real `gh api` calls that read labels, roles, merged PRs, a PR's head and its pushes are tested only
-  by hand; the suite uses the fake (§7). Running Redline on itself (the review's item 17) would
-  call them on every claim; a test may call them on this repository's own PRs. The plan: each call,
-  through the seam, on merged PR #60, and `--paginate` one per page, in the `runners` job with
-  `redline`'s read permissions, skipped without `REDLINE_REAL_GITHUB`.
-- O-GH3 [build 9 part 23]: the seam failed a read on GitHub's first error, and testing the real
-  calls (O-GH1) found that `commits/<sha>/pulls` answers HTTP 500 with an empty body to about four
-  calls in ten, at random, so a push run whose merge carried a claim failed and lost its claims
-  record more often than not. The plan: each `gh api` read tried up to eight times (§7).
+- O-GH1 [closed, build 9 part 23]: the real `gh api` calls that read labels, roles, merged PRs, a
+  PR's head and its pushes were tested only by hand; the suite used fakes and canned answers, so a
+  renamed field, a jq path selecting nothing, the activity API's ref or a time `moment` can't parse
+  would have passed it. Now `tests/test_github.py` makes each call through the seam on merged PR
+  #60, whose answers are known, and reads its issue events one per page with `--paginate`, in a
+  step of the `runners` job holding the `redline` job's read permissions and token, skipped without
+  `REDLINE_REAL_GITHUB`, so GitHub down fails that job and never the gates (§7). That GitHub keeps
+  answering so is seen on every run there; Redline's own PRs run as steps stays the review's item 17.
+- O-GH3 [closed, build 9 part 23]: the seam failed a read on GitHub's first error, and testing the
+  real calls (O-GH1) found that `commits/<sha>/pulls` answers HTTP 500 with an empty body to about
+  four calls in ten, at random, so a push run whose merge carried a claim failed and lost its
+  claims record more often than not. Now each `gh api` read, `GitHub.read`, is tried up to eight
+  times, waiting 1, 2, then 3 seconds; pushing and opening a PR are tried once (§7).
 - O-LOCK1 [closed, build 5 part 3]: a departure's approval was a recorded line, not proof. Now
   `redline ci pr` checks a maintainer's `redline:departure` label, with the same function that
   checks `Oversized` (§7, Approvals), and §7 says what that still doesn't prove.
