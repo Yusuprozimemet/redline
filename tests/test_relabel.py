@@ -128,3 +128,9 @@ def test_a_relabel_names_a_fable_or_opus_model(logged, capsys, model, why):
     named = labels().replace("# Model: claude-fable-5-1\n", f"# Model: {model}\n" if model else "")
     logged.commit("relabel", {RELABEL: named})
     assert check(logged, capsys) == ((1, why + "\n") if why else (0, "ok: 3 defects relabelled blind, 0 disagreements\n"))
+
+
+def test_a_model_line_after_the_first_entry_names_nothing(logged, capsys):
+    late = labels().replace("# Model: claude-fable-5-1\n", "") + "# Model: claude-fable-5-1\n"
+    logged.commit("relabel", {RELABEL: late})
+    assert check(logged, capsys)[1].startswith(f"{RELABEL}: no `# Model:` line;")
