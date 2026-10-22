@@ -21,6 +21,9 @@ INSTALLS = [
     "python -m pip install --require-hashes --force-reinstall -r requirements.txt",
     "python -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index -e .",
 ]
+GATE = [  # the merge-base's Redline on a PR, with its venv's Python and not editable (O-SELF3)
+    line.replace("python -m pip", '"$RUNNER_TEMP/gate/bin/python" -m pip').replace(" -e .", " .") for line in INSTALLS
+]
 
 
 def name(spec: str) -> str:
@@ -74,7 +77,8 @@ def test_every_runner_image_is_named_by_its_version_never_latest():
 def test_every_job_that_runs_pip_runs_the_hashed_lines_in_order_and_no_other():
     installs = {job: [line.strip() for step in spec["steps"] for line in step.get("run", "").splitlines() if "pip" in line]
                 for job, spec in jobs().items()}
-    assert {job: lines for job, lines in installs.items() if lines} == dict.fromkeys(("redline", "runners", "windows"), INSTALLS)
+    assert {job: lines for job, lines in installs.items() if lines} == {
+        "redline": GATE + INSTALLS, "runners": INSTALLS, "windows": INSTALLS}
 
 
 def test_every_pin_has_its_hashes_and_pip_is_pinned_and_setuptools_is_the_build_backend():
