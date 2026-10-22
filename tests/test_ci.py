@@ -220,7 +220,7 @@ def test_the_workflow_runs_redline_ci_on_prs_and_on_pushes_to_main():
     assert triggers["pull_request"]["branches"] == ["main"]
     assert triggers["push"]["branches"] == ["main"]
     runs = [step.get("run", "") for job in flow["jobs"].values() for step in job["steps"]]
-    assert any("redline ci pr" in run for run in runs)
+    assert any('redline" ci pr' in run for run in runs)  # the merge-base's, by its path
     assert any("redline ci push" in run for run in runs)
 
 

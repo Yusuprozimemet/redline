@@ -1947,11 +1947,12 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   <path>` runs the suite and check-break's unmutated runs with that interpreter, through
   `interpreter` in `redline/runner.py`, for that run only; a path that isn't a file, or the option
   on `ci push`, is an error (§7).
-- O-SELF3 [build 9 part 26]: the workflow installs the Redline the PR contains, `pip install -e .`,
-  so a PR that weakens a gate is checked by the weakened gate (the review's item 17). The plan: on
-  a PR, install the Redline at the merge-base into an environment of its own, as §7 reads
-  everything else there, and run its `redline ci pr --python` with the environment that holds the
-  PR's own Redline, which the suite tests. A push run's merged code is `main`, so it is unchanged.
+- O-SELF3 [closed, build 9 part 26]: the workflow installed the Redline the PR contains, `pip
+  install -e .`, so a PR that weakened a gate was checked by the weakened gate (the review's item
+  17). Now, on a PR, the `redline` job installs the merge-base's Redline, not editable, into a venv
+  of its own with the merge-base's pins, before any of the PR's code runs, and calls that venv's
+  `redline ci pr --python "$(command -v python)"`, so the suite tests the PR's own Redline; a push
+  run is unchanged (§7, the merge-base's Redline).
 - O-CI10 [build 9 part 29]: the PR's code, its install, suite and check-break's runs, runs in the
   gate's job as the same user, so it could rewrite a file the gate imports after it, in the
   standard library, the gate's venv or, in an adopting repository, the site-packages it shares
