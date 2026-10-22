@@ -1,0 +1,56 @@
+# Every package CI installs, pinned by version and hash (docs/design.md, section 7). Every job installs it with
+# `--require-hashes`, after requirements-pip.txt, then Redline itself with `--no-deps --no-index`.
+# Pins are kept by hand; a marker keeps mutmut and what only it needs off Windows. Then rewrite the hashes:
+#   python scripts/hashes.py requirements-pip.txt requirements.txt
+# A bump is a PR outside any step. pip refuses a package this file lacks.
+click==8.5.0 ; sys_platform != "win32" \
+    --hash=sha256:255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360
+colorama==0.4.6 ; sys_platform == "win32" \
+    --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6
+coverage==7.16.2 ; sys_platform != "win32" \
+    --hash=sha256:11d28e9123a9156cb405d8d27b44256c9a58fb5decc2073a8f17862057e3aa0f \
+    --hash=sha256:5375ebd99038021b35e99dc88255022912c06565d316212f4a576e4b08d30f5d \
+    --hash=sha256:e6c52d3307824ff93b39efd99e4185d557db40bd841452abfb32e5d9151ca162
+execnet==2.1.2 \
+    --hash=sha256:67fba928dd5a544b783f6056f449e5e3931a5c378b128bc18501f7ea79e296ec
+iniconfig==2.3.1 \
+    --hash=sha256:9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7
+libcst==1.9.0 ; sys_platform != "win32" \
+    --hash=sha256:8d731abe1307720ea1a52d447555e8443a6d130e0e520243c0634a58f6edbc9d \
+    --hash=sha256:b755ed4a4bc2faee849b54820023137d60d4c199e0a0822f0ff0c1bc49e49b48
+linkify-it-py==2.2.0 ; sys_platform != "win32" \
+    --hash=sha256:3adc40eb5af300b2605fcfdb968c24e1d780a90f1f2221af7c15e5111e94d443
+markdown-it-py==4.2.0 ; sys_platform != "win32" \
+    --hash=sha256:9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a
+mdit-py-plugins==0.6.1 ; sys_platform != "win32" \
+    --hash=sha256:214c82fb2ac524472ab6a5bcab1de80f73b50443e187f401bfd77efbc7c6481d
+mdurl==0.1.2 ; sys_platform != "win32" \
+    --hash=sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8
+mutmut==3.8.0 ; sys_platform != "win32" \
+    --hash=sha256:4c0abcef6b8d1116f2adfaad19df12e1c621e4a402d4367ef15bf8cba497b91d
+packaging==26.3 \
+    --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
+platformdirs==4.13.5 ; sys_platform != "win32" \
+    --hash=sha256:53d3ec4280b815c1e0b02edad7f9ee8fda1ba9c0865dd9c2e6e63849ce82fc1e
+pluggy==1.7.0 \
+    --hash=sha256:7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec
+Pygments==2.21.0 \
+    --hash=sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9
+pytest==9.1.1 \
+    --hash=sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c
+pytest-xdist==3.8.0 \
+    --hash=sha256:202ca578cfeb7370784a8c33d6d05bc6e13b4f25b5053c30a152269fd10f0b88
+PyYAML==6.0.3 \
+    --hash=sha256:5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b \
+    --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc
+rich==15.0.0 ; sys_platform != "win32" \
+    --hash=sha256:33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb
+setproctitle==1.3.8 ; sys_platform != "win32" \
+    --hash=sha256:4a765e0c80a2453480be27c4fc22ba1c0771867040c5f91e4221940d78a4abfb \
+    --hash=sha256:f599401675bdcac21176ca385ea3139fc04c1f8e26724dc59f4fc9df1d1528ef
+setuptools==84.2.1 \
+    --hash=sha256:ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2
+textual==8.2.8 ; sys_platform != "win32" \
+    --hash=sha256:267375fd402dc8d981457212efa71f0e3365fd17bba144ba9bb3ed7563cb374a
+typing_extensions==4.16.0 ; sys_platform != "win32" \
+    --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8

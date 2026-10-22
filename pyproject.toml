@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==84.2.1"]  # exact, as constraints.txt pins the rest
+requires = ["setuptools==84.2.1"]  # exact, and requirements.txt's by hash, which CI builds with
 build-backend = "setuptools.build_meta"
 
 [project]
