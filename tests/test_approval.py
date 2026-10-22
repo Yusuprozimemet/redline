@@ -1,10 +1,14 @@
+from pathlib import Path
+
 import pytest
 import yaml
 
+import redline.pr
+from redline.pr import GitHub
 from test_check_break import PASSING, holds, mutator  # noqa: F401 (fixtures)
 from test_ci import WORKFLOW, ci, red_pr
 from test_lock import APPROVED, WEAKENED, lock
-from test_pr import AUDIT, RED_TESTS, begin, github, pr  # noqa: F401 (github is a fixture)
+from test_pr import AUDIT, HEAD, LABELLED, PUSHED, RED_TESTS, begin, github, pr  # noqa: F401 (github is a fixture)
 from test_start import change, fresh_branch, merge_step  # noqa: F401 (change is a fixture)
 
 BIG = {"data.md": "x\n" * 401}
@@ -63,6 +67,63 @@ def test_ci_needs_a_maintainers_label_on_a_departure(holds, capsys, github, appl
                "needs the `redline:departure` label from a maintainer")
     assert (failure in out) is not approved, out
     assert ("check-lock" in out) is not approved
+
+
+BEFORE = "2026-10-22T09:59:59Z"
+
+
+@pytest.mark.parametrize(("at", "head", "failure"), [
+    (BEFORE, HEAD, f"`redline:oversized` was applied at {BEFORE}, before fffffff was pushed at {PUSHED}; apply it again"),
+    (PUSHED, HEAD, f"`redline:oversized` was applied at {PUSHED}, before fffffff was pushed at {PUSHED}; apply it again"),
+    ("2026-10-22T10:00:01Z", HEAD, None),
+    (LABELLED, None, "`redline:oversized` approves nothing: no push of the PR's head was found to check it against"),
+])
+def test_a_label_counts_only_when_it_was_applied_after_the_heads_push(change, capsys, github, at, head, failure):
+    red_pr(change, capsys, {"tests/test_greet.py": RED_TESTS})
+    change.commit(f"big\n\nRedline-Step: add-greet/R\n{OVERSIZED}", BIG)
+    github.applied["redline:oversized"], github.head = ("maintainer", at), head
+    code, out = ci(change, capsys, "pr", "--base", "main", "--pr", "1")
+    if failure:
+        assert code == 1
+        assert f"over the limit of 400: {failure}" in out, out
+    else:
+        assert code == 0, out
+    assert [call for fake in github.fakes for call in fake.calls if call[0] == "pushed"] == [("pushed", 1)]
+
+
+SHA, OTHER = "a" * 40, "b" * 40
+ANSWERS = {
+    "issues/7/events": "labeled\tredline:track\talice\t2026-10-22T09:00:00Z\n"
+                       "labeled\tredline:rigor\tbob\t2026-10-22T09:10:00Z\n"
+                       "unlabeled\tredline:rigor\tbob\t2026-10-22T09:20:00Z\n"
+                       "labeled\tredline:track\tcarol\t2026-10-22T11:00:00Z",
+    "pulls/7": f"{SHA}\tfeature/x\ttoy/fork",
+    "activity": f"branch_deletion\t{'0' * 40}\t2026-10-22T12:00:00Z\n"
+                f"push\t{OTHER}\t2026-10-22T10:50:00Z\n"
+                f"force_push\t{SHA}\t2026-10-22T10:45:00Z\n"
+                f"push\t{SHA}\t2026-10-22T10:00:00Z\n"
+                f"branch_creation\t{OTHER}\t2026-10-22T09:30:00Z",
+}
+
+
+def test_the_seam_reads_when_each_label_was_applied_and_when_the_head_was_last_pushed(monkeypatch, tmp_path):
+    asked, answers = [], dict(ANSWERS)
+
+    def run(self, *command: str) -> str:
+        asked.append(command)
+        return next(answer for key, answer in answers.items() if any(key in part for part in command))
+
+    monkeypatch.setattr(GitHub, "run", run)
+    github = GitHub(tmp_path)
+    assert github.labels(7) == {"redline:track": ("carol", "2026-10-22T11:00:00Z")}
+    assert github.pushed(7) == (SHA, "2026-10-22T10:45:00Z"), "the latest push that made the head, not one of another commit"
+    assert any("repos/toy/fork/activity?ref=refs/heads/feature/x" in part for part in asked[-1]), "the head's own repository"
+    answers["activity"] = f"push\t{OTHER}\t2026-10-22T10:50:00Z"
+    assert github.pushed(7) is None
+
+
+def test_issue_events_are_split_on_an_escape_not_a_literal_tab():
+    assert "\t" not in Path(redline.pr.__file__).read_text(encoding="utf-8")
 
 
 def test_the_workflow_passes_the_pr_number_and_reruns_on_a_label():

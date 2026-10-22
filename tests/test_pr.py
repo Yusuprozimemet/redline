@@ -6,16 +6,21 @@ from test_start import CHANGE, DELTA, change, fresh_branch, merge_step, start  #
 
 URL = "https://github.com/toy/toy/pull/1"
 AUDIT = {f"{CHANGE}/audit.md": "# Audit: add-greet\n\nNo findings.\n"}
+PUSHED = "2026-10-22T10:00:00Z"  # when the fake PR's head was pushed
+LABELLED = "2026-10-22T11:00:00Z"  # when a fake label given as its applier alone was applied, after the push
+HEAD = ("f" * 40, PUSHED)
 
 
 class FakeGitHub:
     """Stands in for git push and gh: records what would have gone over the network."""
 
-    def __init__(self, repo, fail: bool = False, applied: dict | None = None, roles: dict | None = None):
+    def __init__(self, repo, fail: bool = False, applied: dict | None = None, roles: dict | None = None,
+                 head: tuple[str, str] | None = HEAD):
         self.repo = repo
         self.fail = fail
-        self.applied = {} if applied is None else applied  # label -> who applied it
+        self.applied = {} if applied is None else applied  # label -> who applied it, or (who, when)
         self.roles = {} if roles is None else roles
+        self.head = head
         self.calls: list[tuple] = []
 
     def push(self, branch: str) -> None:
@@ -27,9 +32,13 @@ class FakeGitHub:
         self.calls.append(("pr", title, body))
         return URL
 
-    def labels(self, number: int) -> dict[str, str]:
+    def labels(self, number: int) -> dict[str, tuple[str, str]]:
         self.calls.append(("labels", number))
-        return self.applied
+        return {label: by if isinstance(by, tuple) else (by, LABELLED) for label, by in self.applied.items()}
+
+    def pushed(self, number: int) -> tuple[str, str] | None:
+        self.calls.append(("pushed", number))
+        return self.head
 
     def role(self, login: str) -> str:
         return self.roles.get(login, "write")
@@ -38,12 +47,13 @@ class FakeGitHub:
 class Seam:
     def __init__(self):
         self.fail = False
-        self.applied: dict[str, str] = {}
+        self.applied: dict[str, str | tuple[str, str]] = {}
         self.roles = {"maintainer": "admin"}
+        self.head: tuple[str, str] | None = HEAD
         self.fakes: list[FakeGitHub] = []
 
     def __call__(self, repo) -> FakeGitHub:
-        self.fakes.append(FakeGitHub(repo, self.fail, self.applied, self.roles))
+        self.fakes.append(FakeGitHub(repo, self.fail, self.applied, self.roles, self.head))
         return self.fakes[-1]
 
 
