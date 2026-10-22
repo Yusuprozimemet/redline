@@ -878,6 +878,17 @@ declared again is linked again, so its old green without a red fails once more. 
 scenario has no red by design, so it isn't failed either. The gate and `redline check-order` count
 the same failures, with one function, `failed` in `redline/order.py` (O-SELF5).
 
+check-links needs a test for a scenario only once its change has one to give. A change whose S step
+is merged on `main` and no later step is, unless the step gated is its own from R on, has no tests
+yet by design, and neither has the change of a step gated at S; their scenarios aren't unlinked gaps: without that, another change's R, G or C gate, and
+Redline's own suite, would fail as soon as an S step merged, until that change's R did. Its unknown,
+duplicate and malformed scenarios, and a manual one a test links, still fail. A gate passes its own
+step, so at R the change's scenarios need their tests before `pr` stamps a commit; run on its own,
+check-links takes the step the trailers of `main..HEAD` name, else the open step, and prints each
+waiting change as `skipped <change>: <n> scenarios, before its R step` (O-LINK1). A change with no
+`Redline-Step` on `main` at all, as in a history without trailers, isn't waiting: its scenarios
+need tests.
+
 The suite `redline ci` runs is every test of each runner the repository uses, run by the command
 check-break runs (all tests, no `REDLINE_SPEC`). pytest is used when git tracks one of its test
 files; Jest when the root `package.json` lists `jest` in `dependencies` or `devDependencies`. Jest
@@ -911,7 +922,8 @@ The toy's test file, `src/adult.test.js`, isn't committed: the tests that run it
 string beside the helper, and the toy's `.gitignore` ignores `src/*.test.js`. Committed, its markers
 would link TOY.H1 and TOY.H2 in Redline's own tree, where no spec declares them, and fail
 check-links there. `tests/test_self.py` runs check-links and check-order on Redline's own checkout,
-as every step from R on runs them, and fails on any gap. check-order needs the whole history, so it
+as every step from R on runs them, with the step check-links takes on its own (above), and fails on
+any gap. check-order needs the whole history, so it
 is skipped in a shallow clone, as the `windows` and `runners` jobs check out; the `redline` job
 fetches it all and runs it with the suite.
 
@@ -1801,9 +1813,10 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    repository settings Redline rests on listed in §7 (O-DOC1, O-SET1); part 25, `redline ci pr
    --python`, so the suite can test the PR's code while another Redline gates it (O-SELF2); part 26,
    each PR gated by the Redline at its merge-base (O-SELF3); part 27, Redline's own tree passing its
-   gates (O-SELF5); then the change `note-run`, Redline's first build step run as a change, S, R, G1
-   and C (O-NOTE1, O-SELF1); part 28, a workflow an adopting repository installs (O-SELF4); part 29,
-   the PR's code run apart from the gate's job (O-CI10).
+   gates (O-SELF5); part 28, a change's scenarios needing tests only from its R step on, in every
+   change's gates (O-LINK1); then the change `note-run`, Redline's first build step run as a change,
+   S, R, G1 and C (O-NOTE1, O-SELF1); part 29, a workflow an adopting repository installs (O-SELF4);
+   part 30, the PR's code run apart from the gate's job (O-CI10).
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
@@ -1970,12 +1983,20 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   of its own with the merge-base's pins, before any of the PR's code runs, and calls that venv's
   `redline ci pr --python "$(command -v python)"`, so the suite tests the PR's own Redline; a push
   run is unchanged (§7, the merge-base's Redline).
-- O-CI10 [build 9 part 29]: the PR's code, its install, suite and check-break's runs, runs in the
+- O-CI10 [build 9 part 30]: the PR's code, its install, suite and check-break's runs, runs in the
   gate's job as the same user, so it could rewrite a file the gate imports after it, in the
   standard library, the gate's venv or, in an adopting repository, the site-packages it shares
   with the gate (§7, the merge-base's Redline). The plan: the PR's code runs where it can't write
   the gate's files, in a job of its own whose result the gate reads, or as another user.
-- O-SELF4 [build 9 part 28]: a repository adopting Redline has no workflow to start from, since
+- O-LINK1 [closed, build 9 part 28]: check-links failed every scenario of a change whose S step was merged
+  and whose R wasn't, though at S they have no tests by design, so one change's merged S failed every
+  other change's R, G and C gates, and Redline's own suite on the S merge's push run, until its R
+  merged: changes of one phase couldn't run beside each other (§6). Now a change with only its S
+  merged on `main`, unless the step gated is its own from R on, or the change of a step gated at S,
+  has no unlinked gaps, its other gaps kept, by `waiting` in `redline/links.py`; a gate passes its
+  step, and check-links on its own reads it from `main..HEAD`'s trailers or the open step, printing
+  each waiting change as skipped (§5).
+- O-SELF4 [build 9 part 29]: a repository adopting Redline has no workflow to start from, since
   `.github/workflows/redline.yml` is Redline's own. The plan: `redline install workflow` writes one
   that installs Redline from the commit it was installed from, kept in step with Redline's own by
   a test.

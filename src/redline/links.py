@@ -6,6 +6,7 @@ in more than one change, is a duplicate; a change may restate a living scenario 
 A closed change's delta doesn't count: its C step is merged on main, so specs/ holds what it said.
 A `#### Scenario` line not in the form `HEADING` reads is a gap, not nothing (O-SPEC1).
 A `[manual]` scenario has no test, a linked one is a gap, and its block says why in one `Manual:` line (O-SPEC2).
+A change with only its S merged on main, or the gated step's own at S, has no tests yet, so no unlinked gaps (O-LINK1).
 Tracked and untracked files count; ignored ones don't.
 """
 
@@ -59,6 +60,7 @@ class LinkReport:
     scenarios: int = 0
     manual: int = 0
     gaps: list[str] = field(default_factory=list)
+    waiting: dict[str, int] = field(default_factory=dict)  # each change before its R step: its unlinked scenarios
 
 
 def grep(repo: Path, pattern: str, *paths: str) -> list[tuple[str, int, str]]:
@@ -73,10 +75,34 @@ def grep(repo: Path, pattern: str, *paths: str) -> list[tuple[str, int, str]]:
     return sorted(hits)
 
 
+def stepped(repo: Path, revs: str = "main") -> set[str]:
+    """The steps the `Redline-Step` trailers of `revs` name."""
+    log = git(repo, "log", revs, "--format=%(trailers:key=Redline-Step,valueonly)")
+    return {step for line in log.stdout.splitlines() if (step := line.strip())}
+
+
 def closed(repo: Path) -> set[str]:
     """The changes whose C step is merged on main: their deltas are a record, not declarations (§4)."""
-    log = git(repo, "log", "main", "--format=%(trailers:key=Redline-Step,valueonly)")
-    return {step[:-2] for line in log.stdout.splitlines() if (step := line.strip()).endswith("/C")}
+    return {step[:-2] for step in stepped(repo) if step.endswith("/C")}
+
+
+def current(repo: Path) -> str:
+    """The step main..HEAD's trailers name, else the open step, else "": check-links on its own."""
+    if len(named := stepped(repo, "main..HEAD")) == 1:
+        return named.pop()
+    from redline.start import open_step_file  # start imports premises, which imports this module
+    opened = open_step_file(repo)
+    return opened.read_text(encoding="utf-8").strip() if opened.is_file() else ""
+
+
+def waiting(repo: Path, step: str) -> set[str]:
+    """The changes with no tests yet by design (O-LINK1): those with only their S merged on main, unless `step`
+    is theirs from R on, and the change of a `step` at S."""
+    merged = stepped(repo)
+    changes = {name.partition("/")[0] for name in merged}
+    early = {c for c in changes if {n for n in merged if n.startswith(f"{c}/")} == {f"{c}/S"}}
+    own, _, at = step.partition("/")
+    return early | {own} if at == "S" else early - {own}
 
 
 def declarations(repo: Path, pattern: str = r"^#### Scenario") -> list[tuple[str, int, str]]:
@@ -86,7 +112,9 @@ def declarations(repo: Path, pattern: str = r"^#### Scenario") -> list[tuple[str
             if not (hit[0].startswith("redline/changes/") and hit[0].split("/")[2] in done)]
 
 
-def check_links(repo: Path) -> LinkReport:
+def check_links(repo: Path, step: str | None = None) -> LinkReport:
+    """`step`: the step gated, `<change>/<step>`; None reads it as check-links on its own does (`current`)."""
+    early = waiting(repo, current(repo) if step is None else step)
     declared: dict[str, list[tuple[str, int]]] = {}
     manual: set[str] = set()
     bad = []
@@ -123,6 +151,10 @@ def check_links(repo: Path) -> LinkReport:
             report.gaps += [f"manual scenario {sid} ({places[0][0]}:{places[0][1]}): a test links it ({path}:{line}); "
                             "tag it new or hold" for path, line in linked.get(sid, [])]
         elif sid not in linked:
+            owners = {p.split("/")[2] if p.startswith("redline/changes/") else "" for p, _ in places}
+            if len(owners) == 1 and (owner := owners.pop()) in early:  # its tests come at its R step
+                report.waiting[owner] = report.waiting.get(owner, 0) + 1
+                continue
             path, line = places[0]
             report.gaps.append(f"unlinked scenario {sid} ({path}:{line}): no test has a spec marker for it")
     for sid, places in sorted(linked.items()):

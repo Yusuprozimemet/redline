@@ -2,6 +2,8 @@ import pytest
 
 from redline.cli import main
 from redline.links import check_links
+from redline.pr import gates
+from test_start import CHANGE, change, fresh_branch, merge_step  # noqa: F401 (change is a fixture)
 
 SPEC = "redline/specs/toy/spec.md"
 DELTA = "redline/changes/add-bye/specs/toy/delta.md"
@@ -203,3 +205,58 @@ def test_a_test_file_that_doesnt_parse_is_a_gap(repo, capsys):
     assert code == 1
     assert out[0].startswith("unreadable test file tests/test_toy.py: invalid syntax")
     assert f"unlinked scenario TOY.S1 ({SPEC}:3): no test has a spec marker for it" in out
+
+
+UNLINKED = f"unlinked scenario TOY.S9 ({DELTA}:3): no test has a spec marker for it"
+
+
+def test_a_change_with_only_its_s_merged_on_main_has_no_unlinked_gaps_until_its_r(repo, capsys):  # O-LINK1
+    repo.commit("add-bye/S\n\nRedline-Step: add-bye/S", {DELTA: scenarios("TOY.S9")})
+    assert check_links(repo.path).gaps == []
+    assert run(repo, capsys) == (0, ["skipped add-bye: 1 scenarios, before its R step",
+                                     "ok: 1 scenarios, each linked to a test, except 1 before its change's R step"])
+    repo.commit("a typo", {"tests/test_toy.py": marked("TOY.TYPO")})
+    assert check_links(repo.path).gaps == ["unknown scenario TOY.TYPO (tests/test_toy.py:3): no spec declares it"]
+    repo.commit("add-bye/R\n\nRedline-Step: add-bye/R")
+    assert UNLINKED in check_links(repo.path).gaps
+
+
+def test_the_gated_steps_own_change_needs_its_tests_from_r_on(repo):
+    repo.commit("add-bye/S\n\nRedline-Step: add-bye/S", {DELTA: scenarios("TOY.S9")})
+    assert check_links(repo.path, "add-bye/R").gaps == [UNLINKED]
+    assert check_links(repo.path, "add-bye/S").gaps == []
+    assert check_links(repo.path, "add-hi/R").gaps == []
+
+
+def test_a_changes_own_s_step_waits_before_it_is_merged_and_no_trailer_on_main_doesnt(repo):
+    repo.commit("main")
+    repo.git("checkout", "-q", "-b", "spec")
+    repo.commit("the spec", {DELTA: scenarios("TOY.S9")})
+    assert check_links(repo.path, "add-bye/S").gaps == []
+    assert check_links(repo.path).gaps == [UNLINKED]
+
+
+def test_on_its_own_it_takes_the_step_from_the_branchs_trailers_or_else_the_open_step(repo, capsys):
+    repo.commit("add-bye/S\n\nRedline-Step: add-bye/S", {DELTA: scenarios("TOY.S9")})
+    repo.git("checkout", "-q", "-b", "r-step")
+    opened = repo.path / repo.git("rev-parse", "--git-path", "redline-open-step")
+    opened.write_text("add-bye/R\n", encoding="utf-8")
+    assert run(repo, capsys) == (1, [UNLINKED])
+    opened.unlink()
+    assert run(repo, capsys)[0] == 0
+    repo.commit("red tests\n\nRedline-Step: add-bye/R")
+    assert run(repo, capsys) == (1, [UNLINKED])
+
+
+def test_a_gate_from_r_on_needs_its_own_changes_tests_not_those_of_a_change_at_s(change):
+    merge_step(change, "S")
+    change.commit("add-bye/S\n\nRedline-Step: add-bye/S", {DELTA: scenarios("TOY.S9")})
+    fresh_branch(change, "g1")
+    links = [f for f in gates(change.path, "add-greet", "G1") if f.startswith("check-links")]
+    assert links == [f"check-links: unlinked scenario GREET.S{n} ({CHANGE}/specs/greet/delta.md:{line}): "
+                     "no test has a spec marker for it" for n, line in ((1, 5), (2, 10))]
+
+
+def test_a_living_scenario_a_waiting_change_modifies_still_needs_its_test(repo):
+    repo.commit("add-bye/S\n\nRedline-Step: add-bye/S", {SPEC: scenarios("TOY.S9"), DELTA: scenarios("TOY.S9")})
+    assert check_links(repo.path).gaps == [UNLINKED]
