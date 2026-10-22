@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from redline.audit import check_audit
-from redline.breaks import check_break
+from redline.breaks import check_break, holds
 from redline.ci import ci_pr, ci_push
 from redline.claims import claims
 from redline.close import check_close, tags
@@ -15,7 +15,7 @@ from redline.merged import merged
 from redline.links import check_links
 from redline.approval import Approvals
 from redline.lock import check_lock, write_lock
-from redline.order import check_order
+from redline.order import check_order, failed
 from redline.plan import check_plan
 from redline.planaudit import check_plan_audits
 from redline.pr import pr
@@ -153,6 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     notes: list[str] = []
     try:
         results = check_order(args.repo, args.rev, notes=notes)
+        bad = failed(results, set(holds(args.repo)))  # the gate's own count (O-SELF5)
     except RuntimeError as error:
         print(f"redline: {error}")
         return 2
@@ -163,9 +164,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ok {r.scenario}: red {r.red[:7]} is an ancestor of green {r.green[:7]}")
         elif r.status == "pending":
             print(f"pending {r.scenario}: red {r.red[:7]}, no green yet")
-        else:
+        elif r in bad:
             print(f"FAIL {r.scenario}: green {r.green[:7]} has no red commit among its ancestors")
-    return 1 if any(r.status == "fail" for r in results) else 0
+        elif not r.linked:
+            print(f"skipped {r.scenario}: no test at {args.rev} links it; its green {r.green[:7]} had no red")
+        else:
+            print(f"hold {r.scenario}: no red by design")
+    return 1 if bad else 0
 
 
 def run_check_lines(repo: Path, base: str | None) -> int:

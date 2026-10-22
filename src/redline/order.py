@@ -2,7 +2,8 @@
 
 For every scenario, each commit that introduces it as green (marker without `new=True`) must have
 a commit where it was red (`new=True`) among its ancestors. With `since`, only the commits of
-`since..rev` make a scenario red or turn it green: a change's window (redline.ledger).
+`since..rev` make a scenario red or turn it green: a change's window (redline.ledger). `failed` gives the failures a gate counts: none for a scenario no test
+at `rev` links any more, or a `hold` one (O-SELF5).
 Markers are read as each runner reads them (redline.runner), once per blob; a file that doesn't
 parse at a commit gives none there, and is noted. History is read in a fixed number of git calls,
 each commit's files being its first parent's with its diff applied (O-PERF1). See docs/design.md, §5.
@@ -23,6 +24,12 @@ class Result:
     status: str  # "ok", "pending" (red, no green yet) or "fail"
     red: str | None = None
     green: str | None = None
+    linked: bool = True  # a test at `rev` links it; if not, only history holds it (O-SELF5)
+
+
+def failed(results: list[Result], held: set[str]) -> list[Result]:
+    """The failures a gate counts: a scenario a test at `rev` still links, not `hold`, which has no red by design."""
+    return [r for r in results if r.status == "fail" and r.linked and r.scenario not in held]
 
 
 def git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -156,4 +163,7 @@ def check_order(repo: Path, rev: str = "HEAD", since: str | None = None, notes: 
                     result.status, result.red, result.green = ("ok", red, commit) if red else ("fail", None, commit)
     if notes is not None:
         notes += [f"skipped {path} at {commit[:7]}: {why}" for (path, why), commit in skipped.items()]
+    now = states[next(reversed(commits))] if commits else {}  # topological order: `rev` comes last
+    for result in results.values():
+        result.linked = result.scenario in now
     return sorted(results.values(), key=lambda r: r.scenario)

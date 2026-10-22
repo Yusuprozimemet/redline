@@ -80,7 +80,7 @@ Gates, run by `pr`, by CI or both, and each on its own:
 | `redline check-steps <change>` | `steps.md` is malformed, or lost an item or step since the merge-base |
 | `redline check-plan` | an initiative's plan is malformed, or a plan audit it needs is missing or stale |
 | `redline check-links` | a scenario has no test, or a test names no scenario |
-| `redline check-order` | a scenario turned green with no red commit before it |
+| `redline check-order` | a scenario a test still links, not `hold`, turned green with no red commit before it |
 | `redline check-break <change>` | a `hold` scenario's tests survive every mutant |
 | `redline check-lock <change>` | a frozen test changed without an approved departure |
 | `redline check-ledger <change>` | the committed ledger isn't what `main`'s history says |

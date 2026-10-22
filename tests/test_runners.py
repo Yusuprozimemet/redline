@@ -16,13 +16,28 @@ from redline.runner import install
 TOY = Path(__file__).parent / "toys" / "jest"
 pytestmark = pytest.mark.skipif(os.environ.get("REDLINE_REAL_RUNNERS") != "1",
                                 reason="the real Jest and Stryker run in the runners CI job")
+# Written by the toy fixture, never committed or read in Redline's tree: no spec there declares TOY.H1 or TOY.H2 (O-SELF5)
+TESTS = """const { spec } = require("../redline/runners/jest");
+const { adult } = require("./adult");
+
+spec("TOY.H1").test("a grown-up is an adult", () => {
+  expect(adult(30)).toBe(true);
+});
+
+spec("TOY.H2").test("an adult starts at 18", () => {
+  expect(adult(18)).toBe(true);
+  expect(adult(17)).toBe(false);
+});
+"""
 
 
 @pytest.fixture(scope="module")
 def toy():
     install(TOY, "jest")
+    (TOY / "src" / "adult.test.js").write_text(TESTS, encoding="utf-8")
     yield TOY
     shutil.rmtree(TOY / "redline")
+    (TOY / "src" / "adult.test.js").unlink()
 
 
 def jest(toy, *paths, sid=None) -> subprocess.CompletedProcess:

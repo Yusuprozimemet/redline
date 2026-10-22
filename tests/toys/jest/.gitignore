@@ -2,3 +2,4 @@ node_modules/
 redline/
 reports/
 .stryker-tmp/
+src/*.test.js

@@ -33,7 +33,7 @@ from redline.defects import check_defects
 from redline.lines import LIMIT, check_lines
 from redline.links import check_links
 from redline.lock import check_frozen, check_lock, read_lock
-from redline.order import check_order, git
+from redline.order import check_order, failed, git
 from redline.plan import ROOT, check_plan, parse_plan
 from redline.planaudit import check_plan_audits
 from redline.premises import check_premises
@@ -186,12 +186,8 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
         failures += [f"check-audit: {bad}" for bad in check_audit(repo, change).bad]
     else:
         failures += [f"check-links: {gap}" for gap in check_links(repo).gaps]
-        held = set(holds(repo))  # a hold test has no red by design
-        failures += [
-            f"check-order: {r.scenario}: green {r.green[:7]} has no red commit among its ancestors"
-            for r in check_order(repo)
-            if r.status == "fail" and r.scenario not in held
-        ]
+        failures += [f"check-order: {r.scenario}: green {r.green[:7]} has no red commit among its ancestors"
+                     for r in failed(check_order(repo), set(holds(repo)))]
     if step == "R":
         failures += [f"check-break: {sid}: {why}" for sid, why in check_break(repo, change).bad.items()]
     own = step == "R" or step.startswith("G")
