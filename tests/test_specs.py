@@ -1,5 +1,8 @@
+import pytest
+
 from redline.cli import main
 from redline.pr import gates
+from test_check_break import mutator  # noqa: F401 (a fixture)
 
 CHANGE = "redline/changes/add-greet"
 SPEC = "redline/specs/greet/spec.md"
@@ -109,10 +112,35 @@ def test_a_change_to_specs_the_deltas_dont_name_fails(repo, capsys):
     ]
 
 
-def test_pr_runs_it_at_the_c_step_only(repo, capsys):
+UNTOUCHED = "changed since the merge-base with main; only the C step writes redline/specs/, from its delta"
+
+
+def specs_gate(repo, step: str) -> list[str]:
+    return [f for f in gates(repo.path, "add-greet", step) if f.startswith("check-specs")]
+
+
+def test_at_c_it_compares_the_living_specs_with_the_delta(repo, capsys):
     on_c_branch(repo)
     assert f"check-specs: GREET.S1: ADDED, but {SPEC} doesn't have it" in gates(repo.path, "add-greet", "C")
-    assert not [f for f in gates(repo.path, "add-greet", "G1") if f.startswith("check-specs")]
+    repo.commit("merge the delta", {SPEC: MERGED})
+    assert specs_gate(repo, "C") == []
+
+
+@pytest.mark.parametrize("step", ["S", "R", "G1", "G2"])
+def test_before_c_a_step_leaves_the_living_specs_as_they_are(repo, mutator, step):
+    on_c_branch(repo)
+    assert specs_gate(repo, step) == []
+    repo.commit("merge the delta early", {SPEC: MERGED})
+    assert specs_gate(repo, step) == [f"check-specs: {SPEC} {UNTOUCHED}"]
+
+
+def test_before_c_a_spec_moved_or_added_names_each_file(repo, mutator):
+    on_c_branch(repo)
+    (repo.path / "redline/specs/hello").mkdir()
+    repo.git("mv", SPEC, "redline/specs/hello/spec.md")
+    repo.commit("move it and add a note", {"redline/specs/README.md": "Living specs.\n"})
+    assert specs_gate(repo, "G1") == [f"check-specs: {path} {UNTOUCHED}" for path in
+                                      ("redline/specs/README.md", SPEC, "redline/specs/hello/spec.md")]
 
 
 POLITE = "Greetings are polite.\n\n"
