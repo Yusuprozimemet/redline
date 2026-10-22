@@ -1867,16 +1867,18 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   four calls in ten, at random, so a push run whose merge carried a claim failed and lost its
   claims record more often than not. Now each `gh api` read, `GitHub.read`, is tried up to eight
   times, waiting 1, 2, then 3 seconds; pushing and opening a PR are tried once (§7).
-- O-DOC1 [build 9 part 24]: the README said steps 1–6 were on `main` when step 7 was too and
+- O-DOC1 [closed, build 9 part 24]: the README said steps 1–6 were on `main` when step 7 was too and
   step 5 wasn't finished, and had no install, commands, walkthrough or settings (the review's
-  item 16). The plan: say how to install Redline, list every command, walk one toy change from S
-  to C and list the repository settings; restate no progress, pointing to §11 and §12; and a test
-  that fails when its command table isn't the CLI's subcommands, it names a command that doesn't
-  exist, or it names other labels than `redline/approval.py`'s.
-- O-SET1 [build 9 part 24]: §7 rested on a protected `main`, the claim labels, an agent without a
+  item 16). Now it says how to install Redline and set up a repository, lists every command, walks
+  one toy change from S to C, checked by running it, and lists the repository settings as a
+  checklist; it restates no progress, pointing to §11 and §12; and `tests/test_readme.py` fails
+  when its command table isn't the CLI's subcommands, it names a command that doesn't exist, or it
+  names other labels than `redline/approval.py`'s.
+- O-SET1 [closed, build 9 part 24]: §7 rested on a protected `main`, the claim labels, an agent without a
   maintainer's role, no rebase merges and a person reviewing workflow changes, and listed none of
   them, so nothing told whoever sets up a repository what Redline needs (the review's item 7).
-  The plan: §7, Repository settings, lists each with the guarantee it holds up.
+  Now §7, Repository settings, lists each with the guarantee it holds up, and a test fails when
+  that list names other labels than `redline/approval.py`'s.
 - O-SELF1 [build 9, a later part]: Redline's own PRs carry no `Redline-Step` trailer, so they run
   outside any step, and its own red before green is a commit convention, not evidence (the
   review's item 17). The workflow installs the Redline the PR contains, so a PR that weakens a gate
