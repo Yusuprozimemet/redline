@@ -1979,14 +1979,14 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   `.github/workflows/redline.yml` is Redline's own. The plan: `redline install workflow` writes one
   that installs Redline from the commit it was installed from, kept in step with Redline's own by
   a test.
-- O-SELF5 [build 9 part 27]: Redline's own tree fails check-links and check-order, which every step
-  from R on runs: `tests/toys/jest/src/adult.test.js` links TOY.H1 and TOY.H2, which no spec
-  declares, and check-order reads their green with no red in af3968c, which stays in history. Its
-  Python toy markers sit in strings, which count as nothing (O-MARK1). And `redline check-order`
-  fails a `hold` scenario, which the gate skips. The plan: the toy's test file is written from a
-  string by the tests that run it, and ignored; check-order judges only scenarios a test at its
-  commit still links, and the gate and the command count failures with one function; and a test
-  fails when either gate fails on the repository (§5).
+- O-SELF5 [closed, build 9 part 27]: Redline's own tree failed check-links and check-order, which
+  every step from R on runs: `tests/toys/jest/src/adult.test.js` linked TOY.H1 and TOY.H2, which no
+  spec declares, and check-order read their green with no red in af3968c, which stays in history.
+  Its Python toy markers sit in strings, which count as nothing (O-MARK1). Now the toy's test file
+  is written from a string by the tests that run it and ignored; check-order judges only scenarios
+  a test at its commit still links, printing the others as skipped, and `redline check-order` skips
+  `hold` scenarios as the gate does, both through `failed` in `redline/order.py`; and
+  `tests/test_self.py` fails when either gate fails on Redline's own checkout (§5).
 - O-NOTE1 [build 9, the change note-run]: a note is trusted because CI writes it, but anyone with the
   `write` role, the agent's own account among them (§7, Repository settings), can push
   `refs/notes/redline-ci`, which no ruleset covers, and write `result: pass` or a `break:` map on
