@@ -593,8 +593,8 @@ add-sms-codes, and every commit that touches redline/initiatives/2fa-rollout/ or
 Left the plan: add-sms-codes in 9c0d1e2.
 
 ## 4d5e6f1 add-2fa/G2 (PR #12): Lock out after five wrong codes
-Redline-Departure: tests/test_login.py::test_lockout approved-by @maintainer: five, not three
-Label at the merge: redline:departure, applied by @alice, admin, at 2026-11-02T10:15:00Z, head pushed at 2026-11-02T09:40:12Z (CI note on 7a8b9c0)
+Redline-Departure: tests/test_login.py::test_lockout approved-by @alice: five, not three
+Label at the merge: redline:departure, applied by @alice, admin, at 2026-11-02T10:15:00Z, head pushed at 2026-11-02T09:40:12Z, trailer names @alice (CI note on 7a8b9c0)
 ```
 
 - **The changes** are every change any version of the plan on `main` listed: the plan at each
@@ -616,8 +616,9 @@ Label at the merge: redline:departure, applied by @alice, admin, at 2026-11-02T1
   claim merged, the first commit on `main`'s first-parent line that contains it, as for the
   ledger: the claim's label on the PR, who applied it last and their role, when CI ran on the
   merge, with when the label was applied and when the PR's head was pushed, as GitHub timed them
-  (`at <time>, head pushed at <time>`; a record written before build 9 part 21 has neither);
-  or that it wasn't on the PR, or that no merged PR was found. When that commit has no
+  (`at <time>, head pushed at <time>`; a record written before build 9 part 21 has neither),
+  and, for a departure or a manual check, the person its trailer names (`trailer names @<login>`;
+  a record written before build 9 part 22 has none); or that it wasn't on the PR, or that no merged PR was found. When that commit has no
   note, or its note has no record of the claim, `claims` says so (`Label at the merge: not
   recorded: …`) and then reads the label as CI reads it, now (`Label now: …`).
 
@@ -985,7 +986,8 @@ entry. Every other check still applies, so the lock must match the edited test. 
 missing `approved-by @person: <reason>` doesn't count. The test is everything before the last
 ` approved-by @`, so a Jest test whose name is a sentence can be named (O-RUN7). The trailer
 stays in `main`'s history, so the departure is recorded with its approver (§2.7). The trailer is
-only a claim, so in CI it also needs a maintainer's `redline:departure` label on the PR (§7).
+only a claim, so in CI it also needs a maintainer's `redline:departure` label on the PR, applied
+by the person the trailer names (§7).
 
 **One track per Green PR.** A G step's **track** is the code it may change: the `Track:` line
 under its heading in `steps.md`, a comma-separated list of globs, matched as `generated:` globs
@@ -1023,7 +1025,7 @@ on:
 - **A `hold` scenario without a break**, or one whose `result` isn't `pass`.
 - **A `manual` scenario without a person's check**: no `Redline-Manual: <ID> checked-by @person:
   <what was seen>` trailer naming it among the C PR's own commits (`base..HEAD`), or, in CI, no
-  maintainer's `redline:manual` label on the PR (§7). It has no evidence CI can give, and none
+  maintainer's `redline:manual` label on the PR, applied by the person the trailer names (§7). It has no evidence CI can give, and none
   from history stands in for it: a check made in an earlier PR read code a later step may have
   changed. A second trailer for the same scenario passes, and both are recorded.
 - **A `Redline-Manual` trailer that allows nothing**: one missing `checked-by @person: <text>`, or
@@ -1286,20 +1288,23 @@ result: pass
 run: https://github.com/acme/app/actions/runs/7
 claims:
 - commit: 4d5e6f1…
-  claim: 'Redline-Departure: tests/test_login.py::test_lockout approved-by @maintainer: five, not three'
+  claim: 'Redline-Departure: tests/test_login.py::test_lockout approved-by @alice: five, not three'
   pr: 12
   label: redline:departure
   by: alice
   role: admin
   at: '2026-11-02T10:15:00Z'
   pushed: '2026-11-02T09:40:12Z'
+  named: alice
 ```
 
 `pr` is null when GitHub associates no merged PR with the commit; `by`, `role` and `at` are null
 when the label isn't on the PR, and `pushed` when no push of the PR's head is found. `at` is when
 the label was last applied and `pushed` when the PR's head was last pushed, read as `redline ci
-pr` reads them (Approvals, below). The record judges nothing: a label applied by someone who
-isn't a maintainer, or before the head was pushed, is recorded as it is. A merge without claims gets no `claims:`, and `result:`, `run:`
+pr` reads them (Approvals, below). `named` is the person a departure's or a manual check's trailer
+names, read with the trailer's own form, and null for the three claims that name nobody. The
+record judges nothing: a label applied by someone who isn't a maintainer, by someone other than
+the named person, or before the head was pushed, is recorded as it is. A merge without claims gets no `claims:`, and `result:`, `run:`
 and `break:` are as before, so the ledger reads the note as it did. If GitHub can't be read, the
 note is written without the record and the run fails, so the result is kept and the gap is seen.
 A re-run of the push job keeps a record an earlier run wrote: labels read later are what the
@@ -1469,13 +1474,28 @@ One label covers every claim of its kind in the PR. The labels are separate, so 
 doesn't approve weakening a test. Both rules call one function, `approve` in
 `redline/approval.py`, which returns why a claim isn't approved, or nothing.
 
+**A named person approves their own claim.** A departure names who approved it (`approved-by
+@person`) and a manual check who made it (`checked-by @person`), and the trailer stays in `main`'s
+history as that person's word. So its label counts only when the person who applied it last is
+the person the trailer names, logins compared without case, as GitHub's are. Each trailer is
+approved on its own: two departures of one test, or two checks of one scenario, each name
+someone, and each must be the label's applier. One label has one last applier, so a PR whose
+trailers of one kind name two people fails the one the applier isn't, naming both: name the same
+person, or split the PR. Reading every `labeled` event instead wouldn't do: GitHub records none
+while the label is on, so the second person would first remove it, and an `unlabeled` event reads
+as a withdrawal. The applier must still be a maintainer, so the named person is one too. The
+trailer forms live in `redline/approval.py` beside `approve`, which takes the named person, so
+check-lock, check-close and the claims record read a name the same way. `Oversized`,
+`Redline-Track` and `Redline-Rigor` name nobody, and any maintainer's label approves them.
+
 `redline ci pr --pr <number>` reads the labels through the `GitHub` seam, and only when a claim
 needs one. The PR's issue events (`gh api repos/{owner}/{repo}/issues/<number>/events`) give, for
 each label still on the PR, who applied it last. That person is a maintainer when their role on
 the repository (`gh api repos/{owner}/{repo}/collaborators/<login>/permission`, `role_name`) is
 `admin` or `maintain`. The role comes from GitHub, not from a list in `redline/config.yaml`,
 because a PR can edit the config to name its own author. A claim fails when its label is missing,
-was applied by someone else, or there is no PR number. The workflow passes the number and a
+was applied by someone who isn't a maintainer or isn't the person its trailer names, or there is
+no PR number. The workflow passes the number and a
 read-only token, and also runs on `labeled` and `unlabeled`, so applying the label re-runs CI.
 
 **A label counts only for the head it was applied after.** A label isn't tied to a commit: one
@@ -1497,7 +1517,8 @@ label is applied again after it too. Both rules call `approve`, so every claim o
 read this way, and the push is read once, beside the labels, only when a claim needs a label.
 
 Locally there is no PR, so no label can exist yet. `redline pr` and `redline check-lock` don't
-refuse a claim. They print that CI will need its label. A trailer that allows nothing still fails.
+refuse a claim. They print that CI will need its label, and for a departure or a manual check who
+must apply it (`applied by @alice, a maintainer`). A trailer that allows nothing still fails.
 
 What the label still doesn't prove:
 
@@ -1506,10 +1527,10 @@ What the label still doesn't prove:
 - **What they saw.** The label is tied to when the head was pushed, not to what the maintainer
   read: one applied after the push by someone who never opened the PR passes. Nor does it cover
   the base: `main` moving after the label, with no push to the head, changes the diff a gate
-  reads, such as the lines check-lines counts, and the label still counts.
+  reads, such as the lines check-lines counts, and the label still counts. Nor which claims of
+  its kind they read: one label approves them all, so a maintainer named by two departures who
+  read one approves both, by design (one label covers every claim of its kind).
 - **The times.** The label's and the push's times are GitHub's, trusted as GitHub is (§12).
-- **That the named person agreed.** Any maintainer's label approves a departure or a manual
-  check, whoever its trailer names (O-APPR2).
 - **That the person looked, or at what.** A manual check's text is the person's word, about
   whatever they ran; the maintainer reads it on the C PR (§12).
 - **The role at the time.** The role is read when CI runs, not when the label was applied.
@@ -1644,7 +1665,9 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    requirement's prose and the text outside scenarios checked at C (O-CLOSE7); part 19,
    `redline/specs/` untouched before C (O-SPEC4); part 20, the toolchain pinned by hash, pip with it,
    and the runner images by version (O-CI9); part 21, a label counts only when applied after the
-   PR's head was pushed, and issue events split on `"\t"` (O-APPR1, O-GH2). Later parts take O-APPR2 and O-GH1. The review's other
+   PR's head was pushed, and issue events split on `"\t"` (O-APPR1, O-GH2); part 22, a departure's or
+   a manual check's label applied by the person its trailer names (O-APPR2). A later part takes
+   O-GH1. The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 11. **Per-scenario outcomes from CI** (O-CLOSE6, the review's item 19): each linked test's
@@ -1753,7 +1776,7 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
 - O-GH2 [closed, build 9 part 21]: `GitHub.labels` split each issue event on a literal tab
   character in its source (the review's item 18), so an editor that turned tabs into spaces would
   have broken every label read. Now it splits on `"\t"`, and a test fails on a tab in `pr.py`.
-- O-APPR2 [build 9]: any maintainer's label approves a departure, whoever its trailer names as
+- O-APPR2 [build 9 part 22]: any maintainer's label approves a departure, whoever its trailer names as
   approving, and a manual check, whoever its trailer names as checking (§7). The plan: the label's
   applier must be the person the trailer names.
 - O-GH1 [build 9]: the real `gh api` calls that read labels, roles, merged PRs, a PR's head and its pushes are tested only
