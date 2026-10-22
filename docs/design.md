@@ -1901,10 +1901,12 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   `redline/changes/`, its design text, proposal, delta and audit at S, its red tests at R, its code
   at G, its delta into `redline/specs/` at C, run through `start`, `pr` and `merged`; this closes
   when check-close has passed `note-run`'s C on Redline itself.
-- O-SELF2 [build 9 part 25]: a runner ran pytest with the Python Redline runs in, so the Redline that
-  gates a PR and the code its suite tests had to be one installation: a gate in an environment of
-  its own would import itself in the suite (O-SELF3). The plan: `redline ci pr --python <path>`
-  (§7).
+- O-SELF2 [closed, build 9 part 25]: a runner ran pytest with the Python Redline runs in, so the
+  Redline that gates a PR and the code its suite tests had to be one installation: a gate in an
+  environment of its own would import itself in the suite (O-SELF3). Now `redline ci pr --python
+  <path>` runs the suite and check-break's unmutated runs with that interpreter, through
+  `interpreter` in `redline/runner.py`, for that run only; a path that isn't a file, or the option
+  on `ci push`, is an error (§7).
 - O-SELF3 [build 9 part 26]: the workflow installs the Redline the PR contains, `pip install -e .`,
   so a PR that weakens a gate is checked by the weakened gate (the review's item 17). The plan: on
   a PR, install the Redline at the merge-base into an environment of its own, as §7 reads

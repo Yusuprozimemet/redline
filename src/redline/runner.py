@@ -3,7 +3,7 @@
 Each knows its test files, where each of its tests starts and ends, and the spec markers on each (the
 scenario ID, and whether it is `new`): pytest's from Python's own parser, a marker counting only as a
 test function's decorator; Jest's from `spec(` calls in code, found by a scanner that blanks comments, strings and templates;
-and the command that runs them. check-links, check-order and the lock all read markers through it. `redline install jest`
+and the command that runs them, pytest's with Redline's own Python unless `interpreter` gives another. check-links, check-order and the lock all read markers through it. `redline install jest`
 writes the Jest helper tests import; `check_helpers`, run by every gate, fails on one that differs
 from the copy Redline ships.
 """
@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from importlib.resources import files
@@ -174,9 +175,22 @@ def jest_tests(path: str, text: str) -> Iterator[tuple[str, str, tuple[Mark, ...
         yield test[2], text[found.start():closing(code, text.index("(", found.end()), path) + 1], (Mark(found[1], bool(found[2]), at),)
 
 
+PYTHON = [sys.executable]  # pytest's interpreter, the last pushed: another than the gate's own (§7, O-SELF2)
+
+
+@contextmanager
+def interpreter(python: str) -> Iterator[None]:
+    """Run pytest with `python` instead of Redline's own Python while the block lasts."""
+    PYTHON.append(python)
+    try:
+        yield
+    finally:
+        PYTHON.pop()
+
+
 def pytest_command(sid: str | None) -> tuple[list[str], dict[str, str]]:
     spec = [f"--redline-spec={sid}"] if sid else []
-    return [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *spec], {"PYTHONDONTWRITEBYTECODE": "1"}
+    return [PYTHON[-1], "-m", "pytest", "-q", "-p", "no:cacheprovider", *spec], {"PYTHONDONTWRITEBYTECODE": "1"}
 
 
 def jest_command(sid: str | None) -> tuple[list[str], dict[str, str]]:

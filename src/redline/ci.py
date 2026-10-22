@@ -6,7 +6,8 @@ steps.md at the merge-base (only S when there is none), every step before it mer
 itself not merged; and its phase ready, as `start` refuses, with the plans, the changes' steps.md, their
 levels and the plan audits read at the merge-base. Then the step's gates, the test suite (each runner's the
 repository uses, which fails when none is or when Jest is listed but can't run) and check-ledger against
-the base run, and every failure is reported. A PR with no trailer is outside any step: it may not
+the base run, and every failure is reported; with `--python` the suite and check-break's unmutated
+runs use that interpreter, so a gate installed apart can test the PR's own code. A PR with no trailer is outside any step: it may not
 touch a change, the lock or the specs, and gets check-lines, the rigor claim, check-plan, check-lock
 on every locked change and the suite; a `Redline-Manual` trailer fails there, as it is a C step's.
 A departure, an Oversized trailer or a manual check needs its label
@@ -23,6 +24,7 @@ Pushing sits behind `Remote`, which tests replace.
 
 import json
 import shutil
+from contextlib import nullcontext
 from pathlib import Path
 
 import yaml
@@ -38,7 +40,7 @@ from redline.approval import Approvals
 from redline.plan import check_plan
 from redline.planaudit import check_plan_audits
 from redline.pr import GitHub, gates, rigor_claim, size, touched
-from redline.runner import JEST, RUNNERS, Runner, check_helpers, run
+from redline.runner import JEST, RUNNERS, Runner, check_helpers, interpreter, run
 from redline.start import TRAILER, Refused, may_begin, merged_steps, next_step
 
 STEPS_ONLY = ("redline/changes/", "redline/contracts/", "redline/specs/")  # written only by a step's gates
@@ -109,7 +111,13 @@ def outside(repo: Path, base: str, approvals: Approvals) -> list[str]:
     return failures + suite(repo)
 
 
-def ci_pr(repo: Path, base: str, number: int | None = None) -> tuple[str, list[str]]:
+def ci_pr(repo: Path, base: str, number: int | None = None, python: str | None = None) -> tuple[str, list[str]]:
+    """`python`: run the suite and check-break's unmutated runs with it, not the gate's own (§7, O-SELF2)."""
+    with interpreter(python) if python else nullcontext():
+        return step_pr(repo, base, number)
+
+
+def step_pr(repo: Path, base: str, number: int | None) -> tuple[str, list[str]]:
     name = pr_step(repo, base)
     approvals = Approvals(GitHub(repo), number)
     if not name:
