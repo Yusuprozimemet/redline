@@ -76,6 +76,7 @@ BEFORE = "2026-10-22T09:59:59Z"
     (BEFORE, HEAD, f"`redline:oversized` was applied at {BEFORE}, before fffffff was pushed at {PUSHED}; apply it again"),
     (PUSHED, HEAD, f"`redline:oversized` was applied at {PUSHED}, before fffffff was pushed at {PUSHED}; apply it again"),
     ("2026-10-22T10:00:01Z", HEAD, None),
+    ("2026-10-22T10:00:00.500Z", HEAD, None),  # instants, not text: "." sorts before "Z"
     (LABELLED, None, "`redline:oversized` approves nothing: no push of the PR's head was found to check it against"),
 ])
 def test_a_label_counts_only_when_it_was_applied_after_the_heads_push(change, capsys, github, at, head, failure):
@@ -98,7 +99,8 @@ ANSWERS = {
                        "unlabeled\tredline:rigor\tbob\t2026-10-22T09:20:00Z\n"
                        "labeled\tredline:track\tcarol\t2026-10-22T11:00:00Z",
     "pulls/7": f"{SHA}\tfeature/x\ttoy/fork",
-    "activity": f"branch_deletion\t{'0' * 40}\t2026-10-22T12:00:00Z\n"
+    "activity": f"merge_queue_merge\t{SHA}\t2026-10-22T11:30:00Z\n"  # only a push makes the head
+                f"branch_deletion\t{'0' * 40}\t2026-10-22T12:00:00Z\n"
                 f"push\t{OTHER}\t2026-10-22T10:50:00Z\n"
                 f"force_push\t{SHA}\t2026-10-22T10:45:00Z\n"
                 f"push\t{SHA}\t2026-10-22T10:00:00Z\n"
