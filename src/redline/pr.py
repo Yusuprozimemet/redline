@@ -20,8 +20,9 @@ If every gate passes, each commit of the step gets the `Redline-Step: <change>/<
 
 import subprocess
 from pathlib import Path
+from urllib.parse import quote
 
-from redline.approval import OVERSIZED, RIGOR, Approvals, claims
+from redline.approval import OVERSIZED, RIGOR, Approvals, claims, moment
 from redline.audit import check_audit
 from redline.breaks import check_break, holds
 from redline.close import check_close, misplaced
@@ -60,18 +61,33 @@ class GitHub:
     def create_pr(self, title: str, body: str) -> str:
         return self.run("gh", "pr", "create", "--title", title, "--body", body)
 
-    def labels(self, number: int) -> dict[str, str]:
-        """Each label on the PR, with whoever applied it last."""
+    def labels(self, number: int) -> dict[str, tuple[str, str]]:
+        """Each label on the PR, with whoever applied it last and when, as GitHub timed it."""
         events = self.run("gh", "api", "--paginate", f"repos/{{owner}}/{{repo}}/issues/{number}/events", "--jq",
-                          '.[] | select(.event == "labeled" or .event == "unlabeled") | [.event, .label.name, .actor.login] | @tsv')
+                          '.[] | select(.event == "labeled" or .event == "unlabeled") '
+                          '| [.event, .label.name, .actor.login, .created_at] | @tsv')
         applied = {}
         for line in events.splitlines():
-            event, label, who = line.split("	")
+            event, label, who, at = line.split("\t")
             if event == "labeled":
-                applied[label] = who
+                applied[label] = (who, at)
             else:
                 applied.pop(label, None)
         return applied
+
+    def pushed(self, number: int) -> tuple[str, str] | None:
+        """The PR's head and when it was last pushed to the head branch, from GitHub's record of the branch's
+        pushes (the commit's own dates are its author's to set); None when no push of it is found."""
+        head = self.run("gh", "api", f"repos/{{owner}}/{{repo}}/pulls/{number}", "--jq",
+                        "[.head.sha, .head.ref, .head.repo.full_name // \"\"] | @tsv").split("\t")
+        if len(head) != 3 or not all(head):
+            return None
+        sha, ref, where = head
+        activity = self.run("gh", "api", "--paginate", f"repos/{where}/activity?ref={quote(f'refs/heads/{ref}')}&per_page=100",
+                            "--jq", ".[] | [.activity_type, .after, .timestamp] | @tsv")
+        times = [at for kind, after, at in (line.split("\t") for line in activity.splitlines() if line)
+                 if after == sha and kind in ("push", "force_push", "branch_creation")]
+        return (sha, max(times, key=moment)) if times else None
 
     def pulls(self, sha: str) -> list[int]:
         """The merged PRs GitHub associates with the commit."""

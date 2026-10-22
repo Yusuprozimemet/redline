@@ -14,8 +14,8 @@ on the PR (`--pr <number>`), read through `GitHub`. On a push to main, the suite
 recorded as a git note on the merged commit under refs/notes/redline-ci, which is then pushed.
 When the push merged an R step, check-break runs too, and the note gets each `hold` scenario's
 result under `break:`; a failed break fails the run. When the merged commits carry claim trailers,
-the note also gets `claims:`, each claim with its label on the merged PR, who applied it last and their
-role, read through `GitHub` (claims.record); a re-run keeps an earlier record, and a failed read
+the note also gets `claims:`, each claim with its label on the merged PR, who applied it last, their
+role and when, and when the PR's head was last pushed, read through `GitHub` (claims.record); a re-run keeps an earlier record, and a failed read
 writes none and fails the run. With `--note <file>` the note goes to the file, and nothing is added or
 pushed: the workflow's read-only job runs it so, and a job that runs no repository code writes the note.
 Pushing sits behind `Remote`, which tests replace.

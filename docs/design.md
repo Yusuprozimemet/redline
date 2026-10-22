@@ -1742,13 +1742,17 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   setuptools; the hashes are those of the wheels for CI's Pythons, written by `scripts/hashes.py`;
   and the jobs run on `ubuntu-24.04` and `windows-2025-vs2026` (§7). What a hosted runner still
   brings under the pins is a judgment, above.
-- O-APPR1 [build 9 part 21]: a label isn't tied to a commit, so commits pushed after it, with new claims,
-  are covered by it until someone removes it (§7). The plan: a claim's label counts only when it
-  was applied after the PR's head commit was pushed, the push's time read from the repository
-  activity API, and `redline ci push` records both times.
-- O-GH2 [build 9 part 21]: `GitHub.labels` split each issue event on a literal tab character in
-  its source (the review's item 18), so an editor that turned tabs into spaces would break every
-  label read, with no error but a failed unpack. The plan: split on `"\t"`.
+- O-APPR1 [closed, build 9 part 21]: a label isn't tied to a commit, so commits pushed after it,
+  with new claims, were covered by it until someone removed it, and each `synchronize` run read it
+  again and passed (§7). Now `approve` counts a claim's label only when its last `labeled` event is
+  later than the PR's head's last push, read through the `GitHub` seam from the repository activity
+  API of the head's repository, not from the commit's dates, which its author sets; a label at or
+  before the push, or a head with no push found, fails the claim with both times; and `redline ci
+  push` records `at:` and `pushed:` under `claims:`, which `redline claims` prints (§4, §7). What
+  the maintainer read, and a base that moves after the label, stay limits (§7).
+- O-GH2 [closed, build 9 part 21]: `GitHub.labels` split each issue event on a literal tab
+  character in its source (the review's item 18), so an editor that turned tabs into spaces would
+  have broken every label read. Now it splits on `"\t"`, and a test fails on a tab in `pr.py`.
 - O-APPR2 [build 9]: any maintainer's label approves a departure, whoever its trailer names as
   approving, and a manual check, whoever its trailer names as checking (§7). The plan: the label's
   applier must be the person the trailer names.

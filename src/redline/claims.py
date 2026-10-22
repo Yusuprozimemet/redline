@@ -52,11 +52,13 @@ def record(repo: Path, rev: str, github) -> list[dict]:
         return []
     number = next(iter(github.pulls(made[0][0])), None)
     applied = github.labels(number) if number else {}
+    head = github.pushed(number) if number else None
     entries = []
     for sha, key, value in made:
-        who = applied.get(LABELS[key])
+        who, at = applied.get(LABELS[key], (None, None))
         entries.append({"commit": sha, "claim": f"{key}: {value}", "pr": number, "label": LABELS[key],
-                        "by": who, "role": github.role(who) if who else None})
+                        "by": who, "role": github.role(who) if who else None, "at": at,
+                        "pushed": head[1] if head else None})
     return entries
 
 
@@ -83,7 +85,11 @@ def at_merge(entry: dict, merged: str) -> str:
         return f"Label at the merge: no merged PR found {where}\n"
     if entry.get("by") is None:
         return f"Label at the merge: {entry.get('label')}: not on PR #{entry['pr']} {where}\n"
-    return f"Label at the merge: {entry.get('label')}, applied by @{entry['by']}, {entry.get('role')} {where}\n"
+    when = ""  # a record written before build 9 part 21 has no times
+    if entry.get("at"):
+        pushed = entry.get("pushed")
+        when = f", at {entry['at']}, " + (f"head pushed at {pushed}" if pushed else "no push of the head found")
+    return f"Label at the merge: {entry.get('label')}, applied by @{entry['by']}, {entry.get('role')}{when} {where}\n"
 
 
 def label(github, applied: dict[int, dict[str, str]], number: int | None, name: str) -> str:
@@ -91,8 +97,9 @@ def label(github, applied: dict[int, dict[str, str]], number: int | None, name: 
         return "Label now: no merged PR found for this commit\n"
     if number not in applied:
         applied[number] = github.labels(number)
-    if (who := applied[number].get(name)) is None:
+    if name not in applied[number]:
         return f"Label now: {name}: not on PR #{number}\n"
+    who, _ = applied[number][name]
     return f"Label now: {name}, applied by @{who}, now {github.role(who)}\n"
 
 
