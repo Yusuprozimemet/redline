@@ -15,10 +15,12 @@ a deleted plan, or a change taken out of one, needs an approved `Redline-Rigor` 
 <reason>` trailer needs a maintainer's label, as a departure does (approval.py); locally, where
 the PR doesn't exist yet, `pr` only reports that CI will need it.
 If every gate passes, each commit of the step gets the `Redline-Step: <change>/<step>` trailer
-(once), the branch is pushed, the PR is opened with `gh`, and the step stops being open. Pushing and `gh` sit behind `GitHub`, which tests replace.
+(once), the branch is pushed, the PR is opened with `gh`, and the step stops being open. Pushing and `gh` sit behind `GitHub`, which tests replace;
+its `gh api` reads are retried, as GitHub answers 500 now and then, and tests/test_github.py makes them for real.
 """
 
 import subprocess
+import time
 from pathlib import Path
 from urllib.parse import quote
 
@@ -42,6 +44,8 @@ from redline.start import TRAILER, Refused, open_step_file, read_steps
 from redline.steps import check_steps, edited, since
 from redline.track import check_track
 
+TRIES = 8  # GitHub answers a read with HTTP 500 now and then (O-GH3)
+
 
 class GitHub:
     """Everything that goes over the network."""
@@ -55,6 +59,15 @@ class GitHub:
             raise RuntimeError(f"{' '.join(command[:3])}: {done.stderr.strip()}")
         return done.stdout.strip()
 
+    def read(self, *command: str) -> str:
+        """A `gh api` read, tried up to TRIES times, waiting a second longer each time up to three."""
+        for attempt in range(1, TRIES):
+            try:
+                return self.run(*command)
+            except RuntimeError:
+                time.sleep(min(attempt, 3))
+        return self.run(*command)
+
     def push(self, branch: str) -> None:
         self.run("git", "push", "-u", "origin", branch)
 
@@ -63,7 +76,7 @@ class GitHub:
 
     def labels(self, number: int) -> dict[str, tuple[str, str]]:
         """Each label on the PR, with whoever applied it last and when, as GitHub timed it."""
-        events = self.run("gh", "api", "--paginate", f"repos/{{owner}}/{{repo}}/issues/{number}/events", "--jq",
+        events = self.read("gh", "api", "--paginate", f"repos/{{owner}}/{{repo}}/issues/{number}/events", "--jq",
                           '.[] | select(.event == "labeled" or .event == "unlabeled") '
                           '| [.event, .label.name, .actor.login, .created_at] | @tsv')
         applied = {}
@@ -78,12 +91,12 @@ class GitHub:
     def pushed(self, number: int) -> tuple[str, str] | None:
         """The PR's head and when it was last pushed to the head branch, from GitHub's record of the branch's
         pushes (the commit's own dates are its author's to set); None when no push of it is found."""
-        head = self.run("gh", "api", f"repos/{{owner}}/{{repo}}/pulls/{number}", "--jq",
+        head = self.read("gh", "api", f"repos/{{owner}}/{{repo}}/pulls/{number}", "--jq",
                         "[.head.sha, .head.ref, .head.repo.full_name // \"\"] | @tsv").split("\t")
         if len(head) != 3 or not all(head):
             return None
         sha, ref, where = head
-        activity = self.run("gh", "api", "--paginate", f"repos/{where}/activity?ref={quote(f'refs/heads/{ref}')}&per_page=100",
+        activity = self.read("gh", "api", "--paginate", f"repos/{where}/activity?ref={quote(f'refs/heads/{ref}')}&per_page=100",
                             "--jq", ".[] | [.activity_type, .after, .timestamp] | @tsv")
         times = [at for kind, after, at in (line.split("\t") for line in activity.splitlines() if line)
                  if after == sha and kind in ("push", "force_push", "branch_creation")]
@@ -91,12 +104,12 @@ class GitHub:
 
     def pulls(self, sha: str) -> list[int]:
         """The merged PRs GitHub associates with the commit."""
-        found = self.run("gh", "api", f"repos/{{owner}}/{{repo}}/commits/{sha}/pulls", "--jq",
+        found = self.read("gh", "api", f"repos/{{owner}}/{{repo}}/commits/{sha}/pulls", "--jq",
                          ".[] | select(.merged_at != null) | .number")
         return [int(number) for number in found.split()]
 
     def role(self, login: str) -> str:
-        return self.run("gh", "api", f"repos/{{owner}}/{{repo}}/collaborators/{login}/permission", "--jq", ".role_name")
+        return self.read("gh", "api", f"repos/{{owner}}/{{repo}}/collaborators/{login}/permission", "--jq", ".role_name")
 
 
 def size(repo: Path, approvals: Approvals) -> list[str]:

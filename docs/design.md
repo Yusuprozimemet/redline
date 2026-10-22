@@ -1186,8 +1186,8 @@ does: no count refuses or fails.
 
 CI is `.github/workflows/redline.yml`, a thin wrapper around `redline ci`; every rule lives in the
 CLI. It checks out the full history, `main` and `refs/notes/*`. A second job, `runners`, runs the
-real Jest and Stryker on a toy project, and the real mutmut on toy repositories (§5), and records
-nothing. The mutmut toys hold a scenario whose test kills no mutant beside a test that kills them
+real Jest and Stryker on a toy project, the real mutmut on toy repositories (§5) and the real
+`gh api` calls on one of this repository's merged PRs (Approvals, below), and records nothing. The mutmut toys hold a scenario whose test kills no mutant beside a test that kills them
 all, so a kill credited to the wrong test shows. A repository with Jest tests
 installs Node and runs `npm ci` in its workflow before `redline ci`, so the suite can run them. A
 third job, `windows`, runs Redline's own suite on Windows with a read-only token, and records
@@ -1307,6 +1307,11 @@ record judges nothing: a label applied by someone who isn't a maintainer, by som
 the named person, or before the head was pushed, is recorded as it is. A merge without claims gets no `claims:`, and `result:`, `run:`
 and `break:` are as before, so the ledger reads the note as it did. If GitHub can't be read, the
 note is written without the record and the run fails, so the result is kept and the gap is seen.
+GitHub's own answers fail now and then: `commits/<sha>/pulls` answered HTTP 500 with an empty body
+to about four calls in ten when the real calls were first tested (O-GH3), each call alone, and
+GraphQL's `associatedPullRequests` to about one in six. So every `gh api` read the seam makes is
+tried up to eight times, waiting a second longer each time up to three seconds, and fails only when
+the eighth fails. Pushing and opening a PR aren't retried: they aren't reads.
 A re-run of the push job keeps a record an earlier run wrote: labels read later are what the
 record exists to avoid.
 
@@ -1331,7 +1336,9 @@ So the workflow's default token is `contents: read`, and each job says what it h
   out tree can't make git run code: hooks and filter drivers come from git's config, which a
   repository doesn't carry. The commit it notes is the workflow's, not something `redline` said,
   so merged code can choose only the text of its own merge commit's note, as before.
-- **`runners`** and **`windows`** hold `contents: read` and set `persist-credentials: false`.
+- **`runners`** and **`windows`** hold `contents: read` and set `persist-credentials: false`;
+  `runners` also holds `redline`'s `issues: read` and `pull-requests: read`, for the real `gh api`
+  calls (Approvals, below).
 
 A test reads the workflow and fails when any job but `note` holds `contents: write`, when a job
 that runs repository code keeps its credentials, and when `note` has a step that isn't
@@ -1535,7 +1542,25 @@ What the label still doesn't prove:
   whatever they ran; the maintainer reads it on the C PR (§12).
 - **The role at the time.** The role is read when CI runs, not when the label was applied.
 
-The real `gh api` calls are tested only by hand; the suite uses the fake (O-GH1).
+**The real calls are tested on this repository's own PR.** The suite reads GitHub through fakes and
+canned answers, which test what `approve` does with an answer, not that GitHub gives it: a field
+renamed, a jq path that selects nothing, a ref the activity API reads another way, or a time
+`moment` can't parse would each pass them. So `tests/test_github.py` makes every call the `GitHub`
+seam makes, through the seam, on PR #60, merged with known answers: `pulls` of its head gives 60;
+`pushed` gives its head and the activity API's `branch_creation` time, which `moment` parses;
+`labels` gives the one label still on it, with who applied it and when, after another was applied
+and removed; and `role` gives its author's role. One more test reads the PR's issue events one
+per page with `--paginate` and gets every line a single page gives, as `labels` and `pushed`
+rely on. PR #60 carries no claim, so its labels approve nothing and are recorded nowhere, and no
+PR claims `Oversized` to be tested.
+
+The tests are skipped unless `REDLINE_REAL_GITHUB` is set, and run in a step of the `runners` job,
+which holds the `redline` job's read permissions and token, so they read what CI's own token can,
+the activity API included. They aren't in `redline ci`'s suite: a GitHub outage or a changed API
+fails the `runners` job, where it is seen, and never a PR's gates or a merged commit's note. Nor
+do they run on Windows. If GitHub stops keeping PR #60's records, the tests fail and move to a
+newer PR. What they don't prove is a label that approves a claim in a real `redline ci pr` run:
+that reads the same calls, with the same token, through `approve`, which the canned answers test.
 
 ## 8. Rigor levels (on top of the invariants)
 
@@ -1666,8 +1691,9 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    `redline/specs/` untouched before C (O-SPEC4); part 20, the toolchain pinned by hash, pip with it,
    and the runner images by version (O-CI9); part 21, a label counts only when applied after the
    PR's head was pushed, and issue events split on `"\t"` (O-APPR1, O-GH2); part 22, a departure's or
-   a manual check's label applied by the person its trailer names (O-APPR2). A later part takes
-   O-GH1. The review's other
+   a manual check's label applied by the person its trailer names (O-APPR2); part 23, the real
+   `gh api` calls tested on this repository's own merged PR, and its reads retried (O-GH1, O-GH3).
+   The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 11. **Per-scenario outcomes from CI** (O-CLOSE6, the review's item 19): each linked test's
@@ -1785,9 +1811,19 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   locally check-lock and check-close say who must apply it; and `redline ci push` records `named:`
   under `claims:`, which `redline claims` prints (§4, §7). That one label approves every claim of
   its kind, read or not, stays a limit (§7).
-- O-GH1 [build 9]: the real `gh api` calls that read labels, roles, merged PRs, a PR's head and its pushes are tested only
-  by hand; the suite uses the fake (§7). Running Redline on itself (the review's item 17) would
-  call them on every claim; a test may call them on this repository's own PRs.
+- O-GH1 [closed, build 9 part 23]: the real `gh api` calls that read labels, roles, merged PRs, a
+  PR's head and its pushes were tested only by hand; the suite used fakes and canned answers, so a
+  renamed field, a jq path selecting nothing, the activity API's ref or a time `moment` can't parse
+  would have passed it. Now `tests/test_github.py` makes each call through the seam on merged PR
+  #60, whose answers are known, and reads its issue events one per page with `--paginate`, in a
+  step of the `runners` job holding the `redline` job's read permissions and token, skipped without
+  `REDLINE_REAL_GITHUB`, so GitHub down fails that job and never the gates (§7). That GitHub keeps
+  answering so is seen on every run there; Redline's own PRs run as steps stays the review's item 17.
+- O-GH3 [closed, build 9 part 23]: the seam failed a read on GitHub's first error, and testing the
+  real calls (O-GH1) found that `commits/<sha>/pulls` answers HTTP 500 with an empty body to about
+  four calls in ten, at random, so a push run whose merge carried a claim failed and lost its
+  claims record more often than not. Now each `gh api` read, `GitHub.read`, is tried up to eight
+  times, waiting 1, 2, then 3 seconds; pushing and opening a PR are tried once (§7).
 - O-LOCK1 [closed, build 5 part 3]: a departure's approval was a recorded line, not proof. Now
   `redline ci pr` checks a maintainer's `redline:departure` label, with the same function that
   checks `Oversized` (§7, Approvals), and §7 says what that still doesn't prove.
