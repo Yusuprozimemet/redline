@@ -1352,30 +1352,57 @@ a comment (`actions/checkout@11d5960…  # v4.4.0`), since a tag can be moved to
 action has one SHA throughout. Python and Node are exact versions: `3.12` gave Linux 3.12.15 and
 Windows 3.12.10 in one run, so Linux is `3.12.15` and Windows `3.12.10`, the last 3.12 GitHub
 builds for Windows (3.12's later releases are source-only security fixes); Node is `22.23.3`.
-Every `pip install` takes `-c constraints.txt`, which pins with `==` every package any job
-installs, on Linux and Windows, and no pip line pins a version of its own. The build backend is pinned in `pyproject.toml`'s `[build-system]` itself
-(`setuptools==84.2.1`), since whether `-c` reaches pip's isolated build environment depends on
-pip's version. `npm ci` already installs from the toy's `package-lock.json`.
+The runner images are named by version, never `-latest`, which GitHub moves to a new OS: Linux
+jobs run on `ubuntu-24.04`, and `windows` on `windows-2025-vs2026`, since `windows-2025` already
+changed its Visual Studio once under the one label.
 
-Tests read the workflow: every `uses:` is a 40-hex SHA with a `# vX.Y.Z` tag, every
-`python-version` and `node-version` is `X.Y.Z`, and every `pip install` has `-c constraints.txt`
-and no `==`; and every dependency and extra in `pyproject.toml`, and pytest-xdist, has an `==`
-line in the file. A constraints file pins only what it names, so a release that adds a dependency
-would install it unpinned. So one more test, which runs only in GitHub Actions, follows what the
-pip lines pull in, from the installed metadata: Redline's requirements, its `mutation` extra where
-mutmut is installed and pytest-xdist where it is, and their requirements in turn. It fails on any
-of those that isn't in the file at the version installed. It runs with the suite, in the `redline`
-and `windows` jobs. It follows requirements, not every installed distribution, because a runner
-image brings tools of its own that no job installs or runs: Windows' Python carries pipx and its
+Every package pip installs is pinned by version and by hash. Each job that installs runs three
+lines, in this order, and no other pip line:
+
+1. `python -m pip install --require-hashes --force-reinstall -r requirements-pip.txt`: pip itself,
+   so the pinned pip installs the rest, not the one the Python came with.
+2. `python -m pip install --require-hashes --force-reinstall -r requirements.txt`: every package
+   any job installs, each `==` with its sha256 hashes. pip refuses a file whose hash isn't listed,
+   and a package the file lacks, so a dependency a new release adds can't come in unpinned.
+   `--force-reinstall` is there because pip doesn't check the hash of a package already installed
+   at the pinned version, and Windows' Python comes with pipx's `packaging`.
+3. `python -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index -e .`:
+   Redline itself, which has no single file to hash, so `--require-hashes` refuses it. It downloads
+   nothing, and builds with the setuptools line 2 installed, which must be `[build-system]`'s
+   `setuptools==84.2.1`.
+
+A marker keeps mutmut, and what only it needs, off Windows, where it doesn't run, so every job
+installs the one file. `npm ci` already installs from the toy's `package-lock.json`, whose sha512
+hashes it checks.
+
+The hashes are those of the wheels that install on CI's Pythons, CPython 3.12 on Linux x86_64 and
+on Windows x64, not of every file PyPI holds for the version: that was 398 hashes, against 29,
+and an sdist, which would run its build, isn't among them. The pins are kept by hand, and
+`scripts/hashes.py`, on any platform, rewrites each pin's hash lines from PyPI's JSON API, as the
+files' headers say. A bump is a PR outside any step, gated like any other.
+
+Tests read the workflow and both files: every `uses:` is a 40-hex SHA with a `# vX.Y.Z` tag;
+every `python-version` and `node-version` is `X.Y.Z`; no `runs-on` ends in `-latest`, and each
+names a version; each job that runs pip runs the three lines in order, and no other, with no `==`;
+every line of the files is a comment or an `==` pin with at least one sha256; pip is pinned;
+setuptools is pinned as in `[build-system]`; and every dependency and extra in `pyproject.toml`,
+and pytest-xdist, is pinned. pip refuses what the file lacks, but line 3 doesn't resolve
+Redline's own requirements. So one more test, which runs only in GitHub Actions, follows what the
+jobs installed, from the metadata: Redline's requirements, its `mutation` extra where mutmut is
+installed and pytest-xdist where it is, and their requirements in turn. It fails on any of those
+that isn't in the file at the version installed. It runs with the suite, in the `redline` and
+`windows` jobs. It follows requirements, not every installed distribution, because a runner image
+brings tools of its own that no job installs or runs: Windows' Python carries pipx and its
 dependencies.
-The pins are kept current by hand: the file's header gives the command that regenerates it, and a
-bump is a PR outside any step, gated like any other.
 
 What it doesn't prove: that GitHub enforces the permissions it is given, or that the actions the
 jobs use are sound: a pin stops a moved tag from changing them, but the pinned commit is trusted as
-it is. The toolchain is pinned by version, not by hash, so an index serving other files under a
-version isn't caught; the runner images (`ubuntu-latest`, `windows-latest`), and pip, which comes
-with the pinned Python, change with GitHub's updates (O-CI9). Nor does it prove the note's text, which merged code
+it is. Nor that the files the hashes were taken from were sound: they are PyPI's when the pins
+were last rewritten, and a file that was bad then stays trusted. Nor what GitHub's hosted runners
+bring under the pins: a version label still gets a new image build every week, git and the shell
+among it (each run's log names its build), and setup-python and setup-node fetch a version's
+Python and Node builds from a manifest they read as they run, which no hash of Redline's checks
+(§12). Nor does it prove the note's text, which merged code
 still writes for its own merge commit, as it runs the suite that says `pass`. A token with
 `contents: write` held elsewhere, a maintainer's or an agent's given one, still writes any note
 (§4).
@@ -1588,7 +1615,8 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    scenario heading not in its form a failure (O-SPEC1); part 16, a `[manual]` scenario and its
    `Manual:` line (O-SPEC2); part 17, its check recorded at C as a claim (O-SPEC3); part 18, a
    requirement's prose and the text outside scenarios checked at C (O-CLOSE7); part 19,
-   `redline/specs/` untouched before C (O-SPEC4). Later parts take O-CI9, O-APPR1, O-APPR2 and O-GH1. The review's other
+   `redline/specs/` untouched before C (O-SPEC4); part 20, the toolchain pinned by hash, pip with it,
+   and the runner images by version (O-CI9). Later parts take O-APPR1, O-APPR2 and O-GH1. The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 11. **Per-scenario outcomes from CI** (O-CLOSE6, the review's item 19): each linked test's
@@ -1623,9 +1651,12 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   set is named by the departure's spec, which the auditor reads at S.
 - **What Redline can't observe**: what an agent read, and that its reply was written unedited
   (§4, §9); who pressed a label's button, and the role a person had before CI ran (§7); that
-  GitHub enforces the permissions it is given, and that a pinned action's commit is sound; and
-  the note's text, which merged code writes for its own merge commit by running the suite (§7).
-  Each is recorded where it applies; none has a mechanism Redline could add.
+  GitHub enforces the permissions it is given, and that a pinned action's commit is sound; that
+  PyPI's files were sound when their hashes were taken; what a hosted runner brings under the pins,
+  its image's weekly build under a version label and the Python and Node builds the setup actions
+  fetch by version (a container pinned by digest would only move that trust to its registry and
+  its package manager); and the note's text, which merged code writes for its own merge commit by
+  running the suite (§7). Each is recorded where it applies; none has a mechanism Redline could add.
 - **What the claims record leaves out** (§4): PR text, which is untrusted and an injection path
   into the process auditor's context, so it is left out on purpose; and a claim in an earlier
   commit of a PR merged by rebase, since the push run reads the merged commit's own range.
