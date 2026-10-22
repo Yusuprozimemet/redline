@@ -641,7 +641,7 @@ What it still doesn't prove:
   after it as present, and a re-run's record reads them as late as it runs.
 - **A PR merged by rebase**: the push run reads the claims of the merged commit and its first
   parent's range only, as it reads the step (§7), so a claim in an earlier commit of the PR gets
-  no record. Redline needs merge commits or squash merges, a repository setting (§12).
+  no record. Redline needs merge commits or squash merges, a repository setting (§7, Repository settings).
 - **A claim that should have been made**: a PR merged over a gate, without CI or with it failing,
   has no trailer to print. It shows only that the record holds no claim there.
 - **PR text**: descriptions and review comments aren't printed, on purpose: they are untrusted
@@ -1562,6 +1562,44 @@ do they run on Windows. If GitHub stops keeping PR #60's records, the tests fail
 newer PR. What they don't prove is a label that approves a claim in a real `redline ci pr` run:
 that reads the same calls, with the same token, through `approve`, which the canned answers test.
 
+### Repository settings
+
+CI's answers count only where GitHub is set up to honour them. These settings are the
+repository's, not Redline's: no gate makes them, and a PR can't see whether they hold. Each of
+these guarantees rests on one, and without it the guarantee is a convention:
+
+1. **A ruleset on `main`** that requires a pull request and the `redline` status check, and blocks
+   force pushes and deletion. Without it a PR merges whether `redline` passes or not: the 400-line
+   gate, every claim's label and the C step's check-close and check-specs (§1) are advice, and the
+   push run only records `result: fail` after the merge. Only `redline` is required: `runners` and
+   `windows` record nothing, and a GitHub outage fails `runners` (Approvals, above), which mustn't
+   hold up a merge.
+2. **The five labels** of the Approvals table: `redline:departure`, `redline:oversized`,
+   `redline:track`, `redline:rigor` and `redline:manual`. Without them no claim can be approved,
+   so every PR that makes one fails.
+3. **The agent in an account of its own, with the `write` role.** The agent runs `gh` with the
+   credentials it is given. With a maintainer's, a label it applies is that maintainer's, and
+   `approve` passes it (Approvals, "Who pressed the button"). With its own account, its role reads
+   `write`, which isn't `admin` or `maintain`, so its labels approve nothing, with no change to
+   Redline. A maintainer is then not the author of its PRs, so the ruleset can require their
+   review before a merge, the maintainer's role in §9. `write` still pushes
+   `refs/notes/redline-ci`, which no ruleset covers (§4), so the agent can write a note on any
+   commit (O-NOTE1).
+4. **Merge commits or squash merges only.** The push run reads the step and the claims of the
+   merged commit's own range, `<merged>^..<merged>`, so a PR merged by rebase records no claim but
+   its last commit's (§4).
+5. **CODEOWNERS** naming a maintainer for `.github/` and `redline/config.yaml`, with code-owner
+   review required by the ruleset. On `pull_request`, GitHub runs the PR's own workflow file, so a
+   PR can change what its own CI runs, which no gate sees; and the config holds the rules and
+   globs every gate reads. It needs item 3's second account: GitHub doesn't ask an author to
+   review their own PR.
+
+The README repeats the list as a setup checklist. A test fails when the README or this list names
+other labels than `redline/approval.py`'s.
+
+What it doesn't prove: that the settings are set, or stay so. Whoever administers the repository
+can change them between two runs, and is trusted as the maintainer is (§12).
+
 ## 8. Rigor levels (on top of the invariants)
 
 | Level | Adds |
@@ -1692,7 +1730,9 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    and the runner images by version (O-CI9); part 21, a label counts only when applied after the
    PR's head was pushed, and issue events split on `"\t"` (O-APPR1, O-GH2); part 22, a departure's or
    a manual check's label applied by the person its trailer names (O-APPR2); part 23, the real
-   `gh api` calls tested on this repository's own merged PR, and its reads retried (O-GH1, O-GH3).
+   `gh api` calls tested on this repository's own merged PR, and its reads retried (O-GH1, O-GH3);
+   part 24, the README brought up to date, kept in step with the CLI by a test, and the
+   repository settings Redline rests on listed in §7 (O-DOC1, O-SET1).
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
@@ -1743,6 +1783,9 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
 - **What a new spec file says outside its requirements, and the order of requirements** (§5): a
   delta has no form for a file's title and preamble, or for where a requirement sits, and neither
   states behaviour a test proves. The maintainer reads both on the C PR.
+- **Whether the repository's settings hold** (§7, Repository settings): its administrator sets
+  them and can change them between two runs, so a gate that read them would prove only that they
+  held when it ran. The administrator is trusted as the maintainer is.
 
 - O-SPEC1 [closed, build 9 part 15]: every gate found scenarios by `#### Scenario <ID>
   [new|hold]:`, so a heading with an unknown tag, such as the `[manual]` §12 once suggested, or with
@@ -1824,6 +1867,28 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   four calls in ten, at random, so a push run whose merge carried a claim failed and lost its
   claims record more often than not. Now each `gh api` read, `GitHub.read`, is tried up to eight
   times, waiting 1, 2, then 3 seconds; pushing and opening a PR are tried once (§7).
+- O-DOC1 [build 9 part 24]: the README said steps 1–6 were on `main` when step 7 was too and
+  step 5 wasn't finished, and had no install, commands, walkthrough or settings (the review's
+  item 16). The plan: say how to install Redline, list every command, walk one toy change from S
+  to C and list the repository settings; restate no progress, pointing to §11 and §12; and a test
+  that fails when its command table isn't the CLI's subcommands, it names a command that doesn't
+  exist, or it names other labels than `redline/approval.py`'s.
+- O-SET1 [build 9 part 24]: §7 rested on a protected `main`, the claim labels, an agent without a
+  maintainer's role, no rebase merges and a person reviewing workflow changes, and listed none of
+  them, so nothing told whoever sets up a repository what Redline needs (the review's item 7).
+  The plan: §7, Repository settings, lists each with the guarantee it holds up.
+- O-SELF1 [build 9, a later part]: Redline's own PRs carry no `Redline-Step` trailer, so they run
+  outside any step, and its own red before green is a commit convention, not evidence (the
+  review's item 17). The workflow installs the Redline the PR contains, so a PR that weakens a gate
+  is checked by the weakened gate; and a repository adopting Redline has no workflow to start
+  from, since `.github/workflows/redline.yml` is Redline's own. The plan: run Redline's build steps
+  through `start`, `pr` and `merged` with their own specs, gate each PR with the Redline on
+  `main`, and ship a workflow that installs Redline from a pinned commit.
+- O-NOTE1 [build 9, a later part]: a note is trusted because CI writes it, but anyone with the
+  `write` role, the agent's own account among them (§7, Repository settings), can push
+  `refs/notes/redline-ci`, which no ruleset covers, and write `result: pass` or a `break:` map on
+  any commit (§4). The plan: the rebuild checks each note's `run:` against GitHub's Actions API: a
+  push run of the workflow, on that commit, whose outcome is the note's `result:`.
 - O-LOCK1 [closed, build 5 part 3]: a departure's approval was a recorded line, not proof. Now
   `redline ci pr` checks a maintainer's `redline:departure` label, with the same function that
   checks `Oversized` (§7, Approvals), and §7 says what that still doesn't prove.
