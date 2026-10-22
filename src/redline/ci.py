@@ -8,7 +8,8 @@ levels and the plan audits read at the merge-base. Then the step's gates, the te
 repository uses, which fails when none is or when Jest is listed but can't run) and check-ledger against
 the base run, and every failure is reported. A PR with no trailer is outside any step: it may not
 touch a change, the lock or the specs, and gets check-lines, the rigor claim, check-plan, check-lock
-on every locked change and the suite. A departure or an Oversized trailer needs its label
+on every locked change and the suite; a `Redline-Manual` trailer fails there, as it is a C step's.
+A departure, an Oversized trailer or a manual check needs its label
 on the PR (`--pr <number>`), read through `GitHub`. On a push to main, the suite runs and its result is
 recorded as a git note on the merged commit under refs/notes/redline-ci, which is then pushed.
 When the push merged an R step, check-break runs too, and the note gets each `hold` scenario's
@@ -28,6 +29,7 @@ import yaml
 
 from redline.breaks import check_break
 from redline.claims import note, record
+from redline.close import misplaced
 from redline.ledger import NOTES, check_ledger
 from redline.lines import is_generated
 from redline.lock import check_lock, read_lock
@@ -103,7 +105,7 @@ def outside(repo: Path, base: str, approvals: Approvals) -> list[str]:
     diff = git(repo, "diff", "--name-only", "--no-renames", fork.stdout.strip(), "HEAD")
     if touched := [p for p in diff.stdout.splitlines() if p.startswith(STEPS_ONLY)]:
         raise Refused(f"outside any step a PR can't touch a change, the lock or the specs: {', '.join(touched)}")
-    failures = size(repo, approvals) + rigor_claim(repo, approvals)
+    failures = size(repo, approvals) + rigor_claim(repo, approvals) + misplaced(repo, base)
     failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad + check_plan_audits(repo)]
     failures += [f"check-helpers: {bad}" for bad in check_helpers(repo)]
     for change in sorted(read_lock(repo)):  # no Redline-Step, so no departure: the lock can't change here

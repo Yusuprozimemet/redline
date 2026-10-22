@@ -1603,12 +1603,13 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   one is a gap; check-links and check-steps fail the line missing, empty, repeated or under
   another tag, with one function, `unreasoned` in `redline/links.py`; check-specs carries it into
   `specs/`; its ledger entry has no evidence; and check-close refuses it until O-SPEC3 (§4).
-- O-SPEC3 [build 9 part 17]: a `[manual]` scenario can't close, since check-close has no way to
-  record a person's check of it (§5). The plan: a fifth claim, `Redline-Manual: <ID> checked-by
-  @person: <what was seen>`, one per manual scenario in the C PR's own commits, with a
-  maintainer's `redline:manual` label (§7), which `redline ci push` records under `claims:` and
-  `redline claims` prints; a trailer missing `checked-by @person: <text>`, one that names no
-  manual scenario of the change, and one in any PR that isn't a C step fail.
+- O-SPEC3 [closed, build 9 part 17]: a `[manual]` scenario couldn't close, since check-close had
+  no way to record a person's check of it (§5). Now it is the fifth claim, `Redline-Manual: <ID>
+  checked-by @person: <what was seen>`, in the C PR's own commits, with a maintainer's
+  `redline:manual` label (§7), which `redline ci push` records under `claims:` and `redline
+  claims` prints; check-close fails a manual scenario without one, a trailer missing `checked-by
+  @person: <text>` and one naming no manual scenario of the change, and takes `--base`; a trailer
+  in any PR that isn't a C step fails, with one function, `misplaced` in `redline/close.py`.
 - O-CLOSE6 [build 11]: check-close takes a scenario's red, green or break from the whole suite's
   result on the merged commit, so a test skipped or not collected there passes with it (§5). The
   plan: each linked test's outcome in the note, red the first commit where the scenario's `new`

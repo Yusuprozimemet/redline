@@ -3,7 +3,8 @@
 A trailer in the PR's own commits makes a claim: `Redline-Departure` lets a frozen test's lock
 entry change, `Oversized` lets the PR pass 400 lines, `Redline-Track` lets a G step change files
 outside its track, `Redline-Rigor` lets the config's default level or a plan's level change, a plan be deleted or a change
-be taken out of one. In CI the claim needs its label, read
+be taken out of one, and `Redline-Manual` lets a `manual` scenario close at the C step with a person's check
+(close.py). One label covers every claim of its kind. In CI the claim needs its label, read
 through the `GitHub` seam. Locally there is no PR yet, so the claim is noted as pending instead.
 """
 
@@ -15,6 +16,7 @@ DEPARTURE = "redline:departure"
 OVERSIZED = "redline:oversized"
 TRACK = "redline:track"
 RIGOR = "redline:rigor"
+MANUAL = "redline:manual"
 MAINTAINER = ("admin", "maintain")
 
 
