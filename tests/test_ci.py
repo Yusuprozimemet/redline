@@ -220,8 +220,28 @@ def test_the_workflow_runs_redline_ci_on_prs_and_on_pushes_to_main():
     assert triggers["pull_request"]["branches"] == ["main"]
     assert triggers["push"]["branches"] == ["main"]
     runs = [step.get("run", "") for job in flow["jobs"].values() for step in job["steps"]]
-    assert any("redline ci pr" in run for run in runs)
+    assert any('redline" ci pr' in run for run in runs)  # the merge-base's, by its path
     assert any("redline ci push" in run for run in runs)
+
+
+def test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own():  # O-SELF3
+    flow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    steps = flow["jobs"]["redline"]["steps"]
+    runs = [step.get("run", "") for step in steps]
+    install = next(i for i, run in enumerate(runs) if "git worktree add" in run)
+    assert install < next(i for i, run in enumerate(runs) if "--no-index -e ." in run)  # before any of the PR's code
+    assert steps[install]["if"] == "github.event_name == 'pull_request'"
+    assert [line.strip() for line in runs[install].splitlines()][:3] == [
+        'git worktree add --detach "$RUNNER_TEMP/base" "$(git merge-base main HEAD)"',
+        'python -m venv "$RUNNER_TEMP/gate"',
+        'cd "$RUNNER_TEMP/base"',
+    ]
+    pr = [step for job in flow["jobs"].values() for step in job["steps"] if "ci pr" in step.get("run", "")]
+    assert len(pr) == 1 and pr[0]["if"] == "github.event_name == 'pull_request'"
+    assert pr[0]["run"].strip() == ('"$RUNNER_TEMP/gate/bin/redline" ci pr --base main --pr '
+                                    '${{ github.event.pull_request.number }} --python "$(command -v python)"')
+    push = next(step for step in steps if "ci push" in step.get("run", ""))
+    assert push["run"].startswith("redline ci push ")  # the merged code is main's, so it gates itself
 
 
 def test_a_push_with_note_writes_the_note_to_the_file_and_adds_and_pushes_nothing(change, capsys, remote, tmp_path):

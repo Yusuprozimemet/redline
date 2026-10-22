@@ -1206,6 +1206,37 @@ Jest's command has no Python. A path that isn't a file is an error, never a fall
 own. The path is the workflow's word, as every line CI runs is, and on a PR the workflow is the PR's
 own (Repository settings, CODEOWNERS). `redline ci push` and the local commands take no such option.
 
+**The merge-base's Redline gates each PR.** Redline's own workflow installs the Redline the PR
+contains, `pip install -e .`, for the suite to test; gated by that one, a PR that weakens a gate
+would be checked by the weakened gate. So on a pull request the `redline` job first adds the
+merge-base with `main` as a worktree in `$RUNNER_TEMP`, and installs that tree, not editable,
+into a venv of its own with the three hashed pip lines (below), run with the venv's Python and
+reading the merge-base's own requirements files. That runs before the PR's own pip lines, so no
+code of the PR's has run yet. The gate step then calls that venv's `redline` by its path:
+`redline ci pr --base main --pr <n> --python "$(command -v python)"`, the setup-python
+environment that holds the PR's own Redline, which the suite tests. Everything else is read at
+the merge-base already (above), so the gate's code is now read there too. A push run is unchanged:
+its merged code is `main`. So are `runners` and `windows`, which test the PR's own code and record
+nothing. A PR that changes `ci pr`'s options can't use them in its own workflow, since the
+merge-base's Redline doesn't have them yet; the next PR is the first gated with them, as this one
+was the first gated with `--python`. An adopting repository installs a pinned Redline, which its
+PRs don't contain, and needs none of this.
+
+What it doesn't prove:
+
+- **The workflow.** On `pull_request` GitHub runs the PR's own workflow file, so a PR can call its
+  own `redline` again; the gate holds only with CODEOWNERS on `.github/` (Repository settings,
+  item 5).
+- **The pytest plugin.** Redline's own suite runs the PR's plugin, so strict xfail on `new` tests
+  is the PR's own code under test, like the note's text (§12, Judgments): one process imports one
+  `redline`, so the gate can't put its own plugin in the PR's pytest. In an adopting repository the
+  plugin is the pinned Redline's.
+- **The job.** The PR's code runs in the gate's job, as the same user: its `pip install -e .`, its
+  suite and check-break's runs. It could rewrite a file the gate imports later, a lazy import in the
+  standard library or a file in the venv or the setup-python toolcache; `redline/ci.py` imports
+  Redline's own modules before the suite runs, which narrows this and doesn't close it. In an
+  adopting repository the gate shares its site-packages with the code under test (O-CI10).
+
 **Text is UTF-8, on every platform.** Windows' Python decodes and prints text in the code page
 (cp1252) unless told otherwise, while git writes, and Redline's files hold, UTF-8. So every file
 Redline reads or writes says `encoding="utf-8"`, and a file that isn't UTF-8 is an error. What it
@@ -1401,6 +1432,9 @@ lines, in this order, and no other pip line:
    nothing, and builds with the setuptools line 2 installed, which must be `[build-system]`'s
    `setuptools==84.2.1`.
 
+The `redline` job runs them twice: first the gate's, in the merge-base's worktree with the
+venv's Python, line 3 installing `.`, not `-e .` (above); then the PR's own.
+
 A marker keeps mutmut, and what only it needs, off Windows, where it doesn't run, so every job
 installs the one file. `npm ci` already installs from the toy's `package-lock.json`, whose sha512
 hashes it checks.
@@ -1413,7 +1447,8 @@ files' headers say. A bump is a PR outside any step, gated like any other.
 
 Tests read the workflow and both files: every `uses:` is a 40-hex SHA with a `# vX.Y.Z` tag;
 every `python-version` and `node-version` is `X.Y.Z`; no `runs-on` ends in `-latest`, and each
-names a version; each job that runs pip runs the three lines in order, and no other, with no `==`;
+names a version; each job that runs pip runs the three lines in order, and no other, with no `==`,
+`redline` the gate's three before them;
 every line of the files is a comment or an `==` pin with at least one sha256; pip is pinned;
 setuptools is pinned as in `[build-system]`; and every dependency and extra in `pyproject.toml`,
 and pytest-xdist, is pinned. pip refuses what the file lacks, but line 3 doesn't resolve
@@ -1423,7 +1458,9 @@ installed and pytest-xdist where it is, and their requirements in turn. It fails
 that isn't in the file at the version installed. It runs with the suite, in the `redline` and
 `windows` jobs. It follows requirements, not every installed distribution, because a runner image
 brings tools of its own that no job installs or runs: Windows' Python carries pipx and its
-dependencies.
+dependencies. It follows the setup-python environment the suite runs in, not the gate's venv,
+which installs the merge-base's `requirements.txt`, the file that passed it on the merge-base's
+push run.
 
 What it doesn't prove: that GitHub enforces the permissions it is given, or that the actions the
 jobs use are sound: a pin stops a moved tag from changing them, but the pinned commit is trusted as
@@ -1748,7 +1785,8 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    --python`, so the suite can test the PR's code while another Redline gates it (O-SELF2); part 26,
    each PR gated by the Redline at its merge-base (O-SELF3); part 27, Redline's own tree passing its
    gates (O-SELF5); then the change `note-run`, Redline's first build step run as a change, S, R, G1
-   and C (O-NOTE1, O-SELF1); part 28, a workflow an adopting repository installs (O-SELF4).
+   and C (O-NOTE1, O-SELF1); part 28, a workflow an adopting repository installs (O-SELF4); part 29,
+   the PR's code run apart from the gate's job (O-CI10).
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
@@ -1790,7 +1828,9 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   its image's weekly build under a version label and the Python and Node builds the setup actions
   fetch by version (a container pinned by digest would only move that trust to its registry and
   its package manager); and the note's text, which merged code writes for its own merge commit by
-  running the suite (§7). Each is recorded where it applies; none has a mechanism Redline could add.
+  running the suite (§7); and, in Redline's own suite, the PR's pytest plugin, which applies strict
+  xfail to the PR's own tests, since one process imports one `redline` (§7, the merge-base's
+  Redline). Each is recorded where it applies; none has a mechanism Redline could add.
 - **What the claims record leaves out** (§4): PR text, which is untrusted and an injection path
   into the process auditor's context, so it is left out on purpose; and a claim in an earlier
   commit of a PR merged by rebase, since the push run reads the merged commit's own range.
@@ -1907,11 +1947,17 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   <path>` runs the suite and check-break's unmutated runs with that interpreter, through
   `interpreter` in `redline/runner.py`, for that run only; a path that isn't a file, or the option
   on `ci push`, is an error (§7).
-- O-SELF3 [build 9 part 26]: the workflow installs the Redline the PR contains, `pip install -e .`,
-  so a PR that weakens a gate is checked by the weakened gate (the review's item 17). The plan: on
-  a PR, install the Redline at the merge-base into an environment of its own, as §7 reads
-  everything else there, and run its `redline ci pr --python` with the environment that holds the
-  PR's own Redline, which the suite tests. A push run's merged code is `main`, so it is unchanged.
+- O-SELF3 [closed, build 9 part 26]: the workflow installed the Redline the PR contains, `pip
+  install -e .`, so a PR that weakened a gate was checked by the weakened gate (the review's item
+  17). Now, on a PR, the `redline` job installs the merge-base's Redline, not editable, into a venv
+  of its own with the merge-base's pins, before any of the PR's code runs, and calls that venv's
+  `redline ci pr --python "$(command -v python)"`, so the suite tests the PR's own Redline; a push
+  run is unchanged (§7, the merge-base's Redline).
+- O-CI10 [build 9 part 29]: the PR's code, its install, suite and check-break's runs, runs in the
+  gate's job as the same user, so it could rewrite a file the gate imports after it, in the
+  standard library, the gate's venv or, in an adopting repository, the site-packages it shares
+  with the gate (§7, the merge-base's Redline). The plan: the PR's code runs where it can't write
+  the gate's files, in a job of its own whose result the gate reads, or as another user.
 - O-SELF4 [build 9 part 28]: a repository adopting Redline has no workflow to start from, since
   `.github/workflows/redline.yml` is Redline's own. The plan: `redline install workflow` writes one
   that installs Redline from the commit it was installed from, kept in step with Redline's own by
