@@ -47,7 +47,7 @@ the tests import.
    a push to `main` runs `redline ci push --note <file>` in a read-only job and hands the note to a
    job that runs git alone to add and push it. Redline's own
    [workflow](.github/workflows/redline.yml) is the model; its `redline` and `note` jobs are the
-   part every repository needs. There is no workflow to copy yet (O-SELF1).
+   part every repository needs. There is no workflow to copy yet (O-SELF4).
 4. **The repository settings** Redline's guarantees rest on. Without them a gate is advice. Each is
    explained in [§7, Repository settings](docs/design.md#repository-settings):
    - [ ] A ruleset on `main`: require a pull request and the `redline` status check; block force

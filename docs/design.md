@@ -1194,6 +1194,18 @@ third job, `windows`, runs Redline's own suite on Windows with a read-only token
 nothing either. It runs pytest, not `redline ci`: mutmut doesn't run on Windows, and a skipped
 break fails the run (§5).
 
+**The suite can run with another Python than the gate's.** A runner's commands run pytest as
+`<python> -m pytest`, the suite's and check-break's unmutated runs alike (§5), and `<python>` is the
+interpreter Redline itself runs in. That is right where Redline and the project share one
+environment, as in a repository that installs a pinned Redline beside its own packages. It isn't
+for Redline itself: a gate the PR can't edit must sit in an environment of its own (O-SELF3), and
+the gate and the code under test are both the package `redline`, so a suite run with the gate's
+Python would import the gate and test it, not the PR. So `redline ci pr --python <path>` runs those
+commands with that interpreter instead. mutmut is already the one on `PATH`, the project's, and
+Jest's command has no Python. A path that isn't a file is an error, never a fallback to the gate's
+own. The path is the workflow's word, as every line CI runs is, and on a PR the workflow is the PR's
+own (Repository settings, CODEOWNERS). `redline ci push` and the local commands take no such option.
+
 **Text is UTF-8, on every platform.** Windows' Python decodes and prints text in the code page
 (cp1252) unless told otherwise, while git writes, and Redline's files hold, UTF-8. So every file
 Redline reads or writes says `encoding="utf-8"`, and a file that isn't UTF-8 is an error. What it
@@ -1732,7 +1744,11 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    a manual check's label applied by the person its trailer names (O-APPR2); part 23, the real
    `gh api` calls tested on this repository's own merged PR, and its reads retried (O-GH1, O-GH3);
    part 24, the README brought up to date, kept in step with the CLI by a test, and the
-   repository settings Redline rests on listed in §7 (O-DOC1, O-SET1).
+   repository settings Redline rests on listed in §7 (O-DOC1, O-SET1); part 25, `redline ci pr
+   --python`, so the suite can test the PR's code while another Redline gates it (O-SELF2); part 26,
+   each PR gated by the Redline at its merge-base (O-SELF3); part 27, Redline's own tree passing its
+   gates (O-SELF5); then the change `note-run`, Redline's first build step run as a change, S, R, G1
+   and C (O-NOTE1, O-SELF1); part 28, a workflow an adopting repository installs (O-SELF4).
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
@@ -1879,14 +1895,31 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   them, so nothing told whoever sets up a repository what Redline needs (the review's item 7).
   Now §7, Repository settings, lists each with the guarantee it holds up, and a test fails when
   that list names other labels than `redline/approval.py`'s.
-- O-SELF1 [build 9, a later part]: Redline's own PRs carry no `Redline-Step` trailer, so they run
-  outside any step, and its own red before green is a commit convention, not evidence (the
-  review's item 17). The workflow installs the Redline the PR contains, so a PR that weakens a gate
-  is checked by the weakened gate; and a repository adopting Redline has no workflow to start
-  from, since `.github/workflows/redline.yml` is Redline's own. The plan: run Redline's build steps
-  through `start`, `pr` and `merged` with their own specs, gate each PR with the Redline on
-  `main`, and ship a workflow that installs Redline from a pinned commit.
-- O-NOTE1 [build 9, a later part]: a note is trusted because CI writes it, but anyone with the
+- O-SELF1 [build 9, the change note-run]: Redline's own PRs carry no `Redline-Step` trailer, so they
+  run outside any step, and its own red before green is a commit convention, not evidence (the
+  review's item 17). The plan: from the change `note-run` on, each build part is a change under
+  `redline/changes/`, its design text, proposal, delta and audit at S, its red tests at R, its code
+  at G, its delta into `redline/specs/` at C, run through `start`, `pr` and `merged`; this closes
+  when check-close has passed `note-run`'s C on Redline itself.
+- O-SELF2 [build 9 part 25]: a runner ran pytest with the Python Redline runs in, so the Redline that
+  gates a PR and the code its suite tests had to be one installation: a gate in an environment of
+  its own would import itself in the suite (O-SELF3). The plan: `redline ci pr --python <path>`
+  (§7).
+- O-SELF3 [build 9 part 26]: the workflow installs the Redline the PR contains, `pip install -e .`,
+  so a PR that weakens a gate is checked by the weakened gate (the review's item 17). The plan: on
+  a PR, install the Redline at the merge-base into an environment of its own, as §7 reads
+  everything else there, and run its `redline ci pr --python` with the environment that holds the
+  PR's own Redline, which the suite tests. A push run's merged code is `main`, so it is unchanged.
+- O-SELF4 [build 9 part 28]: a repository adopting Redline has no workflow to start from, since
+  `.github/workflows/redline.yml` is Redline's own. The plan: `redline install workflow` writes one
+  that installs Redline from the commit it was installed from, kept in step with Redline's own by
+  a test.
+- O-SELF5 [build 9 part 27]: Redline's own tree fails check-links and check-order, which every step
+  from R on runs: `tests/toys/jest/src/adult.test.js` links TOY.H1 and TOY.H2, which no spec
+  declares. Its 12 toy marker lines in Python sit in strings, which count as nothing (O-MARK1). The
+  plan: the toy's test file is written by the tests that use it, from a string, and a test fails
+  when either gate fails on the repository.
+- O-NOTE1 [build 9, the change note-run]: a note is trusted because CI writes it, but anyone with the
   `write` role, the agent's own account among them (§7, Repository settings), can push
   `refs/notes/redline-ci`, which no ruleset covers, and write `result: pass` or a `break:` map on
   any commit (§4). The plan: the rebuild checks each note's `run:` against GitHub's Actions API: a
