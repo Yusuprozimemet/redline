@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from redline.cli import main
+from redline.pr import gates
 from test_ledger import LEDGER, RED, land
 from test_pr import RED_TESTS
 from test_start import DELTA, STEPS, change, fresh_branch, merge_step  # noqa: F401 (change is a fixture)
@@ -110,6 +111,14 @@ def test_a_step_already_merged_is_refused(change, capsys):
     out = step_pr(change, capsys, "add-greet/R", ("S", "R"))
     assert "refused: add-greet/R is already merged on main: a step is one PR" in out
     assert "check-" not in out
+
+
+def test_a_step_before_c_that_edits_the_living_specs_fails_as_the_local_pr_says(change, capsys):
+    out = step_pr(change, capsys, "add-greet/G1", ("S", "R"))
+    line = ("check-specs: redline/specs/greet/spec.md changed since the merge-base with main; "
+            "only the C step writes redline/specs/, from its delta")
+    assert line in out.splitlines()
+    assert line in gates(change.path, "add-greet", "G1")
 
 
 def test_a_change_with_no_steps_md_at_the_merge_base_can_only_be_at_its_s_step(change, capsys):
