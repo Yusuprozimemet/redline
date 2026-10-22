@@ -16,7 +16,7 @@ FIRST = {"D1": "premise", "D2": "test", "D3": "premise"}
 
 def labels(**causes: str) -> str:
     entries = {d: {"cause": c, "note": f"the text of {d} says so."} for d, c in {**FIRST, **causes}.items() if c}
-    return "# Relabel: add-greet\n" + yaml.safe_dump(entries)
+    return "# Relabel: add-greet\n# Model: claude-fable-5-1\n" + yaml.safe_dump(entries)
 
 
 @pytest.fixture
@@ -110,7 +110,27 @@ def test_the_relabeller_is_read_only_on_the_strongest_model_and_returns_a_relabe
     front = yaml.safe_load(front)
     assert front["name"] == "redline-relabeller"
     assert {t.strip() for t in front["tools"].split(",")} == {"Read"}
-    assert front["model"] == "fable"
-    assert "REFUSED: the relabeller runs only on a Claude Fable model" in body
-    example = yaml.safe_load(re.search(r"```yaml\n(# Relabel: .+?)```", body, re.S)[1])
+    assert (front["model"], front["effort"]) == ("fable", "max")
+    assert "REFUSED: the relabeller runs only on a Claude Fable or Opus model" in body
+    shown = re.search(r"```yaml\n(# Relabel: .+?)```", body, re.S)[1]
+    assert shown.splitlines()[1].startswith("# Model: "), "the example names its model before the first entry"
+    example = yaml.safe_load(shown)
     assert all(e["cause"] in (*CAUSES, "unclear") and e["note"] for e in example.values())
+
+
+@pytest.mark.parametrize(("model", "why"), [
+    (None, f"{RELABEL}: no `# Model:` line; the relabeller names the model it ran on in a `# Model:` line before the first entry"),
+    ("claude-sonnet-5-5", f"{RELABEL}:2: # Model: claude-sonnet-5-5 is neither a Fable nor an Opus model; "
+                          "run the relabeller on Fable, or on Opus at max effort"),
+    ("claude-opus-5-5", None),
+], ids=["none", "sonnet", "opus"])
+def test_a_relabel_names_a_fable_or_opus_model(logged, capsys, model, why):
+    named = labels().replace("# Model: claude-fable-5-1\n", f"# Model: {model}\n" if model else "")
+    logged.commit("relabel", {RELABEL: named})
+    assert check(logged, capsys) == ((1, why + "\n") if why else (0, "ok: 3 defects relabelled blind, 0 disagreements\n"))
+
+
+def test_a_model_line_after_the_first_entry_names_nothing(logged, capsys):
+    late = labels().replace("# Model: claude-fable-5-1\n", "") + "# Model: claude-fable-5-1\n"
+    logged.commit("relabel", {RELABEL: late})
+    assert check(logged, capsys)[1].startswith(f"{RELABEL}: no `# Model:` line;")

@@ -36,7 +36,8 @@ of being taken on the agent's word.
    commits and a maintainer's `redline:oversized` label (§7).
 4. **One session per step.** A step is one PR. A merge ends the session.
 5. **An independent audit before code.** A read-only agent in a fresh context, on the strongest
-   model. If that model isn't available, the work stops; it never falls back to a weaker one.
+   model, Fable; when Fable isn't available, on Opus at its highest effort, and never on a weaker
+   one: below that the work stops. Each audit records the model that wrote it (§9).
 6. **The CLI observes; the agent never certifies.** Evidence is whatever CI ran.
 7. **Nothing is silent.** Every departure, waiver or deferral is a recorded line with an owner.
 
@@ -173,9 +174,12 @@ followed by a symbol in brackets. `redline check-premises` checks that the file 
 are within it, and the symbol is on them; a premise with no citation fails too.
 
 Audit findings, written by the auditor only (closing a finding is a re-audit, never the main
-session's word); a waiver names the person who approved it:
+session's word); a waiver names the person who approved it. Before the first finding, a `Model:`
+line names the model the auditor ran on (§9):
 
 ```markdown
+# Audit: add-2fa
+Model: claude-fable-5-1
 ## F1 [open]: P2 is wrong; `auth/login.py:30` already calls `verify_code`
 ## F2 [closed]: P1 cited the wrong line
 Resolution: P1 now cites `auth/session.py:42`
@@ -183,8 +187,9 @@ Resolution: P1 now cites `auth/session.py:42`
 Waived-by: @maintainer: timing is a manual check (O2)
 ```
 
-`pr` at S refuses if `audit.md` is missing, or any finding is `[open]`, a `[closed]` one has no
-`Resolution:` or a `[waived]` one has no `Waived-by:`.
+`pr` at S refuses if `audit.md` is missing, has no `Model:` line naming a Fable or Opus model, or
+any finding is `[open]`, a `[closed]` one has no `Resolution:` or a `[waived]` one has no
+`Waived-by:`.
 
 A test is linked to its scenario with a marker, e.g. `@pytest.mark.spec("AUTH.2FA.S1")`. A marker
 counts only where its runner reads one: pytest's as a decorator of a test function, Jest's as a
@@ -707,6 +712,7 @@ says whether the causes, and so `retro`'s rules, can be trusted:
 
 ```yaml
 # Relabel: add-2fa
+# Model: claude-fable-5-1
 D1:
   cause: premise
   note: P2 claimed where the counter lived, and the code showed otherwise.
@@ -715,6 +721,7 @@ D2:
   note: The entry says the fix was in a later step but not what was wrong.
 ```
 
+The `# Model:` comment, before the first entry, names the model the relabeller ran on (§9).
 `cause` is one label of the table, or `unclear` when the text doesn't let it choose; `note` is one
 sentence on what decided it. A disagreement, where the second label isn't the `Cause:` line, is
 decided by the maintainer or the main session in a `Decided: <reason>` line under the defect in
@@ -725,6 +732,7 @@ disagreement too: an entry nobody else can label is a weak record.
 
 - **A missing `relabel.yaml`** at the C step, at critical. Below critical it is optional; if it
   exists, it is checked. Run on its own, the command checks as at C.
+- **No `# Model:` line naming a Fable or Opus model** before the first entry (§9).
 - **A defect with no label**, or a label for an ID the log doesn't have. A defect added after the
   relabel needs the relabeller run again; a re-run keeps every earlier entry.
 - **A label not in the table** and not `unclear`, or an entry without a `note`.
@@ -1696,34 +1704,51 @@ proposal is on `main` is the rigor claim, a maintainer's decision (§7, Approval
 |---|---|---|
 | Maintainer (a person) | — | Merge; approve waivers, departures, `Oversized` |
 | Main session | Strong | Specs, briefs, review, breaks, PRs |
-| Auditor | Strongest, fresh context | Read and report only |
-| Plan-auditor | Strongest, fresh context | Read and report on an initiative's phase, at its start and end |
-| Relabeller | Strongest, fresh context | Label defects from their text, blind to the first label |
-| End-of-initiative auditors (3) | Strongest, fresh context each | Read and report on a whole initiative, each from one side, none reading another |
+| Auditor | Strongest (Fable, else Opus at max), fresh context | Read and report only |
+| Plan-auditor | The same, fresh context | Read and report on an initiative's phase, at its start and end |
+| Relabeller | The same, fresh context | Label defects from their text, blind to the first label |
+| End-of-initiative auditors (3) | The same, fresh context each | Read and report on a whole initiative, each from one side, none reading another |
 | Implementer | Cheaper | Code from a brief; never commits |
 
 The CLI holds the rules; each AI tool gets thin skills or commands, as in OpenSpec.
 
 For Claude Code the auditor is `.claude/agents/redline-auditor.md`: tools `Read, Grep, Glob` only,
-`model: fable`, and it refuses on any other model rather than run on a weaker one. Claude Code
+`model: fable` and `effort: max`. Claude Code
 can't limit Write to one file, so the auditor stays read-only and replies with the whole
 `audit.md`, which the main session writes unedited. A re-run reads the old `audit.md`, keeps
 every finding and closes only what it has checked. The `Waived-by:` line is the maintainer's.
 
+**When Fable isn't available**, as when its usage runs out, the main session runs the agent with
+Opus instead (the Agent tool's `model: opus`), and the definition's `effort: max` keeps the
+highest effort. The agent refuses any model but a Claude Fable or Opus one, replying `REFUSED:`,
+so below Opus the work still stops. Its reply's header, before the first finding, has a `Model:`
+line naming the model it ran on, as its system prompt gives it. check-audit fails an audit with no
+such line, or one that names neither Fable nor Opus; the plan and end-of-initiative audits are
+read by the same function, `read_findings` in `redline/audit.py`, so they fail the same way. The
+relabeller's is a `# Model:` comment, which check-relabel reads. A Fable audit once Fable is back
+is welcome, a re-run like any other, but no gate asks for it: a gate that did would hold the work
+up as long as Fable is gone.
+
+What it doesn't prove: that Fable was unavailable, which is the main session's word, though the
+`Model:` line shows which model ran; that the agent ran at max effort, which the definition sets
+and no agent can see; and that the `Model:` line is true, since the agent writes it as it writes
+its findings, and the main session writes the reply unedited (§12, Judgments).
+
 The relabeller (§4, blind relabelling) is `.claude/agents/redline-relabeller.md`, the same way:
-tool `Read` only, `model: fable`, and the same refusal. It is given the text `redline blind`
+tool `Read` only, `model: fable`, `effort: max`, and the same fallback. It is given the text `redline blind`
 prints and, on a re-run, the old `relabel.yaml`, whose entries it keeps unchanged. It labels
 only from the entries' text, reads no other file, and replies with the whole `relabel.yaml`.
 
 The plan-auditor (§4, plan audits) is `.claude/agents/redline-plan-auditor.md`: tools `Read,
-Grep, Glob`, `model: fable`, the same refusal. It is given `<initiative> phase <n> start|end
+Grep, Glob`, `model: fable`, `effort: max`, the same fallback. It is given `<initiative> phase <n> start|end
 with plan <blob>`, reads the old audit file on a re-run with the auditor's rules, and replies with
-the whole file, its `Plan:` line the blob it was given.
+the whole file, its `Plan:` line the blob it was given, and its `Model:` line after it.
 
 The end-of-initiative auditors (§4) are `redline-security-auditor.md`,
 `redline-architecture-auditor.md` and `redline-process-auditor.md`, the same way: `Read, Grep,
-Glob`, `model: fable`, the same refusal. Each is given `<initiative> with plan <blob>`, reads no
-other audit file but its own, and replies with the whole `initiative-<side>.md`, `Plan:` line too.
+Glob`, `model: fable`, `effort: max`, the same fallback. Each is given `<initiative> with plan <blob>`, reads no
+other audit file but its own, and replies with the whole `initiative-<side>.md`, `Plan:` and
+`Model:` lines too.
 The process auditor is also given the text `redline claims <initiative>` prints (§4), and without
 it opens a finding: the record's claims are out of its sight.
 
@@ -1814,9 +1839,10 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    --python`, so the suite can test the PR's code while another Redline gates it (O-SELF2); part 26,
    each PR gated by the Redline at its merge-base (O-SELF3); part 27, Redline's own tree passing its
    gates (O-SELF5); part 28, a change's scenarios needing tests only from its R step on, in every
-   change's gates (O-LINK1); then the change `note-run`, Redline's first build step run as a change,
-   S, R, G1 and C (O-NOTE1, O-SELF1); part 29, a workflow an adopting repository installs (O-SELF4);
-   part 30, the PR's code run apart from the gate's job (O-CI10).
+   change's gates (O-LINK1); part 29, the auditors on Opus at max effort when Fable isn't
+   available, each audit naming its model (O-AUDIT1); then the change `note-run`, Redline's first
+   build step run as a change, S, R, G1 and C (O-NOTE1, O-SELF1); part 30, a workflow an adopting
+   repository installs (O-SELF4); part 31, the PR's code run apart from the gate's job (O-CI10).
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
@@ -1845,6 +1871,11 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   premises cite are mutated, at the R step only, each scenario's runners stopping at the first
   kill (§5). A run that takes too long fails CI where it is seen. How much to cite is the
   auditor's, who checks the premises.
+- **What an Opus audit misses that Fable would have caught** (§9): when Fable isn't available the
+  auditors run on Opus at max effort, and the main session that wrote the spec may be Opus too, so
+  the two can share blind spots that a fresh context narrows and doesn't remove. Waiting for Fable
+  instead could hold the work up without end. The `Model:` line shows which audits ran so; whether
+  to have Fable audit one again is the maintainer's call.
 - **What `reach` can't follow** (§5): a static reading doesn't run the code, so dynamic imports,
   plugins and renamed fixtures are out of its sight, and following every import would hash the
   code under test. At critical, whether a locked test leans on one is the auditor's.
@@ -1983,7 +2014,7 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   of its own with the merge-base's pins, before any of the PR's code runs, and calls that venv's
   `redline ci pr --python "$(command -v python)"`, so the suite tests the PR's own Redline; a push
   run is unchanged (§7, the merge-base's Redline).
-- O-CI10 [build 9 part 30]: the PR's code, its install, suite and check-break's runs, runs in the
+- O-CI10 [build 9 part 31]: the PR's code, its install, suite and check-break's runs, runs in the
   gate's job as the same user, so it could rewrite a file the gate imports after it, in the
   standard library, the gate's venv or, in an adopting repository, the site-packages it shares
   with the gate (§7, the merge-base's Redline). The plan: the PR's code runs where it can't write
@@ -1996,7 +2027,7 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   has no unlinked gaps, its other gaps kept, by `waiting` in `redline/links.py`; a gate passes its
   step, and check-links on its own reads it from `main..HEAD`'s trailers or the open step, printing
   each waiting change as skipped (§5).
-- O-SELF4 [build 9 part 29]: a repository adopting Redline has no workflow to start from, since
+- O-SELF4 [build 9 part 30]: a repository adopting Redline has no workflow to start from, since
   `.github/workflows/redline.yml` is Redline's own. The plan: `redline install workflow` writes one
   that installs Redline from the commit it was installed from, kept in step with Redline's own by
   a test.
@@ -2008,6 +2039,13 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   a test at its commit still links, printing the others as skipped, and `redline check-order` skips
   `hold` scenarios as the gate does, both through `failed` in `redline/order.py`; and
   `tests/test_self.py` fails when either gate fails on Redline's own checkout (§5).
+- O-AUDIT1 [closed, build 9 part 29]: the auditors and the relabeller ran only on Fable, so when
+  Fable's usage ran out every S step stopped, however long that lasted, and nothing recorded which
+  model wrote an audit. Now each agent has `model: fable` and `effort: max`, is run with `model:
+  opus` when Fable isn't available, and refuses any other model; each audit names its model in a
+  `Model:` line before its first finding, and each relabel in a `# Model:` line before its first
+  entry; `unnamed` in `redline/audit.py` fails one with none or with a model weaker than Opus, for
+  check-audit, the plan and end-of-initiative audits, and check-relabel (§9).
 - O-NOTE1 [build 9, the change note-run]: a note is trusted because CI writes it, but anyone with the
   `write` role, the agent's own account among them (§7, Repository settings), can push
   `refs/notes/redline-ci`, which no ruleset covers, and write `result: pass` or a `break:` map on

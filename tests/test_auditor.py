@@ -24,10 +24,11 @@ def test_the_auditor_is_read_only():
     assert tools <= READ_ONLY, f"write-capable tools: {tools - READ_ONLY}"
 
 
-def test_the_auditor_runs_on_the_strongest_model_and_refuses_any_other():
+def test_the_auditor_runs_on_fable_else_opus_at_max_and_refuses_any_weaker_model():
     front, body = definition()
-    assert front["model"] == "fable"
-    assert "REFUSED: the auditor runs only on a Claude Fable model" in body
+    assert (front["model"], front["effort"]) == ("fable", "max")
+    assert "REFUSED: the auditor runs only on a Claude Fable or Opus model" in body
+    assert "`Model:`" in body, "the definition says to name the model in the reply"
 
 
 def test_the_auditor_checks_premises_then_clauses_and_rigor():
