@@ -594,7 +594,7 @@ Left the plan: add-sms-codes in 9c0d1e2.
 
 ## 4d5e6f1 add-2fa/G2 (PR #12): Lock out after five wrong codes
 Redline-Departure: tests/test_login.py::test_lockout approved-by @maintainer: five, not three
-Label at the merge: redline:departure, applied by @alice, admin (CI note on 7a8b9c0)
+Label at the merge: redline:departure, applied by @alice, admin, at 2026-11-02T10:15:00Z, head pushed at 2026-11-02T09:40:12Z (CI note on 7a8b9c0)
 ```
 
 - **The changes** are every change any version of the plan on `main` listed: the plan at each
@@ -615,7 +615,9 @@ Label at the merge: redline:departure, applied by @alice, admin (CI note on 7a8b
 - **The label** is what `redline ci push` recorded (§7) in the CI note on the commit where the
   claim merged, the first commit on `main`'s first-parent line that contains it, as for the
   ledger: the claim's label on the PR, who applied it last and their role, when CI ran on the
-  merge; or that it wasn't on the PR, or that no merged PR was found. When that commit has no
+  merge, with when the label was applied and when the PR's head was pushed, as GitHub timed them
+  (`at <time>, head pushed at <time>`; a record written before build 9 part 21 has neither);
+  or that it wasn't on the PR, or that no merged PR was found. When that commit has no
   note, or its note has no record of the claim, `claims` says so (`Label at the merge: not
   recorded: …`) and then reads the label as CI reads it, now (`Label now: …`).
 
@@ -1289,11 +1291,15 @@ claims:
   label: redline:departure
   by: alice
   role: admin
+  at: '2026-11-02T10:15:00Z'
+  pushed: '2026-11-02T09:40:12Z'
 ```
 
-`pr` is null when GitHub associates no merged PR with the commit; `by` and `role` are null when
-the label isn't on the PR. The record judges nothing: a label applied by someone who isn't a
-maintainer is recorded as it is. A merge without claims gets no `claims:`, and `result:`, `run:`
+`pr` is null when GitHub associates no merged PR with the commit; `by`, `role` and `at` are null
+when the label isn't on the PR, and `pushed` when no push of the PR's head is found. `at` is when
+the label was last applied and `pushed` when the PR's head was last pushed, read as `redline ci
+pr` reads them (Approvals, below). The record judges nothing: a label applied by someone who
+isn't a maintainer, or before the head was pushed, is recorded as it is. A merge without claims gets no `claims:`, and `result:`, `run:`
 and `break:` are as before, so the ledger reads the note as it did. If GitHub can't be read, the
 note is written without the record and the run fails, so the result is kept and the gap is seen.
 A re-run of the push job keeps a record an earlier run wrote: labels read later are what the
@@ -1472,6 +1478,24 @@ because a PR can edit the config to name its own author. A claim fails when its 
 was applied by someone else, or there is no PR number. The workflow passes the number and a
 read-only token, and also runs on `labeled` and `unlabeled`, so applying the label re-runs CI.
 
+**A label counts only for the head it was applied after.** A label isn't tied to a commit: one
+applied to the first head stays on the PR while later pushes add commits, new claims among them,
+and each `synchronize` run reads it again and passes. So a claim's label counts only when it was
+applied after the PR's head was pushed. The label's time is its last `labeled` event's
+`created_at`. The push's time comes from GitHub's record of the head branch's pushes, the
+repository activity API (`gh api repos/{owner}/{repo}/activity?ref=refs/heads/<ref>`): the
+`timestamp` of the latest `push`, `force_push` or `branch_creation` whose `after` is the PR's head
+SHA, the head's SHA, ref and repository read from `gh api repos/{owner}/{repo}/pulls/<number>`.
+Both are GitHub's times. The PR's timeline won't do: an ordinary push leaves only `committed`
+events there, dated by the commit's committer date, which its author sets; issue events record a
+force push and nothing else. A claim fails when its label was applied at or before the push,
+naming the label, its time, the head and its push's time, and saying to apply the label again: a
+maintainer removes and re-applies it, and the `labeled` run reads the new time. It also fails
+when no push of the head is found, as for a fork whose activity the token can't read: a time
+that can't be read approves nothing. GitHub's "Update branch" pushes a merge to the head, so the
+label is applied again after it too. Both rules call `approve`, so every claim of the five is
+read this way, and the push is read once, beside the labels, only when a claim needs a label.
+
 Locally there is no PR, so no label can exist yet. `redline pr` and `redline check-lock` don't
 refuse a claim. They print that CI will need its label. A trailer that allows nothing still fails.
 
@@ -1479,8 +1503,11 @@ What the label still doesn't prove:
 
 - **Who pressed the button.** Anyone holding a maintainer's token, including an agent given it,
   applies the label as that maintainer.
-- **What they saw.** The label isn't tied to a commit. Commits pushed after it, with new
-  departures, are covered by it until someone removes it (O-APPR1).
+- **What they saw.** The label is tied to when the head was pushed, not to what the maintainer
+  read: one applied after the push by someone who never opened the PR passes. Nor does it cover
+  the base: `main` moving after the label, with no push to the head, changes the diff a gate
+  reads, such as the lines check-lines counts, and the label still counts.
+- **The times.** The label's and the push's times are GitHub's, trusted as GitHub is (§12).
 - **That the named person agreed.** Any maintainer's label approves a departure or a manual
   check, whoever its trailer names (O-APPR2).
 - **That the person looked, or at what.** A manual check's text is the person's word, about
@@ -1616,7 +1643,8 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    `Manual:` line (O-SPEC2); part 17, its check recorded at C as a claim (O-SPEC3); part 18, a
    requirement's prose and the text outside scenarios checked at C (O-CLOSE7); part 19,
    `redline/specs/` untouched before C (O-SPEC4); part 20, the toolchain pinned by hash, pip with it,
-   and the runner images by version (O-CI9). Later parts take O-APPR1, O-APPR2 and O-GH1. The review's other
+   and the runner images by version (O-CI9); part 21, a label counts only when applied after the
+   PR's head was pushed, and issue events split on `"\t"` (O-APPR1, O-GH2). Later parts take O-APPR2 and O-GH1. The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 11. **Per-scenario outcomes from CI** (O-CLOSE6, the review's item 19): each linked test's
@@ -1651,6 +1679,7 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   set is named by the departure's spec, which the auditor reads at S.
 - **What Redline can't observe**: what an agent read, and that its reply was written unedited
   (§4, §9); who pressed a label's button, and the role a person had before CI ran (§7); that
+  GitHub's times for a label and a push are true, and what a maintainer read before labelling (§7); that
   GitHub enforces the permissions it is given, and that a pinned action's commit is sound; that
   PyPI's files were sound when their hashes were taken; what a hosted runner brings under the pins,
   its image's weekly build under a version label and the Python and Node builds the setup actions
@@ -1713,13 +1742,21 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   setuptools; the hashes are those of the wheels for CI's Pythons, written by `scripts/hashes.py`;
   and the jobs run on `ubuntu-24.04` and `windows-2025-vs2026` (§7). What a hosted runner still
   brings under the pins is a judgment, above.
-- O-APPR1 [build 9]: a label isn't tied to a commit, so commits pushed after it, with new claims,
-  are covered by it until someone removes it (§7). The plan: a claim's label counts only when it
-  was applied after the PR's head commit was pushed.
+- O-APPR1 [closed, build 9 part 21]: a label isn't tied to a commit, so commits pushed after it,
+  with new claims, were covered by it until someone removed it, and each `synchronize` run read it
+  again and passed (§7). Now `approve` counts a claim's label only when its last `labeled` event is
+  later than the PR's head's last push, read through the `GitHub` seam from the repository activity
+  API of the head's repository, not from the commit's dates, which its author sets; a label at or
+  before the push, or a head with no push found, fails the claim with both times; and `redline ci
+  push` records `at:` and `pushed:` under `claims:`, which `redline claims` prints (§4, §7). What
+  the maintainer read, and a base that moves after the label, stay limits (§7).
+- O-GH2 [closed, build 9 part 21]: `GitHub.labels` split each issue event on a literal tab
+  character in its source (the review's item 18), so an editor that turned tabs into spaces would
+  have broken every label read. Now it splits on `"\t"`, and a test fails on a tab in `pr.py`.
 - O-APPR2 [build 9]: any maintainer's label approves a departure, whoever its trailer names as
   approving, and a manual check, whoever its trailer names as checking (§7). The plan: the label's
   applier must be the person the trailer names.
-- O-GH1 [build 9]: the real `gh api` calls that read labels, roles and merged PRs are tested only
+- O-GH1 [build 9]: the real `gh api` calls that read labels, roles, merged PRs, a PR's head and its pushes are tested only
   by hand; the suite uses the fake (§7). Running Redline on itself (the review's item 17) would
   call them on every claim; a test may call them on this repository's own PRs.
 - O-LOCK1 [closed, build 5 part 3]: a departure's approval was a recorded line, not proof. Now

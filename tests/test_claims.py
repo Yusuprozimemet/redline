@@ -11,6 +11,7 @@ from test_ledger import note
 from test_merged import merged, remote  # noqa: F401 (remote is a fixture)
 from test_plan import PLAN, VALID, complete, planned  # noqa: F401 (planned is a fixture)
 from test_plan_audit import critical, phase_one_complete  # noqa: F401 (critical is a fixture)
+from test_pr import HEAD, LABELLED, PUSHED
 from test_start import change  # noqa: F401 (change is a fixture)
 
 AGENT = Path(__file__).parent.parent / ".claude/agents/redline-process-auditor.md"
@@ -21,6 +22,7 @@ class FakeGitHub:
 
     pulled: dict[str, list[int]] = {}
     applied: dict[int, dict[str, str]] = {}
+    heads: dict[int, tuple[str, str]] = {}
     roles = {"alice": "admin"}
     fail = False
 
@@ -32,8 +34,11 @@ class FakeGitHub:
             raise RuntimeError("gh api: HTTP 502")
         return self.pulled.get(sha, [])
 
-    def labels(self, number: int) -> dict[str, str]:
-        return self.applied.get(number, {})
+    def labels(self, number: int) -> dict[str, tuple[str, str]]:
+        return {label: (who, LABELLED) for label, who in self.applied.get(number, {}).items()}
+
+    def pushed(self, number: int) -> tuple[str, str] | None:
+        return self.heads.get(number, HEAD)
 
     def role(self, login: str) -> str:
         return self.roles.get(login, "write")
@@ -42,6 +47,7 @@ class FakeGitHub:
 @pytest.fixture
 def github(monkeypatch):
     FakeGitHub.pulled, FakeGitHub.applied, FakeGitHub.roles, FakeGitHub.fail = {}, {}, {"alice": "admin"}, False
+    FakeGitHub.heads = {}
     monkeypatch.setattr("redline.claims.GitHub", FakeGitHub, raising=False)
     monkeypatch.setattr("redline.ci.GitHub", FakeGitHub, raising=False)
     monkeypatch.setattr("redline.ci.Remote", FakeRemote(), raising=False)
@@ -126,9 +132,9 @@ def test_a_push_records_each_claim_of_the_merged_pr_in_the_ci_note(planned, caps
     assert text.startswith(f"result: pass\nrun: {RUN}\nclaims:\n"), text
     assert recorded(planned, merge)["claims"] == [
         {"commit": track, "claim": "Redline-Track: the helper moved", "pr": 12, "label": "redline:track",
-         "by": "alice", "role": "admin"},
+         "by": "alice", "role": "admin", "at": LABELLED, "pushed": PUSHED},
         {"commit": big, "claim": "Oversized: one change", "pr": 12, "label": "redline:oversized",
-         "by": None, "role": None},
+         "by": None, "role": None, "at": None, "pushed": PUSHED},
     ]
 
 
@@ -146,11 +152,11 @@ def test_a_manual_check_is_recorded_at_the_merge_and_printed(planned, capsys, gi
     assert code == 0, out
     assert recorded(planned, merge)["claims"] == [
         {"commit": checked, "claim": "Redline-Manual: GREET.M1 checked-by @alice: it fits", "pr": 14,
-         "label": "redline:manual", "by": "alice", "role": "admin"}]
+         "label": "redline:manual", "by": "alice", "role": "admin", "at": LABELLED, "pushed": PUSHED}]
     code, out = claims(planned, capsys)
     assert code == 0, out
     assert f"## {checked[:7]} add-greet/C (PR #14): close\nRedline-Manual: GREET.M1 checked-by @alice: it fits\n" \
-           f"Label at the merge: redline:manual, applied by @alice, admin (CI note on {merge[:7]})\n" in out
+           f"Label at the merge: redline:manual, applied by @alice, admin, at {LABELLED}, head pushed at {PUSHED} (CI note on {merge[:7]})\n" in out
 
 
 def test_a_re_run_keeps_the_record_and_a_failed_read_writes_none(planned, capsys, github):
@@ -176,10 +182,29 @@ def test_claims_reads_the_labels_at_the_merge_from_the_ci_note(planned, capsys, 
     code, out = claims(planned, capsys)
     assert code == 0, out
     assert f"## {track[:7]} add-greet/G1 (PR #12): move\nRedline-Track: the helper moved\n" \
-           f"Label at the merge: redline:track, applied by @alice, admin (CI note on {merge[:7]})\n" in out
+           f"Label at the merge: redline:track, applied by @alice, admin, at {LABELLED}, head pushed at {PUSHED} (CI note on {merge[:7]})\n" in out
     assert f"## {big[:7]} add-greet/G1 (PR #12): grow\nOversized: one change\n" \
            f"Label at the merge: redline:oversized: not on PR #12 (CI note on {merge[:7]})\n" in out
     assert "Label now" not in out and "bob" not in out
+
+
+def test_a_label_applied_before_the_push_is_recorded_as_it_is_and_an_old_record_prints_as_before(planned, capsys, github):
+    track, big, merge = land_claims(planned)
+    later = "2026-10-22T12:00:00Z"
+    github.pulled, github.applied, github.heads = {track: [12]}, {12: {"redline:track": "alice"}}, {12: ("e" * 40, later)}
+    assert push(planned, capsys)[0] == 0, "the record judges nothing"
+    entry = recorded(planned, merge)["claims"][0]
+    assert (entry["at"], entry["pushed"]) == (LABELLED, later)
+    assert f"applied by @alice, admin, at {LABELLED}, head pushed at {later} (CI note on {merge[:7]})\n" in claims(planned, capsys)[1]
+    github.heads = {12: None}  # no push of the head found
+    planned.git("notes", "--ref=redline-ci", "remove", merge)
+    assert push(planned, capsys)[0] == 0
+    assert recorded(planned, merge)["claims"][0]["pushed"] is None
+    assert f"at {LABELLED}, no push of the head found (CI note on" in claims(planned, capsys)[1]
+    old = {k: v for k, v in recorded(planned, merge)["claims"][0].items() if k not in ("at", "pushed")}
+    planned.git("notes", "--ref=redline-ci", "add", "-f", "-m",
+                yaml.safe_dump({"result": "pass", "run": RUN, "claims": [old]}, sort_keys=False), merge)
+    assert f"Label at the merge: redline:track, applied by @alice, admin (CI note on {merge[:7]})\n" in claims(planned, capsys)[1]
 
 
 def test_claims_says_when_the_note_has_no_record_or_no_pr(planned, capsys, github):
