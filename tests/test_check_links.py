@@ -255,3 +255,8 @@ def test_a_gate_from_r_on_needs_its_own_changes_tests_not_those_of_a_change_at_s
     links = [f for f in gates(change.path, "add-greet", "G1") if f.startswith("check-links")]
     assert links == [f"check-links: unlinked scenario GREET.S{n} ({CHANGE}/specs/greet/delta.md:{line}): "
                      "no test has a spec marker for it" for n, line in ((1, 5), (2, 10))]
+
+
+def test_a_living_scenario_a_waiting_change_modifies_still_needs_its_test(repo):
+    repo.commit("add-bye/S\n\nRedline-Step: add-bye/S", {SPEC: scenarios("TOY.S9"), DELTA: scenarios("TOY.S9")})
+    assert check_links(repo.path).gaps == [UNLINKED]
