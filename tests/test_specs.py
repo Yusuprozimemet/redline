@@ -14,8 +14,8 @@ DELTA = (f"## ADDED Requirements\n\n### Requirement: Greeting\n\n{S1}\n"
          "### Premises\n- P1: a placeholder exists — `greet.py:1`\n")
 
 
-def living(*scenarios: str, requirement: str = "Greeting") -> str:
-    return f"# Greet\n\n### Requirement: {requirement}\n\n" + "\n".join(scenarios)
+def living(*scenarios: str, requirement: str = "Greeting", prose: str = "") -> str:
+    return f"# Greet\n\n### Requirement: {requirement}\n\n{prose}" + "\n".join(scenarios)
 
 
 MERGED = living(S0_LOUD, S1, S4)
@@ -113,3 +113,86 @@ def test_pr_runs_it_at_the_c_step_only(repo, capsys):
     on_c_branch(repo)
     assert f"check-specs: GREET.S1: ADDED, but {SPEC} doesn't have it" in gates(repo.path, "add-greet", "C")
     assert not [f for f in gates(repo.path, "add-greet", "G1") if f.startswith("check-specs")]
+
+
+POLITE = "Greetings are polite.\n\n"
+WAVE = "redline/specs/wave/spec.md"
+W1 = "#### Scenario WAVE.S1 [hold]: waves back\n- THEN it waves\n"
+
+
+def ok(added: int, modified: int, removed: int) -> list[str]:
+    return [f"ok: {added} added, {modified} modified, {removed} removed, as the deltas say; "
+            "nothing else in redline/specs changed"]
+
+
+def test_prose_a_delta_gives_reaches_the_living_spec(repo, capsys):
+    on_c_branch(repo, DELTA.replace(f"Greeting\n\n{S0_LOUD}", f"Greeting\n\n{POLITE}{S0_LOUD}"))
+    repo.commit("merge the delta", {SPEC: MERGED})
+    assert specs(repo, capsys) == (1, [f"Requirement: Greeting in {SPEC}: prose other than the delta's"])
+    repo.commit("with its prose", {SPEC: living(S0_LOUD, S1, S4, prose=POLITE)})
+    assert specs(repo, capsys) == (0, ok(1, 1, 1))
+
+
+def test_a_modified_requirement_may_reword_its_prose_alone(repo, capsys):
+    on_c_branch(repo, f"## MODIFIED Requirements\n\n### Requirement: Greeting\n\n{POLITE}")
+    repo.commit("reword", {SPEC: living(S0, S3, S4, prose="Greetings were rude.\n\n")})
+    assert specs(repo, capsys) == (1, [f"Requirement: Greeting in {SPEC}: prose other than the delta's"])
+    repo.commit("reword as the delta says", {SPEC: living(S0, S3, S4, prose=POLITE)})
+    assert specs(repo, capsys) == (0, ok(0, 0, 0))
+
+
+def test_two_blocks_giving_one_requirement_different_prose_fail(repo, capsys):
+    delta = DELTA.replace(S1, f"{POLITE}{S1}").replace(f"Greeting\n\n{S0_LOUD}", f"Greeting\n\nRude.\n\n{S0_LOUD}")
+    second = [n for n, line in enumerate(delta.splitlines(), 1) if line == "### Requirement: Greeting"][1]
+    on_c_branch(repo, delta)
+    repo.commit("merge the delta", {SPEC: living(S0_LOUD, S1, S4, prose=POLITE)})
+    assert specs(repo, capsys) == (1, [f"{CHANGE}/specs/greet/delta.md:{second}: Requirement: Greeting "
+                                       "gives prose other than another block of add-greet gives it"])
+
+
+def test_prose_no_delta_gives_fails(repo, capsys):
+    on_c_branch(repo)
+    repo.commit("reword it too", {SPEC: living(S0_LOUD, S1, S4, prose="Greetings are rude.\n\n")})
+    changed = "prose changed since the merge-base, but no delta of add-greet gives prose under it"
+    assert specs(repo, capsys) == (1, [f"Requirement: Greeting in {SPEC}: {changed}"])
+    repo.commit("and a requirement", {SPEC: MERGED + "\n### Requirement: Names\n\nNames are spelled out.\n"})
+    assert specs(repo, capsys) == (1, [
+        f"Requirement: Names in {SPEC}: {changed}",
+        f"Requirement: Names in {SPEC}: no scenario under it; remove it, heading and prose",
+    ])
+
+
+def test_a_requirement_left_with_no_scenario_must_go(repo, capsys):
+    waving = f"### Requirement: Waving\n\nIt waves.\n\n{S3}"
+    base = living(S0, S4) + f"\n{waving}\n### Requirement: Someday\n\nNot yet.\n"
+    repo.commit("spec", {SPEC: base, f"{CHANGE}/specs/greet/delta.md": "## REMOVED Requirements\n- GREET.S3: gone\n"})
+    repo.git("checkout", "-q", "-b", "close")
+    repo.commit("remove GREET.S3", {SPEC: base.replace(S3, "")})
+    assert specs(repo, capsys) == (1, [f"Requirement: Waving in {SPEC}: no scenario under it; remove it, heading and prose"])
+    repo.commit("and its requirement", {SPEC: base.replace(waving, "")})
+    assert specs(repo, capsys) == (0, ok(0, 0, 1))
+
+
+def test_a_spec_file_left_with_no_scenario_is_deleted(repo, capsys):
+    repo.commit("spec", {SPEC: living(S0), WAVE: f"# Wave\n\n### Requirement: Wave\n\n{W1}",
+                         f"{CHANGE}/specs/wave/delta.md": "## REMOVED Requirements\n- WAVE.S1: gone\n"})
+    repo.git("checkout", "-q", "-b", "close")
+    repo.commit("remove WAVE.S1", {WAVE: "# Wave\n"})
+    assert specs(repo, capsys) == (1, [f"{WAVE}: no scenario left; delete it"])
+    (repo.path / WAVE).unlink()
+    repo.commit("delete it")
+    assert specs(repo, capsys) == (0, ok(0, 0, 1))
+
+
+def test_text_under_no_requirement_changes_only_in_a_file_c_creates_or_deletes(repo, capsys):
+    on_c_branch(repo)
+    unnamed = f"{SPEC}: text under no requirement changed since the merge-base; only a spec file C creates or deletes may change it"
+    repo.commit("merge, with a preamble", {SPEC: MERGED.replace("# Greet\n", "# Greet\n\nEvery greeting is polite.\n")})
+    assert specs(repo, capsys) == (1, [unnamed])
+    repo.commit("merge, with notes", {SPEC: MERGED + "\n## Notes\n\nGreet twice.\n"})
+    assert specs(repo, capsys) == (1, [unnamed])
+    repo.commit("merge, with a new domain", {
+        SPEC: MERGED, WAVE: f"# Wave\n\nIt waves back.\n\n### Requirement: Wave\n\n{W1}",
+        f"{CHANGE}/specs/wave/delta.md": f"## ADDED Requirements\n\n### Requirement: Wave\n\n{W1}",
+    })
+    assert specs(repo, capsys) == (0, ok(2, 1, 1))

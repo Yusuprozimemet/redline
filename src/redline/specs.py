@@ -3,7 +3,8 @@
 A delta's `## ADDED`, `## MODIFIED` and `## REMOVED Requirements` sections say what C does to
 `redline/specs/<domain>/spec.md` (§4). Each scenario of the living specs at the merge-base with
 main is compared with the same scenario now: its text, heading to the next heading, and the
-`### Requirement:` it sits under. A requirement's own prose isn't compared.
+`### Requirement:` it sits under. So is the text outside scenarios: each requirement's prose, which
+only a delta's prose under it may change, and a file's text under no requirement.
 """
 
 import re
@@ -17,6 +18,7 @@ REQUIREMENT = re.compile(r"^### Requirement: (.+?)\s*$")
 REMOVAL = re.compile(r"^- ([^\s:]+): \S")
 
 Scenario = tuple[str, str | None, str | None, str, int]  # ID, section, requirement, text, line
+Block = tuple[str | None, str | None, str, int, int]  # section, requirement, prose, scenarios, line
 
 
 def parse(text: str) -> tuple[list[Scenario], list[str]]:
@@ -44,19 +46,93 @@ def parse(text: str) -> tuple[list[Scenario], list[str]]:
     return scenarios, removed
 
 
-def living(repo: Path, ref: str | None) -> dict[str, tuple[str, str | None, str]]:
-    """Scenario ID -> (spec path, requirement, text) in redline/specs at `ref`, or in the tree."""
+def trim(lines: list[str]) -> str:
+    """The lines joined, blank lines at either end dropped."""
+    kept = [n for n, line in enumerate(lines) if line.strip()]
+    return "\n".join(lines[kept[0]:kept[-1] + 1]) if kept else ""
+
+
+def blocks(text: str) -> list[Block]:
+    """The text outside scenarios, cut at each `## ` and `### ` heading: a requirement's block holds
+    its prose, any other its heading and text; the first holds what comes before every heading."""
+    found: list[list] = [[None, None, [], 0, 1]]
+    section = None
+    inside = False  # in a scenario's block, which runs to the next `#` line
+    for n, line in enumerate(text.splitlines(), 1):
+        if line.startswith("#"):
+            inside = bool(SCENARIO.match(line))
+            if inside:
+                found[-1][3] += 1
+                continue
+            if line.startswith("## "):
+                section = heading[1] if (heading := SECTION.match(line)) else None
+                found.append([section, None, [line], 0, n])
+                continue
+            if heading := REQUIREMENT.match(line):
+                found.append([section, heading[1], [], 0, n])
+                continue
+            if line.startswith("### "):
+                found.append([section, None, [line], 0, n])
+                continue
+        if not inside:
+            found[-1][2].append(line)
+    return [(section, requirement, trim(lines), count, n) for section, requirement, lines, count, n in found]
+
+
+def files(repo: Path, ref: str | None) -> dict[str, str]:
+    """Each spec path in redline/specs at `ref`, or in the tree, and its text."""
     if ref is None:
-        files = {p.relative_to(repo).as_posix(): p.read_text(encoding="utf-8")
-                 for p in sorted((repo / "redline/specs").glob("**/spec.md"))}
-    else:
-        listed = git(repo, "ls-tree", "-r", "--name-only", ref, "--", "redline/specs").stdout.split()
-        files = {p: git(repo, "show", f"{ref}:{p}").stdout for p in sorted(listed) if p.endswith("/spec.md")}
+        return {p.relative_to(repo).as_posix(): p.read_text(encoding="utf-8")
+                for p in sorted((repo / "redline/specs").glob("**/spec.md"))}
+    listed = git(repo, "ls-tree", "-r", "--name-only", ref, "--", "redline/specs").stdout.split()
+    return {p: git(repo, "show", f"{ref}:{p}").stdout for p in sorted(listed) if p.endswith("/spec.md")}
+
+
+def living(texts: dict[str, str]) -> dict[str, tuple[str, str | None, str]]:
+    """Scenario ID -> (spec path, requirement, text)."""
     found: dict[str, tuple[str, str | None, str]] = {}
-    for path, text in files.items():
+    for path, text in texts.items():
         for sid, _, requirement, block, _ in parse(text)[0]:
             found.setdefault(sid, (path, requirement, block))
     return found
+
+
+def outside(texts: dict[str, str]) -> dict[tuple[str, str | None], tuple[str, int]]:
+    """(spec path, requirement or None) -> (its text outside scenarios, its scenario count)."""
+    found: dict[tuple[str, str | None], tuple[str, int]] = {}
+    for path, text in texts.items():
+        for _, requirement, prose, count, _ in blocks(text):
+            was, had = found.get((path, requirement), ("", 0))
+            found[path, requirement] = ("\n".join(p for p in (was, prose) if p), had + count)
+    return found
+
+
+def prose_changes(before: dict[str, str], now: dict[str, str], given: dict[tuple[str, str], str],
+                  change: str) -> list[str]:
+    """Each way the text outside scenarios differs from what the deltas' prose (`given`) says (§4)."""
+    was, is_ = outside(before), outside(now)
+    bad: list[str] = []
+    for path, requirement in sorted(is_, key=lambda key: (key[0], key[1] or "")):
+        (prose, count), old = is_[path, requirement], was.get((path, requirement))
+        if requirement is None:
+            if old is not None and old[0] != prose:
+                bad.append(f"{path}: text under no requirement changed since the merge-base; "
+                           "only a spec file C creates or deletes may change it")
+            continue
+        where = f"Requirement: {requirement} in {path}"
+        if (path, requirement) in given:
+            if prose != given[path, requirement]:
+                bad.append(f"{where}: prose other than the delta's")
+        elif prose != (old[0] if old else ""):
+            bad.append(f"{where}: prose changed since the merge-base, but no delta of {change} gives prose under it")
+        if not count and (old is None or old[1]):
+            bad.append(f"{where}: no scenario under it; remove it, heading and prose")
+    def scenarios(found: dict[tuple[str, str | None], tuple[str, int]], path: str) -> int:
+        return sum(count for (where, _), (_, count) in found.items() if where == path)
+    for path in sorted(set(before) & set(now)):
+        if scenarios(was, path) and not scenarios(is_, path):
+            bad.append(f"{path}: no scenario left; delete it")
+    return bad
 
 
 def check_specs(repo: Path, change: str, base: str = "main") -> tuple[list[str], dict[str, int]]:
@@ -68,14 +144,17 @@ def check_specs(repo: Path, change: str, base: str = "main") -> tuple[list[str],
     deltas = sorted(root.glob("**/delta.md"))
     if not deltas:
         raise RuntimeError(f"no deltas in redline/changes/{change}/specs")
-    before, now = living(repo, fork.stdout.strip()), living(repo, None)
+    texts_before, texts_now = files(repo, fork.stdout.strip()), files(repo, None)
+    before, now = living(texts_before), living(texts_now)
     bad: list[str] = []
     named: set[str] = set()
+    given: dict[tuple[str, str], str] = {}  # (spec path, requirement) -> the prose a delta gives it
     counts = {"ADDED": 0, "MODIFIED": 0, "REMOVED": 0}
     for delta in deltas:
         path = delta.relative_to(repo).as_posix()
         spec = f"redline/specs/{delta.parent.relative_to(root).as_posix()}/spec.md"
-        scenarios, removed = parse(delta.read_text(encoding="utf-8"))
+        text = delta.read_text(encoding="utf-8")
+        scenarios, removed = parse(text)
         for sid, section, requirement, block, n in scenarios:
             named.add(sid)
             if section == "REMOVED":
@@ -105,10 +184,15 @@ def check_specs(repo: Path, change: str, base: str = "main") -> tuple[list[str],
                 bad.append(f"{sid}: REMOVED, but {spec} didn't have it at the merge-base")
             if sid in now and now[sid][0] == spec:
                 bad.append(f"{sid}: REMOVED, but {spec} still has it")
+        for section, requirement, prose, _, n in blocks(text):
+            if section in ("ADDED", "MODIFIED") and requirement and prose:
+                if given.setdefault((spec, requirement), prose) != prose:
+                    bad.append(f"{path}:{n}: Requirement: {requirement} gives prose other than "
+                               f"another block of {change} gives it")
     for sid in sorted(set(before) | set(now), key=lambda s: ((now.get(s) or before[s])[0], s)):
         was, is_ = before.get(sid), now.get(sid)
         if sid in named or was == is_:
             continue
         what = "added to" if was is None else "removed from" if is_ is None else "changed in"
         bad.append(f"{sid}: {what} {(is_ or was)[0]} since the merge-base, but no delta of {change} names it")
-    return bad, counts
+    return bad + prose_changes(texts_before, texts_now, given, change), counts

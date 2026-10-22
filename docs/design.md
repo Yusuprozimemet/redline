@@ -137,6 +137,18 @@ ID, a scenario it already has; each is copied there, heading to last line, under
 a heading, so it needs no test and no evidence: once it leaves `specs/`, a test still linked to it
 fails check-links as an unknown scenario. Deleting that test, if it is frozen, is a departure (§5).
 
+A requirement's prose, the lines between its `### Requirement:` heading and its first scenario, is
+copied the same way. Where a delta gives prose under an ADDED or MODIFIED requirement, the living
+spec's prose for that requirement reads the same after C; where it gives none, the living prose
+stays as it was, and a new requirement has none. So a delta rewords prose but never empties it, and
+a MODIFIED requirement may carry prose and no scenario, to reword its prose alone. A requirement
+under both ADDED and MODIFIED, or in two deltas, gives the same prose in each, or gives it once. A
+requirement the C step leaves with no scenario, its every scenario REMOVED or moved, goes with its
+heading and prose, and a spec file left with no scenario is deleted: what nothing tests mustn't
+still read as behaviour. Text under no requirement, a file's title and any lines before its first
+`### Requirement:` or under another `## ` or `### ` heading, has no form in a delta, so it changes
+only in a spec file the C step creates or deletes.
+
 A change is **closed** once its C step is merged on `main`: a commit reachable from `main` carries
 `Redline-Step: <change>/C`. Its delta stays, the record of what it declared, and its own checks
 still read it, but it declares nothing any more: the living spec holds what it said. So every
@@ -1052,11 +1064,25 @@ scenario, on:
   since the merge-base that none of the change's deltas names. A C step changes only what its
   deltas say.
 
+It compares the text outside scenarios too (§4), each requirement's prose by its spec file and
+name, trailing and leading blank lines dropped, and a file's text under no requirement as a whole,
+and fails, naming the requirement or the file, on:
+
+- **Prose other than the delta's**: a requirement a delta gives prose under whose living prose
+  now differs from it, or two of the change's blocks for one requirement giving different prose.
+- **Prose no delta gives**: a requirement's prose changed since the merge-base, or a new
+  requirement with prose, where no delta of the change gives prose under it.
+- **A requirement with no scenario**: one the merge-base had scenarios under, or a new one, now
+  with none. It must go, heading and prose. One that had none at the merge-base may stay as it was.
+- **A spec file with no scenario** left, which had one at the merge-base: delete it.
+- **Text under no requirement changed** in a spec file that is in both the merge-base and the tree.
+
 It compares with the merge-base, so it is the C PR's gate; run on its own it takes `--base`
 (default `main`), and run on `main` after the merge it has no diff to read and fails. What it
-doesn't prove: anything outside the scenarios. A requirement's own prose, a `### Requirement:`
-heading with no scenario under it, or text before the first requirement, can change unseen
-(O-CLOSE7).
+doesn't prove: that `redline/specs/` was untouched before C. An S, R or G PR may edit it, and an
+edit merged before C's branch forks is part of the merge-base it compares with (O-SPEC4). Nor what
+a new spec file says under no requirement, or the order of requirements in a file, neither of
+which a delta has a form for (§12, Judgments).
 
 At **lite** rigor, S and R may share one PR, so the smallest change is two sessions.
 
@@ -1547,7 +1573,9 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    `steps.md` compared with the merge-base, so no item or step leaves it silently (O-STEPS2); part
    15, every known limit given an O-ID and an owner or a reason it stays a judgment, and a
    scenario heading not in its form a failure (O-SPEC1); part 16, a `[manual]` scenario and its
-   `Manual:` line (O-SPEC2); part 17, its check recorded at C as a claim (O-SPEC3). Later parts take O-CLOSE7, O-CI9, O-APPR1, O-APPR2 and O-GH1. The review's other
+   `Manual:` line (O-SPEC2); part 17, its check recorded at C as a claim (O-SPEC3); part 18, a
+   requirement's prose and the text outside scenarios checked at C (O-CLOSE7); part 19,
+   `redline/specs/` untouched before C (O-SPEC4). Later parts take O-CI9, O-APPR1, O-APPR2 and O-GH1. The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 11. **Per-scenario outcomes from CI** (O-CLOSE6, the review's item 19): each linked test's
@@ -1590,6 +1618,9 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   commit of a PR merged by rebase, since the push run reads the merged commit's own range.
   Redline needs merge commits or squash merges; allowing only those is a repository setting, as
   branch protection is.
+- **What a new spec file says outside its requirements, and the order of requirements** (§5): a
+  delta has no form for a file's title and preamble, or for where a requirement sits, and neither
+  states behaviour a test proves. The maintainer reads both on the C PR.
 
 - O-SPEC1 [closed, build 9 part 15]: every gate found scenarios by `#### Scenario <ID>
   [new|hold]:`, so a heading with an unknown tag, such as the `[manual]` §12 once suggested, or with
@@ -1614,9 +1645,16 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   result on the merged commit, so a test skipped or not collected there passes with it (§5). The
   plan: each linked test's outcome in the note, red the first commit where the scenario's `new`
   tests failed strictly, green where they passed without `new`.
-- O-CLOSE7 [build 9]: check-specs compares scenarios only, so a requirement's prose, a
-  `### Requirement:` heading with no scenario, or text before the first requirement changes unseen
-  at C (§5). The plan: text outside scenarios may change only under a requirement the delta names.
+- O-CLOSE7 [closed, build 9 part 18]: check-specs compared scenarios only, so a requirement's
+  prose, a `### Requirement:` heading with no scenario, or text before the first requirement
+  changed unseen at C (§5). Now a delta's prose under an ADDED or MODIFIED requirement is copied as
+  its scenarios are, and without it the living prose stays; a requirement or spec file left with no
+  scenario goes; text under no requirement changes only in a file C creates or deletes (§4); each
+  is compared with the merge-base by `prose_changes` in `redline/specs.py`.
+- O-SPEC4 [build 9]: only C runs check-specs, and check-track exempts `redline/`, so an S, R or G
+  PR may change anything under `redline/specs/`, scenarios included, and check-specs at C, which
+  compares with C's own merge-base, never sees it (§5). The plan: at S, R and every G step,
+  `redline/specs/` must be as it is at the merge-base, each file that differs named.
 - O-LOCK4 [build 8]: the lock reads no timing from outside its files: environment variables
   (`PYTEST_TIMEOUT`, `PYTEST_ADDOPTS`), flags in the CI workflow, or data files a test reads (§5).
   It is runner configuration outside a step, with O-RUN4.
