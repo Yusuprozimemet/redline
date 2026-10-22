@@ -67,6 +67,37 @@ def test_a_pr_that_passes_the_gates_the_suite_and_check_ledger(change, capsys):
     assert "ok: add-greet/R passes the gates, the test suite and check-ledger" in out
 
 
+def fake_python(where: Path) -> str:
+    """An interpreter that runs nothing: it prints its arguments and exits 3."""
+    if os.name == "nt":
+        path = where / "python.cmd"
+        path.write_text("@echo off\r\necho fake python ran %*\r\nexit /b 3\r\n", encoding="utf-8")
+    else:
+        path = where / "python"
+        path.write_text('#!/bin/sh\necho "fake python ran $*"\nexit 3\n', encoding="utf-8")
+        path.chmod(0o755)
+    return str(path)
+
+
+def test_a_pr_run_with_python_runs_the_suite_with_that_interpreter(change, capsys, tmp_path):  # O-SELF2
+    change.commit("a test", {"tests/test_ok.py": "def test_ok():\n    assert True\n"})
+    fresh_branch(change, "outside")
+    change.commit("outside any step", {"notes.txt": "text\n"})
+    code, out = ci(change, capsys, "pr", "--base", "main", "--python", fake_python(tmp_path))
+    assert code == 1
+    assert "suite: the test suite failed (pytest exit 3): fake python ran -m pytest -q -p no:cacheprovider" in out
+    code, out = ci(change, capsys, "pr", "--base", "main")  # and the gate's own Python again after it
+    assert code == 0, out
+
+
+def test_python_must_be_a_file_and_is_for_a_pr_only(change, capsys, tmp_path, remote):
+    code, out = ci(change, capsys, "pr", "--base", "main", "--python", str(tmp_path / "nowhere"))
+    assert (code, out) == (2, f"redline: --python {tmp_path / 'nowhere'} isn't a file\n")
+    code, out = ci(change, capsys, "push", "--run-url", RUN, "--python", fake_python(tmp_path))
+    assert (code, out) == (2, "redline: --python is for ci pr only: a push run's suite is the merged code's own\n")
+    assert remote.pushed == []
+
+
 def test_a_pr_is_at_most_one_step(change, capsys):  # no step at all: test_outside.py
     red_pr(change, capsys, {"tests/test_greet.py": RED_TESTS}, ("add-greet/R", "add-greet/G1"))
     code, out = ci(change, capsys, "pr", "--base", "main")
