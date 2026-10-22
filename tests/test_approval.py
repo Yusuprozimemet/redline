@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 
 import pytest
@@ -153,6 +154,47 @@ def test_the_seam_reads_when_each_label_was_applied_and_when_the_head_was_last_p
     assert github.pushed(7) is None
 
 
+@pytest.mark.parametrize(("read", "answer"), [
+    (lambda github: github.labels(7), ANSWERS["issues/7/events"]),
+    (lambda github: github.pushed(7), ANSWERS["pulls/7"]),
+    (lambda github: github.pulls(SHA), "7"),
+    (lambda github: github.role("alice"), "admin"),
+], ids=["labels", "pushed", "pulls", "role"])
+def test_each_read_is_tried_up_to_eight_times_as_github_answers_500_now_and_then(monkeypatch, tmp_path, read, answer):
+    waits, asked, failing = [], [], [7]
+    monkeypatch.setattr(time, "sleep", waits.append)
+
+    def run(self, *command: str) -> str:
+        asked.append(command)
+        if len(asked) <= failing[0]:
+            raise RuntimeError("gh api repos/{owner}/{repo}/commits: unexpected end of JSON input")
+        return answer if "activity" not in command[-3] else f"push\t{SHA}\t2026-10-22T10:00:00Z"
+
+    monkeypatch.setattr(GitHub, "run", run)
+    assert read(GitHub(tmp_path))
+    assert len(asked) >= 8 and waits == [1, 2, 3, 3, 3, 3, 3]
+    asked.clear(), waits.clear()
+    failing[0] = 8
+    with pytest.raises(RuntimeError, match="unexpected end of JSON input"):
+        read(GitHub(tmp_path))
+    assert len(asked) == 8
+
+
+def test_pushing_and_opening_a_pr_are_not_retried(monkeypatch, tmp_path):
+    asked = []
+
+    def run(self, *command: str) -> str:
+        asked.append(command)
+        raise RuntimeError("refused")
+
+    monkeypatch.setattr(GitHub, "run", run)
+    monkeypatch.setattr(time, "sleep", lambda seconds: pytest.fail("waited"))
+    for act in (lambda github: github.push("x"), lambda github: github.create_pr("t", "b")):
+        with pytest.raises(RuntimeError):
+            act(GitHub(tmp_path))
+    assert len(asked) == 2
+
+
 def test_issue_events_are_split_on_an_escape_not_a_literal_tab():
     assert "\t" not in Path(redline.pr.__file__).read_text(encoding="utf-8")
 
@@ -165,3 +207,11 @@ def test_the_workflow_passes_the_pr_number_and_reruns_on_a_label():
     step = next(s for job in flow["jobs"].values() for s in job["steps"] if "redline ci pr" in s.get("run", ""))
     assert "--pr ${{ github.event.pull_request.number }}" in step["run"]
     assert step["env"]["GH_TOKEN"] == "${{ github.token }}"
+
+
+def test_the_runners_job_makes_the_real_gh_api_calls_with_the_redline_jobs_token():
+    jobs = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+    step = next(s for s in jobs["runners"]["steps"] if "tests/test_github.py" in s.get("run", ""))
+    assert step["env"] == {"REDLINE_REAL_GITHUB": "1", "GH_TOKEN": "${{ github.token }}"}
+    assert jobs["runners"]["permissions"] == jobs["redline"]["permissions"], "what CI's own token reads"
+    assert not any("tests/test_github.py" in s.get("run", "") for s in jobs["redline"]["steps"] + jobs["windows"]["steps"])
