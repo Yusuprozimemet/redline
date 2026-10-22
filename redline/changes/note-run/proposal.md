@@ -1,6 +1,6 @@
 # Proposal: note-run
 
-Rigor: standard
+Rigor: critical
 
 ## Why
 
@@ -18,26 +18,37 @@ evidence (O-SELF1). This change is the first of Redline's build steps run as a c
 
 - The rebuild checks each note it reads: `ci_result` in `src/redline/ledger.py`, through a new
   `GitHub.push_run(url)` in `src/redline/pr.py`, which reads the run and its jobs from GitHub's
-  Actions API. A note checks out when its `run:` is a run's URL, `…/actions/runs/<id>`, and the
-  run gives that URL as its `html_url`, a `push` event, the noted commit as `head_sha`, `main` as
-  `head_branch` and `.github/workflows/redline.yml` as `path`, and its `redline` job concluded
-  `success` exactly when the note records no failure: `result: pass` and no failing `break:`
-  entry. On 2026-10-22 run 39848744114, the push run of b41ea41, gave exactly those fields, and
-  its `redline` job concluded `success`.
+  Actions API, in the checkout's own repository, by the run's id alone. A note checks out when its
+  `run:` is a run's URL, `…/actions/runs/<id>`, and the run gives that URL as its `html_url`, a
+  `push` event, the noted commit as `head_sha`, `main` as `head_branch` and
+  `.github/workflows/redline.yml` as `path`, and its `redline` job concluded `success` exactly when
+  the note records no failure: `result: pass` and no failing `break:` entry naming a `hold`
+  scenario read from that note. A failed break, `result: pass` with its entry `fail` beside the
+  job's `failure`, reads `pass` with that break `fail`; an entry for any other scenario makes the
+  note `unconfirmed`, and a `result: fail` note's breaks read `fail`. On 2026-10-22 run 39848744114, the push run of b41ea41, gave exactly those fields, and its
+  `redline` job concluded `success`.
 - A note that doesn't check out reads as a fourth result, `unconfirmed`: a run GitHub doesn't have
   (a 404, answered at once, with no retry), a `run:` that isn't a run's URL or is missing, and any
   field that differs. `fail` notes are checked too. Any other failure to read GitHub is an error
-  naming the run.
+  naming the run, as are a missing `gh`, a 404 for the checkout's own repository, read once first,
+  and, before GitHub is asked, a note that isn't YAML or whose `result:` is neither `pass` nor
+  `fail`. Each run is asked about once in a rebuild.
 - check-close refuses `unconfirmed`, saying the note doesn't match its run on GitHub, not that it
   is waiting.
-- The workflow's `redline` and `runners` jobs get `actions: read`.
+- The workflow's `redline` and `runners` jobs get `actions: read`, and no job `actions: write`;
+  the README says a ledger is now rebuilt with `gh` and that permission, and that a note checks out
+  only from a push run of `.github/workflows/redline.yml` whose `redline` job notes its own run's
+  URL.
 - Tests read GitHub through `FakeActions` in `tests/conftest.py`, autouse, which answers only the
-  runs a test registers and a 404 for any other; `tests/test_github.py` reads run 39848744114 for
-  real, under `REDLINE_REAL_GITHUB`, in the `runners` job.
+  runs a test registers and a 404 for any other; `tests/test_github.py` reads run 39848744114 and a
+  run GitHub doesn't have for real, under `REDLINE_REAL_GITHUB`, in the `runners` job.
 
 A push run whose job failed only because the claims record couldn't read GitHub (§7) notes
-`result: pass` beside a failed job, so it reads `unconfirmed` until the job is re-run. That is on
-purpose: the note and its run disagree.
+`result: pass` beside a failed job, so it reads `unconfirmed` until the job is re-run, which GitHub
+allows for 30 days. That is on purpose: the note and its run disagree.
+
+It is critical (§8): it decides whether CI's evidence came from CI, and every ledger rebuild,
+in each adopting repository, now reads GitHub.
 
 ## Non-goals
 
@@ -49,6 +60,8 @@ purpose: the note and its run disagree.
   own R and G1 merges first. Its first CI run is the C PR's check-ledger and check-close, gated by
   G1's code at its merge-base.
 - **Who can push the ref.** That is a repository setting (§7), and stays one.
+- **Evidence a run can no longer confirm**: a run past GitHub's 30 days to re-run, a deleted run,
+  or a renamed repository's runs (O-NOTE3, build 11).
 - **Per-scenario outcomes** (O-CLOSE6, build 11).
 
 ## Steps
