@@ -7,7 +7,8 @@ change. check-links
 and check-order run from the R step on: at S the delta declares scenarios that have no tests yet.
 check-order skips `hold` scenarios, which have no red by design. check-break runs at R only.
 check-lock runs on every change the lock names at every step, and on the step's change at R and G (against main's lock at G);
-at every step the whole lock is compared by test with main's (lock.check_frozen). check-track runs at G steps (track.py). check-close and check-specs run at C (close.py, specs.py).
+at every step the whole lock is compared by test with main's (lock.check_frozen). check-track runs at G steps (track.py). check-close and check-specs run at C (close.py, specs.py);
+a `Redline-Manual` trailer, a manual scenario's check, needs a maintainer's label there and fails at any other step.
 A changed `rigor:` in the config or `Rigor:` line in a plan, a change's level lowered, a glob added to `generated:` or `support:`,
 a deleted plan, or a change taken out of one, needs an approved `Redline-Rigor` claim at every step. Over 400 lines, an `Oversized:
 <reason>` trailer needs a maintainer's label, as a departure does (approval.py); locally, where
@@ -22,7 +23,7 @@ from pathlib import Path
 from redline.approval import OVERSIZED, RIGOR, Approvals, claims
 from redline.audit import check_audit
 from redline.breaks import check_break, holds
-from redline.close import check_close
+from redline.close import check_close, misplaced
 from redline.config import LEVELS, load_config, rigor
 from redline.defects import check_defects
 from redline.lines import LIMIT, check_lines
@@ -164,8 +165,11 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
         failures += [f"check-lock: {other}: {bad}" for bad in check_lock(repo, other).bad]
     if step.startswith("G"):
         failures += check_track(repo, change, step, approvals)
+    if step != "C":  # a person's check is read at C only
+        failures += misplaced(repo, "main")
     if step == "C":  # earlier, a scenario a later step owns has no green yet by design
-        for name, check in (("check-close", check_close), ("check-specs", lambda r, c: check_specs(r, c)[0])):
+        for name, check in (("check-close", lambda r, c: check_close(r, c, approvals=approvals)),
+                            ("check-specs", lambda r, c: check_specs(r, c)[0])):
             try:
                 failures += [f"{name}: {bad}" for bad in check(repo, change)]
             except RuntimeError as error:

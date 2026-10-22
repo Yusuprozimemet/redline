@@ -45,6 +45,14 @@ def test_moving_a_file_out_of_a_change_touches_the_change(change, capsys):
     assert f"{TOUCHED} {CHANGE}/steps.md" in out
 
 
+def test_a_manual_check_outside_any_step_fails(change, capsys):
+    trailer = "Redline-Manual: GREET.M1 checked-by @alice: it looks right"
+    outside(change, {"notes.md": "a note\n"}, f"a note\n\n{trailer}")
+    code, out = ci(change, capsys, "pr", "--base", "main")
+    assert code == 1
+    assert f"manual: {trailer}: a person's check counts at the C step only" in out
+
+
 def test_a_pr_outside_any_step_over_400_lines_needs_oversized_and_its_label(change, capsys, github):
     outside(change, {"notes.md": lines(401)})
     code, out = ci(change, capsys, "pr", "--base", "main", "--pr", "1")

@@ -110,7 +110,8 @@ challenge at S that it can't be automated (§12). check-specs carries it into `s
 other, `Manual:` line included, so the living spec keeps the reason; the brief prints it. A G
 step may own it, where its code is written, but needn't, as with `hold`: nothing is lost, since
 check-close asks for its check at C. Its ledger entry has no red, green or break (all `null`):
-its evidence is a person's check, recorded at C (§5), not CI's (O-SPEC2).
+its evidence is a person's check, not CI's (O-SPEC2): a `Redline-Manual` trailer in the C PR's
+own commits, approved by a maintainer's label, which check-close reads (§5, §7, O-SPEC3).
 
 A delta's scenarios sit under its `## ` sections, which say what the C step does to the living
 spec of the same domain, `redline/specs/<domain>/spec.md`:
@@ -567,8 +568,8 @@ What it doesn't prove: that none read another's file, since Claude Code can't li
 plan edited after them makes them stale, and check-plan fails until each is run again (above).
 
 **The claims record.** With `Read, Grep, Glob`, an auditor sees files, not git history, and the
-claims (§7, Approvals) live only there: the `Oversized`, `Redline-Track`, `Redline-Departure` and
-`Redline-Rigor` trailers, and the labels that approved them. Those are the decisions a person made
+claims (§7, Approvals) live only there: the `Oversized`, `Redline-Track`, `Redline-Departure`,
+`Redline-Rigor` and `Redline-Manual` trailers, and the labels that approved them. Those are the decisions a person made
 to let a gate pass, which is what the process auditor asks about. `redline claims <initiative>`
 prints them from `main`, and the main session gives that text to the process auditor after its
 arguments, as it gives `redline blind`'s text to the relabeller:
@@ -742,7 +743,7 @@ It checks the log's form, never that it is complete: a defect nobody writes down
 | **S: Spec** | Proposal and delta spec, with audit findings resolved | Structure is valid, every premise citation resolves, IDs are unique, every finding is closed or waived |
 | **R: Red** | Linked tests: `new` as strict expected failures (`xfail(strict=True)`, Jest `test.failing`); `hold` added to the lock | Every `new` test fails on today's code; every `hold` test passes, then fails under mutation |
 | **G1…Gn: Green** | Code that turns expected failures into passes | Owned scenarios pass with their markers removed, the lock is unchanged, the code stays in the step's track, nothing else regressed |
-| **C: Close** | Delta merged into `specs/`, ledger, defect log, deferred items with owners | Every `new` scenario has red and green results from merged commits, the red commit an ancestor of the green one; every `hold` scenario has a break result; the delta's ADDED, MODIFIED and REMOVED are in `specs/`, and nothing else there changed; the defect log exists (standard, critical) and is well formed; at critical, each defect has a blind second label and each disagreement a decision |
+| **C: Close** | Delta merged into `specs/`, ledger, defect log, deferred items with owners | Every `new` scenario has red and green results from merged commits, the red commit an ancestor of the green one; every `hold` scenario has a break result; every `manual` scenario has a person's check, its `Redline-Manual` trailer approved by a maintainer's label; the delta's ADDED, MODIFIED and REMOVED are in `specs/`, and nothing else there changed; the defect log exists (standard, critical) and is well formed; at critical, each defect has a blind second label and each disagreement a decision |
 
 Red tests can merge onto `main` while CI stays green, because CI expects them to fail. A `new` test
 that passes before the code exists turns CI red under strict expected-failure, so a check that
@@ -1006,13 +1007,22 @@ on:
   `pass`. The red's result is the suite's on its merged commit, which passes because the test
   failed strictly, as it should.
 - **A `hold` scenario without a break**, or one whose `result` isn't `pass`.
-- **A `manual` scenario**, until a person's check of it can be recorded (O-SPEC3): it has no
-  evidence CI can give, and none from history stands in for it.
+- **A `manual` scenario without a person's check**: no `Redline-Manual: <ID> checked-by @person:
+  <what was seen>` trailer naming it among the C PR's own commits (`base..HEAD`), or, in CI, no
+  maintainer's `redline:manual` label on the PR (§7). It has no evidence CI can give, and none
+  from history stands in for it: a check made in an earlier PR read code a later step may have
+  changed. A second trailer for the same scenario passes, and both are recorded.
+- **A `Redline-Manual` trailer that allows nothing**: one missing `checked-by @person: <text>`, or
+  one whose ID is no `manual` scenario of the change's deltas (unknown, `new`, `hold`, or another
+  change's).
 
 A scenario is `new`, `hold` or `manual` by its tag in the delta, and its evidence is only what its own
 steps made (§4, a change's window): a scenario a closed change proved doesn't close a later
 change that MODIFIES it. It runs at C only, since at G a scenario
-owned by a later step has no green yet by design; run on its own, it checks as at C.
+owned by a later step has no green yet by design; run on its own, it checks as at C, with
+`--base` (default `main`) for where the PR's own commits begin. On `main` after the merge there
+are none, so a `manual` scenario fails there, as check-specs does: both are the C PR's gates.
+Locally, where there is no PR, each checked scenario is a note that CI will need the label.
 
 `unverified` refuses: until CI has run on the merged commit, there is no evidence (§7). A C PR
 opened right after the last G merges usually waits so, for that merge's push run. The refusal says
@@ -1078,8 +1088,9 @@ the R step on (at S the delta's scenarios have no tests yet; check-order skips `
 which have no red by design), check-break at the R step only, check-lock at every step (on the
 whole lock, by test, against `main`'s; G steps with `--base main`, §5), check-track at G steps (§5), check-close and check-specs at the C step (§5), check-defects and check-relabel at every step on the
 step's change (the log is required only at C, the relabel only at C and critical), and the rigor
-check at every step (§7). A departure or an `Oversized` trailer doesn't refuse: the PR and its
-labels don't exist yet, so `pr` prints that CI will need the label (§7). Only when every gate
+check at every step (§7). A departure, an `Oversized` trailer or a manual check doesn't refuse:
+the PR and its labels don't exist yet, so `pr` prints that CI will need the label, one note per
+claim (§7). Only when every gate
 passes does it put the `Redline-Step` trailer on each of the step's commits (once), push, and open
 the PR with `gh`.
 
@@ -1211,6 +1222,7 @@ Otherwise it runs the gates that hold for any PR, and prints every failure:
 - **check-lock** on every change the lock names, without `--base`. The PR can't touch the lock,
   so a locked test or (at critical) what it reaches can't change outside a step at all. A
   `Redline-Departure` trailer doesn't help: a departure is a step's, and re-locks the test.
+- **No manual check**: a `Redline-Manual` trailer fails, since it is a C step's (Approvals, below).
 - **The test suite**: each runner's the repository uses (§5).
 
 It doesn't run check-links (on `main` an S step's scenarios have no tests yet, by design),
@@ -1333,7 +1345,7 @@ still writes for its own merge commit, as it runs the suite that says `pass`. A 
 
 A person's approval is a label on the PR, applied by a maintainer. A commit trailer in the PR's
 own commits (`base..HEAD`) says what is approved and why, and stays in `main`'s history. The label
-says a maintainer agreed. Four claims need one:
+says a maintainer agreed. Five claims need one:
 
 | Trailer | Allows | Label |
 |---|---|---|
@@ -1341,6 +1353,12 @@ says a maintainer agreed. Four claims need one:
 | `Oversized: <reason>` | more than 400 changed lines (§2.3) | `redline:oversized` |
 | `Redline-Track: <reason>` | a G step changing files outside its track (§5) | `redline:track` |
 | `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml` or to a plan's `Rigor:` line; a change's level lowered; a glob added to its `generated:` or `support:`; a plan deleted, or a change taken out of one | `redline:rigor` |
+| `Redline-Manual: <ID> checked-by @person: <what was seen>` | a `manual` scenario to close at C (§5) | `redline:manual` |
+
+A person's check is evidence at the C step only, where check-close reads it. A `Redline-Manual`
+trailer in any other step's PR, or in a PR outside any step, fails, naming it: no gate would read
+it, yet `redline ci push` would record it under `claims:`, and the claims record would show a
+check that closed nothing.
 
 `rigor:` sets the level of every change whose proposal names none, and so what all their gates
 require, so changing it, up or down, is a claim on any PR, in a step or outside one (§7). A plan's
@@ -1373,7 +1391,8 @@ is that later PRs face less. Removing a glob isn't a claim, and nothing judges w
 covers another: an added glob is a claim even when an old one already matched what it matches.
 The cost is that a PR adding a lockfile counts its lines unless an earlier PR declared its glob.
 
-A trailer without its reason (or, for a departure, without `approved-by @person:`) allows nothing.
+A trailer without its reason (or, for a departure, without `approved-by @person:`, for a manual
+check, without `checked-by @person:`) allows nothing.
 One label covers every claim of its kind in the PR. The labels are separate, so approving the size
 doesn't approve weakening a test. Both rules call one function, `approve` in
 `redline/approval.py`, which returns why a claim isn't approved, or nothing.
@@ -1396,8 +1415,10 @@ What the label still doesn't prove:
   applies the label as that maintainer.
 - **What they saw.** The label isn't tied to a commit. Commits pushed after it, with new
   departures, are covered by it until someone removes it (O-APPR1).
-- **That the named person agreed.** Any maintainer's label approves a departure, whoever its
-  trailer names (O-APPR2).
+- **That the named person agreed.** Any maintainer's label approves a departure or a manual
+  check, whoever its trailer names (O-APPR2).
+- **That the person looked, or at what.** A manual check's text is the person's word, about
+  whatever they ran; the maintainer reads it on the C PR (§12).
 - **The role at the time.** The role is read when CI runs, not when the label was applied.
 
 The real `gh api` calls are tested only by hand; the suite uses the fake (O-GH1).
@@ -1548,7 +1569,8 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
 - **Whether a scenario really can't be automated** (§4): a `[manual]` scenario needs no test, so
   the tag is a way around red and green. No gate can tell a scenario no assertion can read from
   one nobody tried to test; the auditor challenges each at S, and the maintainer reviewing the S
-  PR sees its `Manual:` line.
+  PR sees its `Manual:` line. Nor can a gate see what the person checked: the `Redline-Manual`
+  trailer's text is their word, and the maintainer whose label approves it reads it on the C PR.
 - **Mutation cost on large codebases** is a cost, never a gate passed: only the files the change's
   premises cite are mutated, at the R step only, each scenario's runners stopping at the first
   kill (§5). A run that takes too long fails CI where it is seen. How much to cite is the
@@ -1581,11 +1603,13 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   one is a gap; check-links and check-steps fail the line missing, empty, repeated or under
   another tag, with one function, `unreasoned` in `redline/links.py`; check-specs carries it into
   `specs/`; its ledger entry has no evidence; and check-close refuses it until O-SPEC3 (§4).
-- O-SPEC3 [build 9 part 17]: a `[manual]` scenario can't close, since check-close has no way to
-  record a person's check of it (§5). The plan: a fifth claim, `Redline-Manual: <ID> checked-by
-  @person: <what was seen>`, one per manual scenario in the C PR's own commits, with a
-  maintainer's `redline:manual` label (§7), which `redline ci push` records under `claims:` and
-  `redline claims` prints; a trailer that names no manual scenario of the change fails.
+- O-SPEC3 [closed, build 9 part 17]: a `[manual]` scenario couldn't close, since check-close had
+  no way to record a person's check of it (§5). Now it is the fifth claim, `Redline-Manual: <ID>
+  checked-by @person: <what was seen>`, in the C PR's own commits, with a maintainer's
+  `redline:manual` label (§7), which `redline ci push` records under `claims:` and `redline
+  claims` prints; check-close fails a manual scenario without one, a trailer missing `checked-by
+  @person: <text>` and one naming no manual scenario of the change, and takes `--base`; a trailer
+  in any PR that isn't a C step fails, with one function, `misplaced` in `redline/close.py`.
 - O-CLOSE6 [build 11]: check-close takes a scenario's red, green or break from the whole suite's
   result on the merged commit, so a test skipped or not collected there passes with it (§5). The
   plan: each linked test's outcome in the note, red the first commit where the scenario's `new`
@@ -1604,7 +1628,8 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   are covered by it until someone removes it (§7). The plan: a claim's label counts only when it
   was applied after the PR's head commit was pushed.
 - O-APPR2 [build 9]: any maintainer's label approves a departure, whoever its trailer names as
-  approving (§7). The plan: the label's applier must be the person the trailer names.
+  approving, and a manual check, whoever its trailer names as checking (§7). The plan: the label's
+  applier must be the person the trailer names.
 - O-GH1 [build 9]: the real `gh api` calls that read labels, roles and merged PRs are tested only
   by hand; the suite uses the fake (§7). Running Redline on itself (the review's item 17) would
   call them on every claim; a test may call them on this repository's own PRs.

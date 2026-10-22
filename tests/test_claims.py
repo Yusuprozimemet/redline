@@ -132,6 +132,27 @@ def test_a_push_records_each_claim_of_the_merged_pr_in_the_ci_note(planned, caps
     ]
 
 
+def test_a_manual_check_is_recorded_at_the_merge_and_printed(planned, capsys, github):
+    planned.git("checkout", "-q", "main")
+    planned.git("checkout", "-q", "-b", "c")
+    checked = planned.commit("close\n\nRedline-Manual: GREET.M1 checked-by @alice: it fits\nRedline-Step: add-greet/C",
+                             {"tests/test_ok.py": "def test_ok():\n    pass\n"})
+    planned.git("checkout", "-q", "main")
+    planned.git("merge", "-q", "--no-ff", "--no-edit", "c")
+    merge = planned.git("rev-parse", "HEAD")
+    github.pulled = {checked: [14]}
+    github.applied = {14: {"redline:manual": "alice"}}
+    code, out = push(planned, capsys)
+    assert code == 0, out
+    assert recorded(planned, merge)["claims"] == [
+        {"commit": checked, "claim": "Redline-Manual: GREET.M1 checked-by @alice: it fits", "pr": 14,
+         "label": "redline:manual", "by": "alice", "role": "admin"}]
+    code, out = claims(planned, capsys)
+    assert code == 0, out
+    assert f"## {checked[:7]} add-greet/C (PR #14): close\nRedline-Manual: GREET.M1 checked-by @alice: it fits\n" \
+           f"Label at the merge: redline:manual, applied by @alice, admin (CI note on {merge[:7]})\n" in out
+
+
 def test_a_re_run_keeps_the_record_and_a_failed_read_writes_none(planned, capsys, github):
     track, big, merge = land_claims(planned)
     github.pulled, github.applied = {track: [12]}, {12: {"redline:track": "alice"}}
