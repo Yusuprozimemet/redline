@@ -185,7 +185,7 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
         failures += [f"check-premises: {bad}" for bad in check_premises(repo, change).bad]
         failures += [f"check-audit: {bad}" for bad in check_audit(repo, change).bad]
     else:
-        failures += [f"check-links: {gap}" for gap in check_links(repo).gaps]
+        failures += [f"check-links: {gap}" for gap in check_links(repo, f"{change}/{step}").gaps]
         failures += [f"check-order: {r.scenario}: green {r.green[:7]} has no red commit among its ancestors"
                      for r in failed(check_order(repo), set(holds(repo)))]
     if step == "R":

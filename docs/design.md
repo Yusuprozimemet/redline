@@ -1988,13 +1988,14 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   standard library, the gate's venv or, in an adopting repository, the site-packages it shares
   with the gate (§7, the merge-base's Redline). The plan: the PR's code runs where it can't write
   the gate's files, in a job of its own whose result the gate reads, or as another user.
-- O-LINK1 [build 9 part 28]: check-links failed every scenario of a change whose S step was merged
+- O-LINK1 [closed, build 9 part 28]: check-links failed every scenario of a change whose S step was merged
   and whose R wasn't, though at S they have no tests by design, so one change's merged S failed every
   other change's R, G and C gates, and Redline's own suite on the S merge's push run, until its R
-  merged: changes of one phase couldn't run beside each other (§6). The plan: a change with only its
-  S merged on `main`, or the gated step's own at S, has no unlinked gaps, its other gaps kept; a gate
-  passes its step, and check-links on its own reads it from `main..HEAD`'s trailers or the open step,
-  printing each waiting change as skipped (§5).
+  merged: changes of one phase couldn't run beside each other (§6). Now a change with only its S
+  merged on `main`, unless the step gated is its own from R on, or the change of a step gated at S,
+  has no unlinked gaps, its other gaps kept, by `waiting` in `redline/links.py`; a gate passes its
+  step, and check-links on its own reads it from `main..HEAD`'s trailers or the open step, printing
+  each waiting change as skipped (§5).
 - O-SELF4 [build 9 part 29]: a repository adopting Redline has no workflow to start from, since
   `.github/workflows/redline.yml` is Redline's own. The plan: `redline install workflow` writes one
   that installs Redline from the commit it was installed from, kept in step with Redline's own by

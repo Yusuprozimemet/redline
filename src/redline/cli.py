@@ -233,11 +233,15 @@ def run_check_links(repo: Path) -> int:
     except RuntimeError as error:
         print(f"redline: {error}")
         return 2
+    for change, count in sorted(report.waiting.items()):
+        print(f"skipped {change}: {count} scenarios, before its R step")
     for gap in report.gaps:
         print(gap)
     if report.gaps:
         return 1
-    print(f"ok: {report.scenarios} scenarios, each linked to a test" + (f", except {report.manual} manual" if report.manual else ""))
+    excepts = [f"{report.manual} manual"] * bool(report.manual)
+    excepts += [f"{sum(report.waiting.values())} before its change's R step"] * bool(report.waiting)
+    print(f"ok: {report.scenarios} scenarios, each linked to a test" + (f", except {' and '.join(excepts)}" if excepts else ""))
     return 0
 
 
