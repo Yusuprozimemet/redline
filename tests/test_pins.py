@@ -1,4 +1,5 @@
-"""What CI runs is pinned: actions by commit, Python and Node by version, pip from constraints.txt (docs/design.md, section 7)."""
+"""What CI runs is pinned: actions by commit, Python, Node and the runner images by version, every package pip installs by
+version and hash (docs/design.md, section 7)."""
 import os
 import re
 import tomllib
@@ -11,8 +12,15 @@ from packaging.requirements import Requirement
 
 ROOT = Path(__file__).parent.parent
 WORKFLOW = ROOT / ".github/workflows/redline.yml"
-CONSTRAINTS = ROOT / "constraints.txt"
+REQUIREMENTS = ROOT / "requirements.txt"
+PIP = ROOT / "requirements-pip.txt"
 USES = re.compile(r"^\s*(?:- )?uses: ([\w.-]+/[\w.-]+)@([0-9a-f]{40})  # (v\d+\.\d+\.\d+)$")
+PIN = re.compile(r"([A-Za-z0-9._-]+)==([\w.]+)(?: ; (.+?))?((?: --hash=sha256:[0-9a-f]{64})+)")
+INSTALLS = [
+    "python -m pip install --require-hashes --force-reinstall -r requirements-pip.txt",
+    "python -m pip install --require-hashes --force-reinstall -r requirements.txt",
+    "python -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index -e .",
+]
 
 
 def name(spec: str) -> str:
@@ -20,16 +28,25 @@ def name(spec: str) -> str:
     return re.sub(r"[-_.]+", "-", re.match(r"[A-Za-z0-9._-]+", spec).group()).lower()
 
 
-def pins() -> dict[str, str]:
-    lines = [line.strip() for line in CONSTRAINTS.read_text(encoding="utf-8").splitlines()]
-    specs = [line for line in lines if line and not line.startswith("#")]
-    assert all(re.fullmatch(r"[A-Za-z0-9._-]+==[\w.]+", spec) for spec in specs), specs
-    return {name(spec): spec.partition("==")[2] for spec in specs}
+def pinned(path: Path = REQUIREMENTS) -> dict[str, tuple[str, str | None, int]]:
+    """Each pin of a requirements file by name: its version, its marker and how many hashes it has. A line that is
+    neither a comment nor an `==` pin with at least one sha256 fails."""
+    text = re.sub(r" ?\\\n\s*", " ", path.read_text(encoding="utf-8"))
+    found = {}
+    for line in text.splitlines():
+        if line.strip() and not line.startswith("#"):
+            match = PIN.fullmatch(line.strip())
+            assert match, line
+            found[name(match[1])] = (match[2], match[3], match[4].count("--hash="))
+    return found
+
+
+def jobs() -> dict[str, dict]:
+    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]
 
 
 def steps() -> list[dict]:
-    flow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
-    return [step for job in flow["jobs"].values() for step in job["steps"]]
+    return [step for job in jobs().values() for step in job["steps"]]
 
 
 def test_every_action_is_pinned_to_a_commit_with_its_tag_in_a_comment():
@@ -48,22 +65,35 @@ def test_python_and_node_are_exact_versions():
     assert len(versions) == 4 and all(re.fullmatch(r"\d+\.\d+\.\d+", v) for v in versions), versions
 
 
-def test_every_pip_install_takes_the_constraints_and_pins_nothing_itself():
-    installs = [line for step in steps() for line in step.get("run", "").splitlines() if "pip install" in line]
-    assert len(installs) == 3
-    assert all("-c constraints.txt" in line and "==" not in line for line in installs), installs
+def test_every_runner_image_is_named_by_its_version_never_latest():
+    images = {job: spec["runs-on"] for job, spec in jobs().items()}
+    assert len(images) == 4 and not any("latest" in image for image in images.values()), images
+    assert all(re.fullmatch(r"ubuntu-\d+\.\d+|windows-\d{4}-vs\d{4}", image) for image in images.values()), images
 
 
-def test_the_constraints_pin_every_dependency_and_extra_and_xdist_and_the_build_backend_is_exact():
+def test_every_job_that_runs_pip_runs_the_hashed_lines_in_order_and_no_other():
+    installs = {job: [line.strip() for step in spec["steps"] for line in step.get("run", "").splitlines() if "pip" in line]
+                for job, spec in jobs().items()}
+    assert {job: lines for job, lines in installs.items() if lines} == dict.fromkeys(("redline", "runners", "windows"), INSTALLS)
+
+
+def test_every_pin_has_its_hashes_and_pip_is_pinned_and_setuptools_is_the_build_backend():
+    assert list(pinned(PIP)) == ["pip"]
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert project["build-system"]["requires"] == [f"setuptools=={pinned()['setuptools'][0]}"]
+
+
+def test_the_requirements_pin_every_dependency_and_extra_and_xdist_and_keep_mutmut_off_windows():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     needed = project["project"]["dependencies"] + sum(project["project"]["optional-dependencies"].values(), [])
-    assert {name(spec) for spec in needed} | {"pytest-xdist"} <= set(pins()), pins()
-    assert [re.fullmatch(r"setuptools==[\d.]+", spec) is not None for spec in project["build-system"]["requires"]] == [True]
+    assert {name(spec) for spec in needed} | {"pytest-xdist"} <= set(pinned()), pinned()
+    assert pinned()["mutmut"][1] == 'sys_platform != "win32"'
 
 
 def pulled_in() -> dict[str, str]:
-    """Each installed distribution the pip lines pull in, by name, at its version: Redline's requirements, its `mutation`
-    extra and pytest-xdist where installed, and theirs in turn. A runner image's own tools, such as Windows' pipx, aren't."""
+    """Each installed distribution the jobs' pip lines pull in, by name, at its version: Redline's requirements, its
+    `mutation` extra and pytest-xdist where installed, and theirs in turn. A runner image's own tools, such as Windows'
+    pipx, aren't."""
     installed = {name(d.metadata["Name"]): d for d in distributions()}
     found, todo = {}, [("redline", ("", "mutation")), ("pytest-xdist", ("",))]
     while todo:
@@ -81,6 +111,6 @@ def pulled_in() -> dict[str, str]:
 
 @pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") != "true", reason="a job's environment is its pip lines' in CI")
 def test_every_package_the_pip_lines_pull_in_is_pinned_at_its_version():
-    pinned, pulled = pins(), pulled_in()
+    pins, pulled = pinned(), pulled_in()
     assert {"redline", "pytest"} <= set(pulled), pulled
-    assert {n: v for n, v in pulled.items() if n != "redline" and pinned.get(n) != v} == {}, pinned
+    assert {n: v for n, v in pulled.items() if n != "redline" and pins.get(n, ("",))[0] != v} == {}, pins

@@ -87,7 +87,7 @@ def test_check_break_hands_mutmut_the_scenarios_test_files(holds, capsys, mutato
 def test_the_runners_job_runs_the_real_mutmut():
     job = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["runners"]
     runs = " ".join(step.get("run", "") for step in job["steps"])
-    assert 'pip install -e ".[mutation]"' in runs and "tests/test_mutmut.py" in runs
+    assert "-r requirements.txt" in runs and "tests/test_mutmut.py" in runs  # mutmut, on Linux
 
 
 real = pytest.mark.skipif(os.environ.get("REDLINE_REAL_RUNNERS") != "1", reason="the real mutmut runs in the runners CI job")
