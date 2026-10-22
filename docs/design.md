@@ -1776,9 +1776,15 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
 - O-GH2 [closed, build 9 part 21]: `GitHub.labels` split each issue event on a literal tab
   character in its source (the review's item 18), so an editor that turned tabs into spaces would
   have broken every label read. Now it splits on `"\t"`, and a test fails on a tab in `pr.py`.
-- O-APPR2 [build 9 part 22]: any maintainer's label approves a departure, whoever its trailer names as
-  approving, and a manual check, whoever its trailer names as checking (§7). The plan: the label's
-  applier must be the person the trailer names.
+- O-APPR2 [closed, build 9 part 22]: any maintainer's label approved a departure, whoever its
+  trailer named as approving, and a manual check, whoever its trailer named as checking, so
+  `main`'s history could say a person agreed who never did (§7). Now `approve` takes the person
+  the trailer names, read with the trailer forms in `redline/approval.py`, and fails a label whose
+  last applier isn't that person, logins compared without case, naming both; each trailer is
+  approved on its own, so trailers of one kind naming two people fail the one the applier isn't;
+  locally check-lock and check-close say who must apply it; and `redline ci push` records `named:`
+  under `claims:`, which `redline claims` prints (§4, §7). That one label approves every claim of
+  its kind, read or not, stays a limit (§7).
 - O-GH1 [build 9]: the real `gh api` calls that read labels, roles, merged PRs, a PR's head and its pushes are tested only
   by hand; the suite uses the fake (§7). Running Redline on itself (the review's item 17) would
   call them on every claim; a test may call them on this repository's own PRs.

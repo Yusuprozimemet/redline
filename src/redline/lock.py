@@ -7,17 +7,16 @@ is missing, a hold test isn't locked, or a critical entry has no `reach`; a clos
 `redline lock` moves each scenario the change's deltas name out of every closed change's entry, keeping `reach`.
 `check_frozen`, at every step, compares the whole lock by test with the lock at the merge-base: a test frozen
 there whose hashes changed or that left the lock (and, with a base, the G steps, an entry of the change added since)
-needs a `Redline-Departure: <test> approved-by @person: <reason>` trailer in base..HEAD naming the test and a
-maintainer's label (approval.py). See docs/design.md, §4, §5 and §7.
+needs a `Redline-Departure: <test> approved-by @person: <reason>` trailer in base..HEAD naming the test and the
+label of the person it names, a maintainer (approval.py). See docs/design.md, §4, §5 and §7.
 """
 
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
 
-from redline.approval import DEPARTURE, Approvals, claims
+from redline.approval import DEPARTED, DEPARTURE, Approvals, claims
 from redline.breaks import hold_tests
 from redline.config import rigor
 from redline.links import closed
@@ -27,7 +26,6 @@ from redline.runner import PYTEST, runner_for
 from redline.specs import parse
 
 LOCK = "redline/contracts/lock.yaml"
-CLAIM = re.compile(r"^(.+) approved-by @\S+: \S")  # the test is all before the last approved-by (O-RUN7)
 
 
 @dataclass
@@ -125,12 +123,15 @@ def check_frozen(repo: Path, base: str, approvals: Approvals | None = None, own:
     if own:  # at G: tests are locked at R
         had = entries(then, own)
         moved += [key for key in sorted(entries(lock, own)) if key not in had]
-    claimed = {m[1] for line in claims(repo, fork.stdout.strip(), "Redline-Departure") if (m := CLAIM.match(line))}
+    claimed: dict[str, list[str]] = {}  # test -> each person a departure of it names
+    for line in claims(repo, fork.stdout.strip(), "Redline-Departure"):
+        if found := DEPARTED.match(line):
+            claimed.setdefault(found[1], []).append(found[2])
     bad = []
     for sid, test in dict.fromkeys(moved):
         what = f"{sid}: {test}: its lock entry changed since {base}"
         if test not in claimed:
             bad.append(f"{what}, with no approved departure")
-        elif why := approvals.approve(DEPARTURE, what):
-            bad.append(why)
+        else:
+            bad += [why for who in claimed[test] if (why := approvals.approve(DEPARTURE, what, who))]
     return bad
