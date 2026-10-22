@@ -105,10 +105,11 @@ def main(argv: list[str] | None = None) -> int:
     ci.add_argument("--run-url", default="", help="push: the CI run to record in the note")
     ci.add_argument("--pr", type=int, help="pr: the PR's number, to read its approval labels")
     ci.add_argument("--note", type=Path, help="push: write the note to this file instead of adding and pushing it")
+    ci.add_argument("--python", type=Path, help="pr: run the suite with this interpreter, not Redline's own")
     ci.add_argument("--repo", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
     if args.command == "ci":
-        return run_ci(args.repo, args.event, args.base, args.run_url, args.pr, args.note)
+        return run_ci(args.repo, args.event, args.base, args.run_url, args.pr, args.note, args.python)
     if args.command == "install":
         print(f"ok: wrote {install(args.repo, args.runner)}")
         return 0
@@ -424,10 +425,17 @@ def run_ledger(repo: Path, change: str, main: str, check: bool) -> int:
     return 0
 
 
-def run_ci(repo: Path, event: str, base: str, run_url: str, number: int | None, to: Path | None = None) -> int:
+def run_ci(repo: Path, event: str, base: str, run_url: str, number: int | None, to: Path | None = None,
+           python: Path | None = None) -> int:
+    if python and event != "pr":
+        print("redline: --python is for ci pr only: a push run's suite is the merged code's own")
+        return 2
+    if python and not python.is_file():
+        print(f"redline: --python {python} isn't a file")
+        return 2
     try:
         if event == "pr":
-            name, failures = ci_pr(repo, base, number)
+            name, failures = ci_pr(repo, base, number, str(python) if python else None)
             done = (f"ok: {name} passes the gates, the test suite and check-ledger" if name else
                     "ok: a PR outside any step passes check-lines, check-plan, check-lock and the test suite")
         else:

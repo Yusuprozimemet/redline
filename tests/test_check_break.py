@@ -3,7 +3,7 @@ import yaml
 
 from redline import breaks
 from redline.cli import main
-from test_ci import RUN, ci, remote  # noqa: F401 (remote is a fixture)
+from test_ci import RUN, ci, fake_python, remote  # noqa: F401 (remote is a fixture)
 from test_ledger import LEDGER, note
 from test_pr import RED_TESTS, github, pr  # noqa: F401 (github is a fixture)
 from test_start import CHANGE, DELTA, change, fresh_branch, merge_step, start  # noqa: F401
@@ -100,6 +100,18 @@ def test_check_break_prints_each_hold_scenario_that_isnt_proved(holds, capsys, m
     assert "GREET.H3: its pytest tests fail on unmutated code" in out
     assert [sid for _, sid in mutator.calls] == ["GREET.H1"]
     assert "ok:" not in out
+
+
+def test_check_break_runs_the_scenarios_tests_with_the_python_its_given(holds, capsys, mutator, tmp_path):  # O-SELF2
+    from redline.runner import interpreter
+    holds.commit("hold tests", {"test_hold.py": PASSING})
+    with interpreter(fake_python(tmp_path)):
+        code, out = check_break(holds, capsys)
+    assert code == 1
+    assert "GREET.H1: its pytest tests fail on unmutated code" in out
+    assert mutator.calls == []
+    code, out = check_break(holds, capsys)  # and its own Python again after it
+    assert code == 0, out
 
 
 def test_where_mutmut_cannot_run_the_mutation_is_skipped_not_failed(holds, capsys, mutator):
