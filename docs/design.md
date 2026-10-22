@@ -869,6 +869,15 @@ strings count again. Skipping can only drop a red or a green, never make one, an
 red was dropped fails, where it is seen. In the working tree a file that doesn't parse is an
 error: check-links reports it as a gap, and the lock refuses.
 
+check-order judges only the scenarios a test at the commit it reads (`HEAD` by default) still
+links. History keeps a scenario whose tests are gone: Redline's own toy once linked TOY.H1 and
+TOY.H2 from a committed test file, green with no red, and no commit can take that back. A scenario
+no test links any more is printed as `skipped <ID>: no test at <rev> links it`, never failed, and
+nothing is lost: a declared scenario with no test is an unlinked gap in check-links, and an ID
+declared again is linked again, so its old green without a red fails once more. A `hold`
+scenario has no red by design, so it isn't failed either. The gate and `redline check-order` count
+the same failures, with one function, `failed` in `redline/order.py` (O-SELF5).
+
 The suite `redline ci` runs is every test of each runner the repository uses, run by the command
 check-break runs (all tests, no `REDLINE_SPEC`). pytest is used when git tracks one of its test
 files; Jest when the root `package.json` lists `jest` in `dependencies` or `devDependencies`. Jest
@@ -897,6 +906,14 @@ toy's `adult`, TOY.H1's test kills 4 and TOY.H2's all 6. They also run check-bre
 a git repository holding the toy, its `node_modules` linked rather than copied, and a delta whose
 premise cites `src/adult.js`: TOY.H1 and TOY.H2 hold, and a TOY.H3 test that asserts nothing
 about `adult` survives all 6 mutants and fails.
+
+The toy's test file, `src/adult.test.js`, isn't committed: the tests that run it write it from a
+string beside the helper, and the toy's `.gitignore` ignores `src/*.test.js`. Committed, its markers
+would link TOY.H1 and TOY.H2 in Redline's own tree, where no spec declares them, and fail
+check-links there. `tests/test_self.py` runs check-links and check-order on Redline's own checkout,
+as every step from R on runs them, and fails on any gap. check-order needs the whole history, so it
+is skipped in a shallow clone, as the `windows` and `runners` jobs check out; the `redline` job
+fetches it all and runs it with the suite.
 
 A Jest test is `path::name`, where the name is the first argument of its `test` call, a string
 literal. Two tests in one file with the same name are an error, since a `describe` around them
@@ -1964,9 +1981,12 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   a test.
 - O-SELF5 [build 9 part 27]: Redline's own tree fails check-links and check-order, which every step
   from R on runs: `tests/toys/jest/src/adult.test.js` links TOY.H1 and TOY.H2, which no spec
-  declares. Its 12 toy marker lines in Python sit in strings, which count as nothing (O-MARK1). The
-  plan: the toy's test file is written by the tests that use it, from a string, and a test fails
-  when either gate fails on the repository.
+  declares, and check-order reads their green with no red in af3968c, which stays in history. Its
+  Python toy markers sit in strings, which count as nothing (O-MARK1). And `redline check-order`
+  fails a `hold` scenario, which the gate skips. The plan: the toy's test file is written from a
+  string by the tests that run it, and ignored; check-order judges only scenarios a test at its
+  commit still links, and the gate and the command count failures with one function; and a test
+  fails when either gate fails on the repository (§5).
 - O-NOTE1 [build 9, the change note-run]: a note is trusted because CI writes it, but anyone with the
   `write` role, the agent's own account among them (§7, Repository settings), can push
   `refs/notes/redline-ci`, which no ruleset covers, and write `result: pass` or a `break:` map on
