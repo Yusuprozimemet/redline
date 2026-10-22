@@ -2039,10 +2039,13 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   a test at its commit still links, printing the others as skipped, and `redline check-order` skips
   `hold` scenarios as the gate does, both through `failed` in `redline/order.py`; and
   `tests/test_self.py` fails when either gate fails on Redline's own checkout (§5).
-- O-AUDIT1 [build 9 part 29]: the auditors and the relabeller ran only on Fable, so when Fable's
-  usage ran out every S step stopped, however long that lasted, and nothing recorded which model
-  wrote an audit. The plan: Fable, else Opus at max effort, and nothing weaker; each audit's
-  `Model:` line, and the relabel's `# Model:` comment, checked by check-audit and check-relabel (§9).
+- O-AUDIT1 [closed, build 9 part 29]: the auditors and the relabeller ran only on Fable, so when
+  Fable's usage ran out every S step stopped, however long that lasted, and nothing recorded which
+  model wrote an audit. Now each agent has `model: fable` and `effort: max`, is run with `model:
+  opus` when Fable isn't available, and refuses any other model; each audit names its model in a
+  `Model:` line before its first finding, and each relabel in a `# Model:` line before its first
+  entry; `unnamed` in `redline/audit.py` fails one with none or with a model weaker than Opus, for
+  check-audit, the plan and end-of-initiative audits, and check-relabel (§9).
 - O-NOTE1 [build 9, the change note-run]: a note is trusted because CI writes it, but anyone with the
   `write` role, the agent's own account among them (§7, Repository settings), can push
   `refs/notes/redline-ci`, which no ruleset covers, and write `result: pass` or a `break:` map on

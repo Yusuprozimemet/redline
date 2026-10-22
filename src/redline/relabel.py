@@ -14,6 +14,7 @@ from pathlib import Path
 
 import yaml
 
+from redline.audit import unnamed
 from redline.config import rigor
 from redline.defects import CAUSE, CAUSES, DEFECT, check_defects
 from redline.order import git
@@ -74,7 +75,9 @@ def check_relabel(repo: Path, change: str, required: bool = True) -> RelabelRepo
         if required and rigor(repo, change) == "critical":
             report.bad.append(f"{path}: missing; at C a critical change has its defects relabelled blind")
         return report
-    labels = yaml.safe_load((repo / path).read_text(encoding="utf-8")) or {}
+    text = (repo / path).read_text(encoding="utf-8")
+    report.bad += unnamed(text, path, "# Model:", "the relabeller", "entry")
+    labels = yaml.safe_load(text) or {}
     logged = causes((repo / log).read_text(encoding="utf-8")) if (repo / log).is_file() else {}
     first = firsts(repo, change, log, path)
     report.bad += [f"{d}: no label in relabel.yaml; run the relabeller again" for d in logged if d not in labels]
