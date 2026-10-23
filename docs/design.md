@@ -1332,6 +1332,35 @@ What it doesn't prove:
   Redline's own modules before the suite runs, which narrows this and doesn't close it. In an
   adopting repository the gate shares its site-packages with the code under test (O-CI10).
 
+**An adopting repository's workflow.** `.github/workflows/redline.yml` is Redline's own: it
+installs the Redline its PR contains and gates with the merge-base's, and runs the `runners` and
+`windows` jobs, none of which an adopting repository has. So `redline install workflow` writes
+one for that repository at `.github/workflows/redline.yml`, the one path a note checks out from
+(§4), from a template shipped in the package. It installs the Redline that ran the command: pip
+records a commit installed by `redline @ git+<url>@<commit>` in the distribution's
+`direct_url.json` (PEP 610), with its URL, `vcs_info.vcs` `git` and the full `commit_id` even
+when a short one was asked for. The workflow clones that URL into `$RUNNER_TEMP`, checks out that
+commit and installs it with Redline's own three hashed pip lines, read from that commit's
+requirements files, not editable; then a comment marks where the project installs its own
+dependencies. Every other line is Redline's own: the triggers, the default permissions, the
+concurrency group, the `redline` job's checkout, fetch, setup-python, push step and note
+hand-off, and the `note` job, so a note it writes checks out (§4). Its PR gate runs `redline ci
+pr --base main --pr <n>` with no `--python`, since Redline and the project share one environment
+there (above). A test keeps the template in step: it writes the workflow and compares it with
+Redline's own, line for line outside the install and the PR gate, so a change to Redline's
+workflow that an adopter needs fails until the template has it too.
+
+The command refuses, writing nothing, when the Redline that runs it wasn't installed from a git
+commit (an editable or local install, an index or archive URL, another VCS), so a workflow never
+pins a Redline nobody can fetch; and when `.github/workflows/redline.yml` exists, which is the
+repository's own and may hold its own steps (Node for Jest, say). To move to another commit,
+reinstall Redline from it, remove the file and run the command again.
+
+What it doesn't prove: that the commit is on a branch a clone fetches, or that the URL serves the
+same commit later; a clone that can't check it out fails the run, where it is seen. Nor that the
+project's own dependencies, installed beside Redline's pins, leave them as they were: that is the
+site-packages the gate shares with the code under test (O-CI10).
+
 **Text is UTF-8, on every platform.** Windows' Python decodes and prints text in the code page
 (cp1252) unless told otherwise, while git writes, and Redline's files hold, UTF-8. So every file
 Redline reads or writes says `encoding="utf-8"`, and a file that isn't UTF-8 is an error. What it
@@ -2123,10 +2152,12 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   has no unlinked gaps, its other gaps kept, by `waiting` in `redline/links.py`; a gate passes its
   step, and check-links on its own reads it from `main..HEAD`'s trailers or the open step, printing
   each waiting change as skipped (§5).
-- O-SELF4 [build 9 part 30]: a repository adopting Redline has no workflow to start from, since
-  `.github/workflows/redline.yml` is Redline's own. The plan: `redline install workflow` writes one
-  that installs Redline from the commit it was installed from, kept in step with Redline's own by
-  a test.
+- O-SELF4 [build 9 part 30, the change `install-workflow`]: a repository adopting Redline has no
+  workflow to start from, since `.github/workflows/redline.yml` is Redline's own. The plan:
+  `redline install workflow` writes one that installs Redline from the git commit `direct_url.json`
+  records, by hash, and refuses an install with no commit or an existing file; a test keeps it in
+  step with Redline's own outside the install and the PR gate (§7, an adopting repository's
+  workflow).
 - O-SELF5 [closed, build 9 part 27]: Redline's own tree failed check-links and check-order, which
   every step from R on runs: `tests/toys/jest/src/adult.test.js` linked TOY.H1 and TOY.H2, which no
   spec declares, and check-order read their green with no red in af3968c, which stays in history.
