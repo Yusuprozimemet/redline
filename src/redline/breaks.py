@@ -63,10 +63,21 @@ def without_mutmut(pyproject: Path) -> None:
     pyproject.write_text("".join(kept), encoding="utf-8", newline="")
 
 
-def copied(copy: Path, tests: list[str]) -> list[str]:
+def package(copy: Path, path: str) -> PurePosixPath | None:
+    """The outermost package holding `path`: the highest of its directories with an __init__.py, all of them up to it."""
+    top = None
+    for parent in (p for p in PurePosixPath(path).parents if p.name):
+        if not (copy / parent / "__init__.py").is_file():
+            break
+        top = parent
+    return top
+
+
+def copied(copy: Path, tests: list[str], mutated: list[str] = ()) -> list[str]:
     """mutmut's `also_copy`: the directory of each of the scenario's tests, of each conftest.py from the root down
-    to them and of each `support:` file, or the file itself at the root, since mutmut makes no directory for a file."""
-    files = set(tests)
+    to them and of each `support:` file, or the file itself at the root, since mutmut makes no directory for a file;
+    and the outermost package of each mutated file, whose copy would otherwise be a namespace portion (O-MUT3)."""
+    files = set(tests) | {(top / "__init__.py").as_posix() for path in mutated if (top := package(copy, path))}
     for test in tests:
         files |= {(parent / "conftest.py").as_posix() for parent in PurePosixPath(test).parents
                   if (copy / parent / "conftest.py").is_file()}
@@ -99,7 +110,7 @@ class Mutmut:
             config = configparser.ConfigParser()
             config.read(copy / "setup.cfg", encoding="utf-8")
             config["mutmut"] = {"source_paths": "\n".join(files), "pytest_add_cli_args": f"--redline-spec={sid}"}
-            if also := copied(copy, list(tests)):  # never empty: mutmut reads "" as ".", the whole copy
+            if also := copied(copy, list(tests), files):  # never empty: mutmut reads "" as ".", the whole copy
                 config["mutmut"]["also_copy"] = "\n".join(also)
             with open(copy / "setup.cfg", "w", encoding="utf-8") as out:
                 config.write(out)

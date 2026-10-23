@@ -873,7 +873,13 @@ guess. mutmut copies only `tests/`, `test/`, root `test*.py` files and a few con
 its `mutants/` directory, so `also_copy` adds the directory of each of the scenario's tests, of each
 `conftest.py` from the root down to them, and of each `support:` file (§4), or the file itself at
 the root: mutmut copies a listed file without making its directory. `support:` is read from the
-tree, as `reach` reads it, since check-break counts as evidence only on `main`.
+tree, as `reach` reads it, since check-break counts as evidence only on `main`. A cited file in a
+package, a directory with an `__init__.py`, would be copied alone, into a package with no
+`__init__.py`: a namespace portion, which loses to the same package anywhere else on `sys.path`,
+such as the checkout an editable install points at, so the tests would run the unmutated code and
+reach no mutant (O-MUT3). So `also_copy` adds the outermost package of each cited file too,
+`src/redline` for `src/redline/runner.py`; mutmut copies it before it writes the mutants over the
+cited files' copies.
 
 Stryker mutates in its own sandbox, so no copy of the repository is made (copying `node_modules`
 is costly): `npx --no-install stryker run --mutate <files> --testRunner jest --reporters json`,
@@ -1968,7 +1974,9 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    by its level, each after the first reading only what changed (O-AUDIT2); then the change `note-run`, Redline's first
    build step run as a change, S, R, G1 and C (O-NOTE1, O-SELF1); part 30, a workflow an adopting
    repository installs (O-SELF4); part 31, the PR's code run apart from the gate's job (O-CI10); part 32, the plan
-   and end-of-initiative audits' rounds limited too (O-AUDIT3).
+   and end-of-initiative audits' rounds limited too (O-AUDIT3); part 35, a cited file in a
+   package mutated in a copy of its whole package (O-MUT3), found by install-workflow/R's
+   check-break and merged before that step.
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
@@ -2413,6 +2421,15 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   how mutmut reads its settings went unseen. Now the `runners` CI job runs `Mutmut` on toy
   repositories, one with `[tool.mutmut]`, and checks each scenario's kills against a test that
   kills every mutant (§7).
+- O-MUT3 [closed, build 9 part 35]: mutmut copies only the cited files, so a cited file in a package
+  landed in a copy of that package with no `__init__.py`, a namespace portion that loses to the
+  package the tests can import from anywhere else, such as the checkout an editable install
+  points at. The tests ran the unmutated code and reached no mutant, mutmut stopped, and the run
+  failed: INSTALL.WF.H1 on `src/redline/runner.py`, in install-workflow/R's CI (PR #75), the first
+  `hold` scenario check-break ran on Redline's own code. The real mutmut had run only on a
+  top-level module. Now `also_copy` adds each cited file's outermost package, by `package` in
+  `redline/breaks.py` (§5), and the `runners` job runs the real mutmut on a `src/` package the
+  tests can also import from the original tree.
 - O-RUN5 [closed, build 5 part 7]: the helper had been checked under real Jest by hand only, and
   Stryker not at all. Now the `runners` CI job runs both on a toy project (§5). It found that Jest
   took the helper, then `redline/runners/spec.js`, for a test file and failed every run, so the

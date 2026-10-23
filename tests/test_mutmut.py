@@ -58,6 +58,14 @@ def test_mutmut_gets_redlines_settings_alone_and_the_scenarios_tests_with_their_
     assert settings["also_copy"].split() == ["checks", "checks/unit", "conftest.py", "helpers"]  # directories, as mutmut copies
 
 
+def test_mutmut_copies_the_outermost_package_of_each_cited_file(repo, monkeypatch):
+    repo.commit("toy", {"src/toy/__init__.py": "", "src/toy/words.py": "", "src/toy/sub/__init__.py": "",
+                        "src/toy/sub/greet.py": GREET, "loose/greet.py": GREET, "greet.py": GREET, "tests/test_h.py": ""})
+    seen = fake_run(monkeypatch)
+    Mutmut(repo.path).kills(["src/toy/sub/greet.py", "loose/greet.py", "greet.py"], "TOY.H1", ["tests/test_h.py"])
+    assert seen[0]["mutmut"]["also_copy"].split() == ["src/toy", "tests"]  # loose/ and the root are no package
+
+
 def test_tool_mutmut_is_taken_out_of_the_copy_and_pytests_settings_stay(tmp_path, monkeypatch):
     toy(tmp_path, {"greet.py": GREET, "pyproject.toml": PYTEST + TABLE + '[tool.mutmut.extra]\nx = 1\n\n[project]\nname = "toy"\n'})
     seen = fake_run(monkeypatch)
@@ -126,3 +134,14 @@ def test_the_real_mutmut_runs_a_test_outside_tests_with_its_root_conftest(tmp_pa
     toy(tmp_path, {"greet.py": GREET, "conftest.py": 'import pytest\n\n\n@pytest.fixture\ndef word():\n    return "hello"\n',
                    "checks/test_h.py": test})
     assert Mutmut(tmp_path).kills(["greet.py"], "TOY.H1", ["checks/test_h.py"]) == (2, 2)
+
+
+@real
+def test_the_real_mutmut_mutates_a_package_the_tests_can_also_import_from_the_original_tree(tmp_path, monkeypatch):
+    test = 'import pytest\nfrom toy.greet import greet\n\n\n@pytest.mark.spec("TOY.H1")\ndef test_h():\n    assert greet() == "hello!"\n'
+    toy(tmp_path, {"src/toy/__init__.py": "", "src/toy/words.py": 'HELLO = "hello"\n',
+                   "src/toy/greet.py": 'from toy.words import HELLO\n\n\ndef greet():\n    return HELLO + "!"\n',
+                   "tests/test_greet.py": test})
+    monkeypatch.setenv("PYTHONPATH", str(tmp_path / "src"))  # the original tree importable, as an editable install makes it
+    made, killed = Mutmut(tmp_path).kills(["src/toy/greet.py"], "TOY.H1", ["tests/test_greet.py"])
+    assert made and killed == made
