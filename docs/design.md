@@ -1358,7 +1358,11 @@ Redline's other jobs taken out, the two are equal whole, a job's `name` or `if` 
 change to Redline's workflow that an adopter needs fails until the template has it too. The
 template isn't one of the runners' helpers: a written workflow never equals it and may hold the
 project's own steps, so check-helpers doesn't read it. Every suite runs on an editable install,
-which reads the template from the tree, so a test builds the wheel and finds it there.
+which reads the template from the tree, so a test builds the wheel and finds it there. The
+template, `src/redline/helpers/redline.yml`, holds `{url}` and `{commit}` in the install step's
+script, and `write_workflow` in `redline/runner.py` puts in the commit, checked as 40 hex digits,
+and the URL, quoted for the shell by `shlex.quote`. It reads `direct_url.json` through
+`distribution("redline")`, imported into `redline.runner` so the tests can give it any.
 
 The command refuses, writing nothing, when the Redline that runs it wasn't installed from a git
 commit (an editable or local install, an index or archive URL, another VCS), so a workflow never
@@ -1368,6 +1372,8 @@ reinstall Redline from it, remove the file and run the command again.
 
 What it doesn't prove: that the commit is on a branch a clone fetches, or that the URL serves the
 same commit later; a clone that can't check it out fails the run, where it is seen. Nor that the
+URL is safe outside the shell: a `${{` in it is an Actions expression, and a line break ends the
+script, before the shell's quoting counts (O-SELF6). Nor that the
 project's own dependencies, installed beside Redline's pins, leave them as they were: that is the
 site-packages the gate shares with the code under test (O-CI10).
 
@@ -1976,7 +1982,8 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    repository installs (O-SELF4); part 31, the PR's code run apart from the gate's job (O-CI10); part 32, the plan
    and end-of-initiative audits' rounds limited too (O-AUDIT3); part 35, a cited file in a
    package mutated in a copy of its whole package (O-MUT3), found by install-workflow/R's
-   check-break and merged before that step.
+   check-break and merged before that step; part 36, the URL a written workflow clones held to
+   what a git URL needs (O-SELF6).
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
@@ -2170,6 +2177,12 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   records, by hash, and refuses an install with no commit or an existing file; a test keeps it in
   step with Redline's own outside the install and the PR gate (§7, an adopting repository's
   workflow).
+- O-SELF6 [build 9 part 36]: `redline install workflow` writes `direct_url.json`'s URL into the
+  install step's script quoted for the shell alone, as the spec takes any URL with a git commit. A
+  URL holding `${{` would be an Actions expression, and one holding a line break would end the
+  YAML block, before the quoting counts. pip writes the URL the person installing typed, and the
+  file is reviewed under CODEOWNERS before it runs, so it is their own; still, the command should
+  refuse a URL outside the characters a git URL needs.
 - O-SELF5 [closed, build 9 part 27]: Redline's own tree failed check-links and check-order, which
   every step from R on runs: `tests/toys/jest/src/adult.test.js` linked TOY.H1 and TOY.H2, which no
   spec declares, and check-order read their green with no red in af3968c, which stays in history.

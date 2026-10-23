@@ -45,16 +45,20 @@ the tests import.
    `.claude/agents/`. They are the read-only auditors and the blind relabeller of §9, for Claude
    Code. They run on Fable, or on Opus at max effort when Fable isn't available (run them with
    `model: opus` then), refuse any weaker model, and name the model they ran on in their reply.
-3. **CI**: a workflow that checks out the full history with `main` and `refs/notes/*`, runs
-   `redline ci pr --base main --pr <number>` on each PR (and on `labeled` and `unlabeled`), and on
-   a push to `main` runs `redline ci push --note <file>` in a read-only job and hands the note to a
-   job that runs git alone to add and push it. A note counts only from a push run of
-   `.github/workflows/redline.yml` on `main` whose `redline` job runs `redline ci push` with
+3. **CI**: `redline install workflow` writes `.github/workflows/redline.yml`, which installs the
+   commit Redline was installed from, by hash, and refuses if Redline wasn't installed from a git
+   commit or the file exists. Add the project's own dependencies (Node and `npm ci` for Jest, say)
+   where its comment says, after Redline's install. The workflow checks out the full history with
+   `main` and `refs/notes/*`, runs `redline ci pr --base main --pr <number>` on each PR (and on
+   `labeled` and `unlabeled`), and on a push to `main` runs `redline ci push --note <file>` in a
+   read-only job and hands the note to a job that runs git alone to add and push it. A note
+   counts only from a push run of `.github/workflows/redline.yml` on `main` whose `redline` job runs `redline ci push` with
    `--run-url` its own run's URL (`${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`),
    and whose outcome agrees with the note; any other reads `unconfirmed` ([§4](docs/design.md#4-files)).
-   The jobs that rebuild a ledger hold `actions: read`, and no job `actions: write`. Redline's own
-   [workflow](.github/workflows/redline.yml) is the model; its `redline` and `note` jobs are the
-   part every repository needs. There is no workflow to copy yet (O-SELF4).
+   The jobs that rebuild a ledger hold `actions: read`, and no job `actions: write`. The written
+   workflow is Redline's own [workflow](.github/workflows/redline.yml)'s `redline` and `note` jobs,
+   so keep its lines as they are. To move to another commit, reinstall Redline from it, remove the
+   file and run the command again.
 4. **The repository settings** Redline's guarantees rest on. Without them a gate is advice. Each is
    explained in [§7, Repository settings](docs/design.md#repository-settings):
    - [ ] A ruleset on `main`: require a pull request and the `redline` status check; block force
@@ -106,7 +110,7 @@ Records and helpers:
 | `redline audit-brief <change>` | prints the auditor's prompt for the next round, or refuses past the level's limit (1, 2, 3) |
 | `redline retro <change>` | groups the defects by cause and proposes rules; writes nothing |
 | `redline claims <initiative>` | prints every approved claim in `main`'s history, for the process auditor |
-| `redline install jest` | writes the Jest `spec` helper into `redline/runners/` |
+| `redline install jest\|workflow` | writes the Jest `spec` helper into `redline/runners/`, or the CI workflow into `.github/workflows/redline.yml` |
 | `redline ci pr\|push` | what CI runs: a PR's gates and suite, or a merged commit's suite and note |
 
 ## A change from S to C
