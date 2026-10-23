@@ -2151,14 +2151,15 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   Rounds).
 - O-AUDIT3 [build 9 part 32]: the plan and end-of-initiative audits have no limit on their
   rounds, and each re-run reads its whole initiative again.
-- O-NOTE1 [build 9, the change note-run]: a note is trusted because CI writes it, but anyone with the
-  `write` role, the agent's own account among them (§7, Repository settings), can push
+- O-NOTE1 [closed, build 9, the change note-run]: a note was trusted because CI writes it, but anyone
+  with the `write` role, the agent's own account among them (§7, Repository settings), can push
   `refs/notes/redline-ci`, which no ruleset covers, and write `result: pass` or a `break:` map on
-  any commit (§4). The plan, at note-run's G1: the rebuild checks each note it reads against its
-  `run:` on GitHub's Actions API, through `GitHub.push_run`: a push run of
-  `.github/workflows/redline.yml` on `main`, in this repository, on the noted commit, whose
-  `redline` job concluded `success` exactly when the note records no failure; any other note reads
-  `unconfirmed`, which check-close refuses as a note that doesn't match its run (§4, §5).
+  any commit (§4). Since note-run's G1, the rebuild checks each note it reads against its `run:` on
+  GitHub's Actions API, through `GitHub.push_run`: a push run of `.github/workflows/redline.yml` on
+  `main`, in this repository, on the noted commit, whose `redline` job concluded `success` exactly
+  when the note records no failure; any other note reads `unconfirmed`, which check-close refuses
+  as a note that doesn't match its run (§4, §5). The rest of the note's text is O-NOTE2's, and
+  evidence a run can no longer confirm O-NOTE3's.
 - O-NOTE2 [build 11]: a run that checks out confirms how it ended, not the rest of its note: the
   `claims:` record, which anyone with the `write` role can still rewrite, and which `break:` entry
   failed when one did, since the job's outcome says only that one failed (§4).

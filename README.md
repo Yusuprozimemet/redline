@@ -14,8 +14,10 @@ that owns it. Nothing has been released, so pin a commit.
 
 ## Install
 
-Redline needs Python 3.12 or later, git, and the GitHub CLI `gh` for opening PRs and reading
-labels in CI. It isn't on PyPI; install it from a commit:
+Redline needs Python 3.12 or later, git, and the GitHub CLI `gh` for opening PRs, reading labels
+in CI and rebuilding a ledger: each CI note the ledger reads is checked against its run on GitHub,
+so `gh`'s token must be able to read the repository's Actions API. It isn't on PyPI; install it
+from a commit:
 
 ```sh
 pip install "redline @ git+https://github.com/Yusuprozimemet/redline@<commit>"
@@ -46,7 +48,11 @@ the tests import.
 3. **CI**: a workflow that checks out the full history with `main` and `refs/notes/*`, runs
    `redline ci pr --base main --pr <number>` on each PR (and on `labeled` and `unlabeled`), and on
    a push to `main` runs `redline ci push --note <file>` in a read-only job and hands the note to a
-   job that runs git alone to add and push it. Redline's own
+   job that runs git alone to add and push it. A note counts only from a push run of
+   `.github/workflows/redline.yml` on `main` whose `redline` job runs `redline ci push` with
+   `--run-url` its own run's URL (`${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`),
+   and whose outcome agrees with the note; any other reads `unconfirmed` ([§4](docs/design.md#4-files)).
+   The jobs that rebuild a ledger hold `actions: read`, and no job `actions: write`. Redline's own
    [workflow](.github/workflows/redline.yml) is the model; its `redline` and `note` jobs are the
    part every repository needs. There is no workflow to copy yet (O-SELF4).
 4. **The repository settings** Redline's guarantees rest on. Without them a gate is advice. Each is
