@@ -63,7 +63,7 @@ in each adopting repository, now reads GitHub.
 - **Who can push the ref.** That is a repository setting (§7), and stays one.
 - **Evidence a run can no longer confirm**: a run past GitHub's 30 days to re-run, a deleted run,
   a renamed repository's runs, or an R note whose failed break names a `hold` scenario a later
-  step drops from the delta (O-NOTE3, build 11).
+  step drops from the delta or retags (O-NOTE3, build 11).
 - **Per-scenario outcomes** (O-CLOSE6, build 11).
 
 ## Steps

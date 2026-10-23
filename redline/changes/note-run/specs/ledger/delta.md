@@ -6,7 +6,7 @@ The ledger reads a result or a break from a CI note only when the note's `run:` 
 job concluded `success` exactly when the note records no failure. A failure is `result: fail`, or
 a `break:` entry `fail` that names a `hold` scenario whose break the ledger reads from that note;
 an entry for any other scenario counts for nothing. A break is read as its entry only from a
-note that says `result: pass`, and as `fail` from one that says `result: fail`.
+note that says `result: pass`, and as `fail` from one that says `result: fail`, entry or none.
 The ledger asks GitHub for the run in the checkout's own repository, by the run's id alone, once
 it has read that repository. Any other note reads as `unconfirmed`. A note that isn't YAML, or
 whose `result:` is neither `pass` nor `fail`, is an error before GitHub is asked; so is a
@@ -31,7 +31,7 @@ repository GitHub doesn't show, and any other failure to read a run than a 404.
 - WHEN the note says `result: pass`, with H's entry `pass` or none, and the `redline` job concluded `failure`, or `result: fail` and `success`, or `result: pass` with H's `break:` entry `fail` and `success`, or the run's jobs have no `redline` job
 - OR the job concluded `failure` and the note says `result: pass` with H's entry `pass` and an entry `fail` for a scenario the ledger reads no break of from that note
 - THEN the result, and H's break, is `unconfirmed`, in each case, H's too when the note has no entry for it
-- AND `result: fail` with the job's `failure` reads `fail`, and H's break `fail` whatever its entry says
+- AND `result: fail` with the job's `failure` reads `fail`, and H's break `fail` whatever its entry says, or with none
 - AND `result: pass` with H's entry `fail` and the job's `failure` reads `pass`, H's break `fail`
 - AND `result: pass` with H's entry `pass` and the job's `success` reads `pass`, H's break `pass`
 - AND `result: pass` with H's entry `pass`, an entry `fail` for a scenario the change no longer holds, and the job's `success` reads `pass`, H's break `pass`
