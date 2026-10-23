@@ -22,8 +22,9 @@ already there, it writes nothing and exits 2; `redline install jest` still write
 
 #### Scenario INSTALL.WF.S2 [new]: the workflow is Redline's own outside the install and the PR gate
 - GIVEN the workflow written as in INSTALL.WF.S1, and Redline's own `.github/workflows/redline.yml`, both parsed as YAML
-- THEN `on`, `permissions`, `concurrency` and the `note` job are equal
-- AND the `redline` job's `runs-on`, `permissions` and `outputs` are equal, and its steps are Redline's own in order, without the merge-base's install, with the install of INSTALL.WF.S1 in place of the editable install, and the PR gate's `run` `redline ci pr --base main --pr ${{ github.event.pull_request.number }}`, with its `if` and `env` as Redline's own
+- WHEN the `runners` and `windows` jobs, the merge-base's install, the install step and the PR gate's `run` are taken out of both
+- THEN the two documents are equal whole, every key at every level, the `redline` job's `name` and `if` among them
+- AND the written workflow's install step sits where Redline's own editable install does, and its PR gate's `run` is `redline ci pr --base main --pr ${{ github.event.pull_request.number }}`
 - AND its jobs are `redline` and `note` alone
 
 #### Scenario INSTALL.WF.S3 [new]: a Redline with no git commit to install writes nothing

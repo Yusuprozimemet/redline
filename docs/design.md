@@ -1347,7 +1347,8 @@ concurrency group, the `redline` job's checkout, fetch, setup-python, push step 
 hand-off, and the `note` job, so a note it writes checks out (§4). Its PR gate runs `redline ci
 pr --base main --pr <n>` with no `--python`, since Redline and the project share one environment
 there (above). A test keeps the template in step: it writes the workflow and compares it with
-Redline's own, both parsed as YAML, so comments aside, outside the install and the PR gate; a
+Redline's own, both parsed as YAML, so comments aside: with the install, the PR gate's `run` and
+Redline's other jobs taken out, the two are equal whole, a job's `name` or `if` included, and a
 change to Redline's workflow that an adopter needs fails until the template has it too. The
 template isn't one of the runners' helpers: a written workflow never equals it and may hold the
 project's own steps, so check-helpers doesn't read it. Every suite runs on an editable install,

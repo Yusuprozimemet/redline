@@ -24,11 +24,10 @@ from a push run of `.github/workflows/redline.yml` whose `redline` job notes its
   `requirements-pip.txt` and `requirements.txt`, with `.` not editable, on a push as on a PR. A
   comment after that step, outside its script, marks where the project installs its own
   dependencies, so a line added there doesn't run in Redline's clone.
-- Every other line follows Redline's own workflow: `on`, the default permissions, `concurrency`,
-  the `note` job, and the `redline` job's `runs-on`, permissions, outputs and steps, but for the
-  merge-base's install, the editable install and the PR gate, which runs `redline ci pr --base main
-  --pr ${{ github.event.pull_request.number }}` with `GH_TOKEN`, without `--python`. It has no
-  `runners` or `windows` job.
+- Every other line follows Redline's own workflow, every key at every level, the `redline` job's
+  `name` and `if` among them, but for the merge-base's install, the editable install and the PR
+  gate, which runs `redline ci pr --base main --pr ${{ github.event.pull_request.number }}` with
+  `GH_TOKEN`, without `--python`. It has no `runners` or `windows` job.
 - It refuses, exit 2, writing nothing: a Redline with no `direct_url.json`, or whose
   `direct_url.json` has no `vcs_info`, a `vcs` other than `git`, or a `commit_id` that isn't 40
   hex digits (an editable or local install, an index or archive URL); and an existing
