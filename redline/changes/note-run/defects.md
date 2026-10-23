@@ -49,7 +49,10 @@ The proposal's scope still said an entry for any other scenario made a note `unc
 so the brief for R would have carried a rule no scenario held.
 
 ## D8: S5 named the repository GitHub answered 404 for, which Redline has no way to learn
-Cause: spec
+Cause: premise
+Decided: changed from spec to the relabel's premise; S5 said nothing wrong about the behaviour
+wanted, it rested on an unchecked belief that `gh`'s 404 names the repository it asked, a claim
+about the tool the scenario was written against.
 Found-by: note-run/S
 `gh`'s 404 names no repository (F20), so S5's error message could not be written as specified. It
 now says only that GitHub doesn't show the checkout's repository to the token.

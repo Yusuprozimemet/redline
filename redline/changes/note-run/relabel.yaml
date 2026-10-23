@@ -1,0 +1,29 @@
+# Relabel: note-run
+# Model: claude-opus-5-5
+D1:
+  cause: spec
+  note: The committed S3 itself pinned the rule that any failing break entry excused a failed job, and the fix changed that rule.
+D2:
+  cause: spec
+  note: The rule from D1 read CI's real R note unconfirmed once a later step dropped a hold scenario, and the fix was §4 and O-NOTE3 saying which case reads unconfirmed.
+D3:
+  cause: spec
+  note: The requirement's last sentence made an answer an error that S2 reads as unconfirmed, and only that sentence was reworded.
+D4:
+  cause: premise
+  note: S1 to S3 rested on GitHub's run fields with nothing citing them, and the fix was a new premise, P18, recording a real run.
+D5:
+  cause: premise
+  note: P16's claim that the workflow's tests read only --note of the push step was wrong, since they also read its token and command.
+D6:
+  cause: spec
+  note: S3's THEN covered the green's note too, so a forged entry there could change H's break, and the fix narrowed S3.
+D7:
+  cause: handoff
+  note: The proposal kept D1's old rule after the delta and §4 moved on, so the brief for R would have carried a rule no scenario held.
+D8:
+  cause: premise
+  note: S5 rested on Redline learning the repository from gh's 404, and the text says gh's 404 names none.
+D9:
+  cause: spec
+  note: The requirement and §4 read the same note differently and S3 pinned neither, so a scenario was missing.
