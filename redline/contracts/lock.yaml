@@ -1,0 +1,5 @@
+install-workflow:
+  INSTALL.WF.H1:
+    tests/test_install_workflow.py::test_install_jest_writes_over_an_edited_helper:
+      reach: 299aae975a741b360be07e358bf36ceeed0cea2251fb1329967c904dfbe320c8
+      test: 80cc7d73a5b1867de0746a41582c45a4f30fd22e70b55227771aecc7fc5491c4
