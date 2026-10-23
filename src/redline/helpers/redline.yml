@@ -1,0 +1,87 @@
+# Redline's CI, written by `redline install workflow`: every rule lives in `redline ci` (Redline's docs/design.md, section 7).
+name: redline
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]  # a label re-runs the approval check
+  push:
+    branches: [main]
+
+permissions:
+  contents: read  # each job says what it holds; only `note`, which runs no repository code, writes
+
+concurrency:
+  # a push run's own, so no merge's run is cancelled as a pending one; a PR's runs in turn, newest last
+  group: ${{ github.event_name == 'push' && format('redline-push-{0}', github.run_id) || format('redline-{0}', github.ref) }}
+  cancel-in-progress: false
+
+jobs:
+  redline:  # runs the repository's code, the PR's own on a PR, so it can't write the notes
+    runs-on: ubuntu-24.04  # by version: -latest moves to a new OS
+    permissions:
+      actions: read  # the push run each CI note names, for the ledger; no job can write the runs
+      contents: read
+      issues: read  # who applied a PR's approval labels
+      pull-requests: read
+    outputs:
+      note: ${{ steps.note.outputs.note }}  # the push run's note, base64, for the `note` job
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          fetch-depth: 0  # the ledger and check-order read the whole history
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}  # the PR's own commits, not a merge
+          persist-credentials: false
+      - name: Fetch main and the CI notes
+        run: |
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" fetch --no-tags origin '+refs/heads/main:refs/heads/main' '+refs/notes/*:refs/notes/*'
+        env:
+          GH_TOKEN: ${{ github.token }}  # for this fetch alone, since the checkout keeps no credentials
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12.15"  # exact: "3.12" gave Linux and Windows different patches
+      - name: Install Redline, the commit `redline install workflow` ran from, by hash
+        run: |  # in a clone of its own, so the project's files choose none of Redline's pins
+          git clone --no-checkout {url} "$RUNNER_TEMP/redline"
+          cd "$RUNNER_TEMP/redline"
+          git checkout --detach {commit}
+          python -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
+          python -m pip install --require-hashes --force-reinstall -r requirements.txt
+          python -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index .
+      # the project's own dependencies install here, in steps of their own (Node and `npm ci` for Jest, say)
+      - name: Gates, suite and ledger for the PR's step, or the gates for a PR outside any step
+        if: github.event_name == 'pull_request'
+        run: redline ci pr --base main --pr ${{ github.event.pull_request.number }}  # Redline and the project share this environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Run the suite and write the note for the merged commit
+        if: github.event_name == 'push'
+        run: redline ci push --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --note "$RUNNER_TEMP/note"
+        env:
+          GH_TOKEN: ${{ github.token }}  # the merged PR's claim labels, recorded in the note
+      - name: Hand the note on, a failed run's too
+        id: note
+        if: always() && github.event_name == 'push'
+        run: if [ -f "$RUNNER_TEMP/note" ]; then echo "note=$(base64 -w0 "$RUNNER_TEMP/note")" >> "$GITHUB_OUTPUT"; fi
+
+  note:  # the only job that can write refs/notes/redline-ci, so it runs git alone (docs/design.md, section 7)
+    needs: redline
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.redline.outputs.note != '' }}
+    runs-on: ubuntu-24.04  # by version: -latest moves to a new OS
+    permissions:
+      contents: write
+    steps:
+      # the merged commit, to note; nothing in it runs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - name: Add the note to the merged commit and push it, again over a push that overtook it
+        run: |
+          printf '%s' "$NOTE" | base64 -d > "$RUNNER_TEMP/note"
+          for attempt in 1 2 3 4 5; do
+            git fetch --no-tags origin '+refs/notes/*:refs/notes/*'
+            git -c user.name=redline-ci -c user.email=redline-ci@users.noreply.github.com notes --ref=redline-ci add -f -F "$RUNNER_TEMP/note" "$GITHUB_SHA"
+            git push origin refs/notes/redline-ci && exit 0
+            sleep "$attempt"
+          done
+          exit 1
+        env:
+          NOTE: ${{ needs.redline.outputs.note }}  # through env, never ${{ }} in the script: the text is data

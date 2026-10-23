@@ -21,7 +21,7 @@ from redline.planaudit import check_plan_audits
 from redline.pr import pr
 from redline.premises import check_premises
 from redline.relabel import blind, check_relabel
-from redline.runner import HELPERS, install
+from redline.runner import HELPERS, install, write_workflow
 from redline.specs import check_specs
 from redline.start import Refused, read_steps, start
 from redline.steps import check_steps, since
@@ -88,8 +88,8 @@ def main(argv: list[str] | None = None) -> int:
         led.add_argument("change", help="the change, e.g. add-greet")
         led.add_argument("--main", default="main", help="the ref whose history is evidence")
         led.add_argument("--repo", type=Path, default=Path.cwd())
-    setup = commands.add_parser("install", help="write a runner's spec helper into the repository")
-    setup.add_argument("runner", choices=sorted(HELPERS))
+    setup = commands.add_parser("install", help="write a runner's spec helper, or the CI workflow, into the repository")
+    setup.add_argument("runner", choices=sorted(HELPERS) + ["workflow"])
     setup.add_argument("--repo", type=Path, default=Path.cwd())
     begin = commands.add_parser("start", help="start a step on a fresh branch and print its brief")
     begin.add_argument("step", help="<change>/<step>, e.g. add-greet/G1")
@@ -112,7 +112,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "ci":
         return run_ci(args.repo, args.event, args.base, args.run_url, args.pr, args.note, args.python)
     if args.command == "install":
-        print(f"ok: wrote {install(args.repo, args.runner)}")
+        try:
+            path = write_workflow(args.repo) if args.runner == "workflow" else install(args.repo, args.runner)
+        except RuntimeError as error:
+            print(f"redline: {error}")
+            return 2
+        print(f"ok: wrote {path}")
         return 0
     if args.command == "merged":
         return run_merged(args.repo, args.step)
