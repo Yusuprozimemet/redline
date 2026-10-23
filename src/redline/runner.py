@@ -5,12 +5,15 @@ scenario ID, and whether it is `new`): pytest's from Python's own parser, a mark
 test function's decorator; Jest's from `spec(` calls in code, found by a scanner that blanks comments, strings and templates;
 and the command that runs them, pytest's with Redline's own Python unless `interpreter` gives another. check-links, check-order and the lock all read markers through it. `redline install jest`
 writes the Jest helper tests import; `check_helpers`, run by every gate, fails on one that differs
-from the copy Redline ships.
+from the copy Redline ships. `redline install workflow` writes the adopting repository's CI from the
+template beside the helpers (§7).
 """
 
 import ast
+import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -18,11 +21,13 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from fnmatch import fnmatch
+from importlib.metadata import distribution
 from importlib.resources import files
 from pathlib import Path
 from typing import NamedTuple
 
 HELPERS = {"jest": "redline/runners/jest.js"}  # runner -> where `redline install` writes its helper
+WORKFLOW = ".github/workflows/redline.yml"  # `redline install workflow`'s, the one path a note checks out from
 CLOSE = {"(": ")", "[": "]", "{": "}"}
 
 
@@ -225,6 +230,25 @@ def install(repo: Path, name: str) -> str:
     (repo / HELPERS[name]).parent.mkdir(parents=True, exist_ok=True)
     (repo / HELPERS[name]).write_bytes(shipped(name).encode())
     return HELPERS[name]
+
+
+def write_workflow(repo: Path) -> str:
+    """Write the adopting repository's workflow, installing the git commit this Redline was installed
+    from (`direct_url.json`, PEP 610); refuse with no such commit or an existing file. Never a helper:
+    a written workflow may hold the project's own steps, so check-helpers doesn't read it."""
+    text = distribution("redline").read_text("direct_url.json")
+    direct = json.loads(text) if text else {}
+    vcs = direct.get("vcs_info", {})
+    commit = vcs.get("commit_id", "")
+    if vcs.get("vcs") != "git" or not re.fullmatch(r"[0-9a-f]{40}", commit) or not direct.get("url"):
+        raise RuntimeError("Redline wasn't installed from a git commit, so the workflow has none to install; "
+                           'install it with `pip install "redline @ git+<url>@<commit>"` and run this again')
+    if (repo / WORKFLOW).exists():
+        raise RuntimeError(f"{WORKFLOW} exists and is the repository's own; to write Redline's, remove it first")
+    template = files("redline").joinpath("helpers", "redline.yml").read_text(encoding="utf-8")
+    (repo / WORKFLOW).parent.mkdir(parents=True, exist_ok=True)
+    (repo / WORKFLOW).write_bytes(template.replace("{url}", shlex.quote(direct["url"])).replace("{commit}", commit).encode())
+    return WORKFLOW
 
 
 def check_helpers(repo: Path) -> list[str]:

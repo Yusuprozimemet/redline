@@ -97,7 +97,7 @@ def core(workflow: dict) -> dict:
     return workflow
 
 
-@pytest.mark.spec("INSTALL.WF.S1", new=True)
+@pytest.mark.spec("INSTALL.WF.S1")
 def test_the_workflow_installs_the_commit_redline_was_installed_from(repo, capsys, installed):
     repo.commit("start")
     code, out = install(repo, capsys)
@@ -128,7 +128,7 @@ def test_the_workflow_installs_the_commit_redline_was_installed_from(repo, capsy
     assert check_helpers(repo.path) == []
 
 
-@pytest.mark.spec("INSTALL.WF.S2", new=True)
+@pytest.mark.spec("INSTALL.WF.S2")
 def test_the_workflow_is_redlines_own_outside_the_install_and_the_pr_gate(repo, capsys, installed):
     workflow = written(repo, capsys)
     assert core(workflow) == core(own())
@@ -146,7 +146,7 @@ def test_the_workflow_is_redlines_own_outside_the_install_and_the_pr_gate(repo, 
     {"url": URL, "vcs_info": {"commit_id": COMMIT, "vcs": "hg"}},
     {"url": URL, "vcs_info": {"commit_id": "dea7b69", "vcs": "git"}},
 ], ids=["no-direct-url", "dir-info", "hg", "short-commit"])
-@pytest.mark.spec("INSTALL.WF.S3", new=True)
+@pytest.mark.spec("INSTALL.WF.S3")
 def test_a_redline_with_no_git_commit_to_install_writes_nothing(repo, capsys, installed, direct_url):
     repo.commit("start")
     installed.direct_url = direct_url
@@ -156,7 +156,7 @@ def test_a_redline_with_no_git_commit_to_install_writes_nothing(repo, capsys, in
     assert not (repo.path / WRITTEN).exists()
 
 
-@pytest.mark.spec("INSTALL.WF.S4", new=True)
+@pytest.mark.spec("INSTALL.WF.S4")
 def test_an_existing_workflow_file_is_left_as_it_was(repo, capsys, installed):
     repo.commit("start")
     mine = b"# the repository's own\r\nname: mine\r\non: push\r\n"
@@ -168,7 +168,7 @@ def test_an_existing_workflow_file_is_left_as_it_was(repo, capsys, installed):
     assert (repo.path / WRITTEN).read_bytes() == mine
 
 
-@pytest.mark.spec("INSTALL.WF.S5", new=True)
+@pytest.mark.spec("INSTALL.WF.S5")
 def test_the_wheel_built_from_the_tree_ships_the_template(tmp_path):
     tree, out = tmp_path / "tree", tmp_path / "wheel"
     tree.mkdir()
