@@ -1341,14 +1341,17 @@ records a commit installed by `redline @ git+<url>@<commit>` in the distribution
 `direct_url.json` (PEP 610), with its URL, `vcs_info.vcs` `git` and the full `commit_id` even
 when a short one was asked for. The workflow clones that URL into `$RUNNER_TEMP`, checks out that
 commit and installs it with Redline's own three hashed pip lines, read from that commit's
-requirements files, not editable; then a comment marks where the project installs its own
-dependencies. Every other line is Redline's own: the triggers, the default permissions, the
+requirements files, not editable, on a push as on a PR; then a comment after that step, outside
+its script, marks where the project installs its own dependencies. Every other line is Redline's own: the triggers, the default permissions, the
 concurrency group, the `redline` job's checkout, fetch, setup-python, push step and note
 hand-off, and the `note` job, so a note it writes checks out (§4). Its PR gate runs `redline ci
 pr --base main --pr <n>` with no `--python`, since Redline and the project share one environment
 there (above). A test keeps the template in step: it writes the workflow and compares it with
-Redline's own, line for line outside the install and the PR gate, so a change to Redline's
-workflow that an adopter needs fails until the template has it too.
+Redline's own, both parsed as YAML, so comments aside, outside the install and the PR gate; a
+change to Redline's workflow that an adopter needs fails until the template has it too. The
+template isn't one of the runners' helpers: a written workflow never equals it and may hold the
+project's own steps, so check-helpers doesn't read it. Every suite runs on an editable install,
+which reads the template from the tree, so a test builds the wheel and finds it there.
 
 The command refuses, writing nothing, when the Redline that runs it wasn't installed from a git
 commit (an editable or local install, an index or archive URL, another VCS), so a workflow never

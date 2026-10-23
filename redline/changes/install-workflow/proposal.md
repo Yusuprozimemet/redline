@@ -1,6 +1,6 @@
 # Proposal: install-workflow
 
-Rigor: standard
+Rigor: critical
 
 ## Why
 
@@ -21,8 +21,9 @@ from a push run of `.github/workflows/redline.yml` whose `redline` job notes its
   `vcs_info.commit_id` of the distribution's `direct_url.json` (PEP 610), which pip writes for an
   install from `redline @ git+<url>@<commit>`. It clones the URL into `$RUNNER_TEMP`, checks out
   the commit, and runs Redline's three hashed pip lines there, reading that commit's
-  `requirements-pip.txt` and `requirements.txt`, with `.` not editable. A comment after them marks
-  where the project installs its own dependencies.
+  `requirements-pip.txt` and `requirements.txt`, with `.` not editable, on a push as on a PR. A
+  comment after that step, outside its script, marks where the project installs its own
+  dependencies, so a line added there doesn't run in Redline's clone.
 - Every other line follows Redline's own workflow: `on`, the default permissions, `concurrency`,
   the `note` job, and the `redline` job's `runs-on`, permissions, outputs and steps, but for the
   merge-base's install, the editable install and the PR gate, which runs `redline ci pr --base main
@@ -32,8 +33,12 @@ from a push run of `.github/workflows/redline.yml` whose `redline` job notes its
   `direct_url.json` has no `vcs_info`, a `vcs` other than `git`, or a `commit_id` that isn't 40
   hex digits (an editable or local install, an index or archive URL); and an existing
   `.github/workflows/redline.yml`, left as it was.
-- `pyproject.toml` ships `helpers/*.yml` beside `helpers/*.js`; the README's setup step 3 names the
-  command, in place of "There is no workflow to copy yet".
+- The workflow isn't one of `HELPERS`: a written one never equals the template, and may hold the
+  project's own steps, so check-helpers doesn't read it; `redline install jest` still writes over
+  its helper, check-helpers' remedy for an edited one.
+- `pyproject.toml` ships `helpers/*.yml` beside `helpers/*.js`, which a test reads from the wheel
+  the tree builds, since every suite runs on an editable install; the README's setup step 3 names
+  the command, in place of "There is no workflow to copy yet".
 - Tests set `direct_url.json` through a fake distribution, and compare the written workflow with
   Redline's own, parsed as YAML.
 
@@ -42,9 +47,10 @@ wrote `{"url": "https://github.com/Yusuprozimemet/redline", "vcs_info": {"commit
 "dea7b6981106798b773ae799e71a404488e5b33d", "requested_revision": "dea7b69", "vcs": "git"}}`, and
 this checkout's editable install has `{"dir_info": {"editable": true}, "url": "file:///…"}`.
 
-It is standard (§8): it writes a file the adopter reviews and commits, under CODEOWNERS on
-`.github/` (§7, Repository settings), and decides no evidence; the ledger's check of each note
-against its run is unchanged.
+It is critical (§8, raised by the audit's F1): in an adopting repository the file it writes runs
+every job that produces evidence, holds the token's permissions and the one `contents: write`,
+and chooses the Redline that gates each PR; it widens a public command; and the first write
+comes before CODEOWNERS in the README's setup order.
 
 ## Non-goals
 
