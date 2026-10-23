@@ -1,0 +1,28 @@
+# A cache of evidence, rebuilt from main's history by `redline ledger <change>`.
+# CI rebuilds it and fails on a mismatch, so never edit it by hand. See docs/design.md, section 4.
+change: install-workflow
+scenarios:
+  INSTALL.WF.S1:
+    red: null
+    green: null
+    break: null
+  INSTALL.WF.S2:
+    red: null
+    green: null
+    break: null
+  INSTALL.WF.S3:
+    red: null
+    green: null
+    break: null
+  INSTALL.WF.S4:
+    red: null
+    green: null
+    break: null
+  INSTALL.WF.S5:
+    red: null
+    green: null
+    break: null
+  INSTALL.WF.H1:
+    red: null
+    green: null
+    break: null
