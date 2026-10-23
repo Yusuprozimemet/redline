@@ -299,8 +299,10 @@ has no red and no green, and both stay `null`. Its `break` is `{commit, merged, 
 `commit` is the first commit of the change's R step (one on `main` carrying `Redline-Step:
 <change>/R`) whose tests link the scenario without `new=True`, `merged` is found as for red, and
 `result` is the scenario's entry in the `break:` map of the CI note on `merged` (`pass` or
-`fail`). It is `unverified` when that note, or its entry, is missing, and `unconfirmed` when the
-note doesn't match its run (below). The R step's merge is the
+`fail`). From a note that checks out (below), it is `unverified` when the note says `result: pass`
+and has no entry for it, and `fail`, entry or none, when it says `result: fail`. It is
+`unverified` when that note is missing, and `unconfirmed` when the note doesn't match its run
+(below). The R step's merge is the
 only one whose note has a `break:` map (§5), so a break is never read from another change's.
 
 **A change's evidence is its own.** A scenario ID outlives the change that added it: a later
@@ -347,13 +349,12 @@ records no failure. A failure is `result: fail`, or a `break:` entry `fail` nami
 scenario whose break the ledger reads from that note: CI writes a `break:` map only on an R merge,
 keyed by exactly the change's `hold` scenarios (§5), notes `result: pass` beside a failed break
 and fails the job, so that note reads `pass` with that break `fail`. An entry for any other
-scenario counts for nothing, so it can't excuse a failed job, and a delta that drops a `hold`
-scenario after R still reads its R note when that scenario's break passed; when it failed, the
-note records no failure the ledger counts beside the job's `failure`, so it reads `unconfirmed`
-(O-NOTE3). A break is read as its entry only from a note that says
-`result: pass`; from one that says `result: fail` every break is
-`fail`, so a forged entry can't turn a failed run into a passing break. A run whose jobs have no
-`redline` job confirms nothing.
+scenario counts for nothing, so it can't excuse a failed job, and a delta that drops or retags a
+`hold` scenario after R still reads its R note when that scenario's break passed; when it failed,
+the note records no failure the ledger counts beside the job's `failure`, so it reads `unconfirmed`
+(O-NOTE3). A break is read as its entry only from a note that says `result: pass`; from one that
+says `result: fail` every break is `fail`, entry or none, so a forged entry can't turn a failed
+run into a passing break. A run whose jobs have no `redline` job confirms nothing.
 
 A note that doesn't check out reads as a fourth result, `unconfirmed`, whatever it says, `fail`
 included: a run GitHub doesn't have (a 404, answered at once, with no retry), a `run:` that isn't
@@ -2165,8 +2166,8 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   then never close: a run GitHub no longer re-runs, after 30 days; a run deleted, which anyone
   with the `write` role can do; and every run of a repository renamed or transferred, whose
   `html_url` no longer matches its notes; and an R merge whose failed break names a `hold`
-  scenario a later step drops from the delta, whose note then records no failure the ledger
-  counts beside the job's `failure` (§4). What then confirms that evidence is open.
+  scenario a later step drops from the delta or retags, whose note then records no failure the
+  ledger counts beside the job's `failure` (§4). What then confirms that evidence is open.
 - O-LOCK1 [closed, build 5 part 3]: a departure's approval was a recorded line, not proof. Now
   `redline ci pr` checks a maintainer's `redline:departure` label, with the same function that
   checks `Oversized` (§7, Approvals), and §7 says what that still doesn't prove.
