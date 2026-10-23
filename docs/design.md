@@ -1803,8 +1803,9 @@ changed text, with what that text cites or contradicts, and doesn't re-check a c
 Each round's commit message records the agent's token and tool-call counts, as its result gives
 them, so the cost of each audit stays in `git log`.
 
-What it doesn't prove: that the main session gave the agent the brief unchanged, which is its
-word, as an unedited reply is (§12, Judgments); and that a re-round missed nothing outside the
+What it doesn't prove: that the main session gave the agent the brief unchanged, and wrote back
+the reply's `Round:` as the agent gave it, which is its word, as an unedited reply is, though
+`git log` of `audit.md` shows each round (§12, Judgments); and that a re-round missed nothing outside the
 changed text, which is the reason for the first round's full read.
 
 **When Fable isn't available**, as when its usage runs out, the main session runs the agent with

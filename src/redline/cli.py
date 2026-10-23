@@ -3,7 +3,7 @@ import io
 import sys
 from pathlib import Path
 
-from redline.audit import check_audit
+from redline.audit import brief, check_audit
 from redline.breaks import check_break, holds
 from redline.ci import ci_pr, ci_push
 from redline.claims import claims
@@ -54,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
                        ("check-defects", "check the form of a change's defect log, as at the C step"),
                        ("retro", "group a change's defects by cause and propose rules; writes nothing"),
                        ("blind", "print a change's defect log without its causes, for the relabeller"),
+                       ("audit-brief", "print the auditor's prompt for the change's next round, or refuse past its limit"),
                        ("check-relabel", "compare the blind relabel with the defect log, as at the C step")):
         logged = commands.add_parser(name, help=help)
         logged.add_argument("change", help="the change, e.g. add-greet")
@@ -133,8 +134,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_defects(args.repo, args.change)
     if args.command == "check-steps":
         return run_check_steps(args.repo, args.change, args.base)
-    if args.command in ("retro", "blind"):
-        return run_retro(args.repo, args.change, retro if args.command == "retro" else blind)
+    if args.command in ("retro", "blind", "audit-brief"):
+        return run_retro(args.repo, args.change, {"retro": retro, "blind": blind, "audit-brief": brief}[args.command])
     if args.command == "claims":
         return run_retro(args.repo, args.initiative, claims)
     if args.command == "check-close":
