@@ -1978,8 +1978,9 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    change's gates (O-LINK1); part 29, the auditors on Opus at max effort when Fable isn't
    available, each audit naming its model (O-AUDIT1); part 29a, a change's audit rounds limited
    by its level, each after the first reading only what changed (O-AUDIT2); then the change `note-run`, Redline's first
-   build step run as a change, S, R, G1 and C (O-NOTE1, O-SELF1); part 30, a workflow an adopting
-   repository installs (O-SELF4); part 31, the PR's code run apart from the gate's job (O-CI10); part 32, the plan
+   build step run as a change, S, R, G1 and C (O-NOTE1, O-SELF1); part 30, the change
+   `install-workflow`, a workflow an adopting repository writes with `redline install workflow`,
+   S, R, G1 and C (O-SELF4); part 31, the PR's code run apart from the gate's job (O-CI10); part 32, the plan
    and end-of-initiative audits' rounds limited too (O-AUDIT3); part 35, a cited file in a
    package mutated in a copy of its whole package (O-MUT3), found by install-workflow/R's
    check-break and merged before that step; part 36, the URL a written workflow clones held to
@@ -2171,12 +2172,14 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   has no unlinked gaps, its other gaps kept, by `waiting` in `redline/links.py`; a gate passes its
   step, and check-links on its own reads it from `main..HEAD`'s trailers or the open step, printing
   each waiting change as skipped (§5).
-- O-SELF4 [build 9 part 30, the change `install-workflow`]: a repository adopting Redline has no
-  workflow to start from, since `.github/workflows/redline.yml` is Redline's own. The plan:
-  `redline install workflow` writes one that installs Redline from the git commit `direct_url.json`
-  records, by hash, and refuses an install with no commit or an existing file; a test keeps it in
-  step with Redline's own outside the install and the PR gate (§7, an adopting repository's
-  workflow).
+- O-SELF4 [closed, build 9 part 30, the change `install-workflow`]: a repository adopting Redline
+  had no workflow to start from, since `.github/workflows/redline.yml` is Redline's own. Now
+  `redline install workflow` writes one from the template `src/redline/helpers/redline.yml`, which
+  installs Redline from the git commit `direct_url.json` records, by hash, on a push as on a PR,
+  and refuses an install with no commit or an existing file; a test keeps it in step with
+  Redline's own outside the install and the PR gate, and the README's setup step 3 names it (§7,
+  an adopting repository's workflow). Its C step passed check-close, each red and green, and H1's
+  break, confirmed by its push run (§4).
 - O-SELF6 [build 9 part 36]: `redline install workflow` writes `direct_url.json`'s URL into the
   install step's script quoted for the shell alone, as the spec takes any URL with a git commit. A
   URL holding `${{` would be an Actions expression, and one holding a line break would end the
