@@ -38,6 +38,14 @@ def test_the_auditor_checks_premises_then_clauses_and_rigor():
     assert "never lower" in body
 
 
+def test_the_auditor_works_from_the_brief_alone_and_a_re_round_reads_only_what_changed():
+    _, body = definition()
+    assert "redline audit-brief" in body
+    assert "REFUSED: give me the text `redline audit-brief <id>` prints" in body
+    for rule in ("`Since: none`", "don't re-check a closed finding", "only its heading and its `Resolution:`"):
+        assert rule in body
+
+
 def test_the_documented_output_is_an_audit_check_audit_reads(repo):
     _, body = definition()
     example = re.search(r"```markdown\n(# Audit: .+?)```", body, re.S)
