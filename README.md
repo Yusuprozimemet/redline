@@ -192,6 +192,8 @@ add-greet` proposes rules from its defect log.
 ## How Redline is built
 
 Redline follows its own rules: every PR changes at most 400 lines, one session builds one step,
-and tests come first, each seen to fail before the code that makes it pass. Its own PRs don't run
-as steps yet, though: they carry no `Redline-Step` trailer, so their red before green is a commit
-convention a reviewer checks, not evidence Redline checks (O-SELF1).
+and tests come first, each seen to fail before the code that makes it pass. Its build steps now
+run as changes under `redline/changes/`, through `redline start`, `redline pr` and `redline
+merged`, each PR with its `Redline-Step` trailer. So Redline's own red before green is evidence it
+checks, not a commit convention: the change `note-run` was the first, and its C step passed
+check-close on Redline itself (O-SELF1).

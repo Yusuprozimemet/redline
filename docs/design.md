@@ -2092,12 +2092,12 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   them, so nothing told whoever sets up a repository what Redline needs (the review's item 7).
   Now §7, Repository settings, lists each with the guarantee it holds up, and a test fails when
   that list names other labels than `redline/approval.py`'s.
-- O-SELF1 [build 9, the change note-run]: Redline's own PRs carry no `Redline-Step` trailer, so they
-  run outside any step, and its own red before green is a commit convention, not evidence (the
-  review's item 17). The plan: from the change `note-run` on, each build part is a change under
-  `redline/changes/`, its design text, proposal, delta and audit at S, its red tests at R, its code
-  at G, its delta into `redline/specs/` at C, run through `start`, `pr` and `merged`; this closes
-  when check-close has passed `note-run`'s C on Redline itself.
+- O-SELF1 [closed, build 9, the change note-run]: Redline's own PRs carried no `Redline-Step`
+  trailer, so they ran outside any step, and its own red before green was a commit convention, not
+  evidence (the review's item 17). Now each build part is a change under `redline/changes/`, its
+  design text, proposal, delta and audit at S, its red tests at R, its code at G, its delta into
+  `redline/specs/` at C, run through `start`, `pr` and `merged`. `note-run` was the first: its C
+  step passed check-close on Redline itself, each red and green confirmed by its push run (§4).
 - O-SELF2 [closed, build 9 part 25]: a runner ran pytest with the Python Redline runs in, so the
   Redline that gates a PR and the code its suite tests had to be one installation: a gate in an
   environment of its own would import itself in the suite (O-SELF3). Now `redline ci pr --python
