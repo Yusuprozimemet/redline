@@ -3,30 +3,51 @@
 change: note-run
 scenarios:
   LEDGER.RUN.S1:
-    red: null
+    red:
+      commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
+      merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
+      result: pass
     green: null
     break: null
   LEDGER.RUN.S2:
-    red: null
+    red:
+      commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
+      merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
+      result: pass
     green: null
     break: null
   LEDGER.RUN.S3:
-    red: null
+    red:
+      commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
+      merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
+      result: pass
     green: null
     break: null
   LEDGER.RUN.S4:
-    red: null
+    red:
+      commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
+      merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
+      result: pass
     green: null
     break: null
   LEDGER.RUN.S5:
-    red: null
+    red:
+      commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
+      merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
+      result: pass
     green: null
     break: null
   LEDGER.RUN.S6:
-    red: null
+    red:
+      commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
+      merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
+      result: pass
     green: null
     break: null
   LEDGER.RUN.S7:
-    red: null
+    red:
+      commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
+      merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
+      result: pass
     green: null
     break: null
