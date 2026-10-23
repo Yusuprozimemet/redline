@@ -7,47 +7,68 @@ scenarios:
       commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
       merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
       result: pass
-    green: null
+    green:
+      commit: acf2dd4b6ceaf6c65d9d7abbdfbc51887284f89a
+      merged: b389a7a335921ed7e6335de73f7b4ac01bffbce6
+      result: pass
     break: null
   LEDGER.RUN.S2:
     red:
       commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
       merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
       result: pass
-    green: null
+    green:
+      commit: acf2dd4b6ceaf6c65d9d7abbdfbc51887284f89a
+      merged: b389a7a335921ed7e6335de73f7b4ac01bffbce6
+      result: pass
     break: null
   LEDGER.RUN.S3:
     red:
       commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
       merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
       result: pass
-    green: null
+    green:
+      commit: acf2dd4b6ceaf6c65d9d7abbdfbc51887284f89a
+      merged: b389a7a335921ed7e6335de73f7b4ac01bffbce6
+      result: pass
     break: null
   LEDGER.RUN.S4:
     red:
       commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
       merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
       result: pass
-    green: null
+    green:
+      commit: acf2dd4b6ceaf6c65d9d7abbdfbc51887284f89a
+      merged: b389a7a335921ed7e6335de73f7b4ac01bffbce6
+      result: pass
     break: null
   LEDGER.RUN.S5:
     red:
       commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
       merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
       result: pass
-    green: null
+    green:
+      commit: acf2dd4b6ceaf6c65d9d7abbdfbc51887284f89a
+      merged: b389a7a335921ed7e6335de73f7b4ac01bffbce6
+      result: pass
     break: null
   LEDGER.RUN.S6:
     red:
       commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
       merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
       result: pass
-    green: null
+    green:
+      commit: acf2dd4b6ceaf6c65d9d7abbdfbc51887284f89a
+      merged: b389a7a335921ed7e6335de73f7b4ac01bffbce6
+      result: pass
     break: null
   LEDGER.RUN.S7:
     red:
       commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
       merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
       result: pass
-    green: null
+    green:
+      commit: acf2dd4b6ceaf6c65d9d7abbdfbc51887284f89a
+      merged: b389a7a335921ed7e6335de73f7b4ac01bffbce6
+      result: pass
     break: null
