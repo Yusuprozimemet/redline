@@ -97,6 +97,7 @@ Records and helpers:
 | `redline ledger <change>` | rebuilds the change's `ledger.yaml` from `main`'s history and CI's notes |
 | `redline lock <change>` | writes the change's `hold` tests into `redline/contracts/lock.yaml` |
 | `redline blind <change>` | prints the defect log without its causes, for the relabeller |
+| `redline audit-brief <change>` | prints the auditor's prompt for the next round, or refuses past the level's limit (1, 2, 3) |
 | `redline retro <change>` | groups the defects by cause and proposes rules; writes nothing |
 | `redline claims <initiative>` | prints every approved claim in `main`'s history, for the process auditor |
 | `redline install jest` | writes the Jest `spec` helper into `redline/runners/` |
@@ -137,9 +138,10 @@ add-greet/S`. Add `proposal.md` (why, scope, `Rigor: standard`) and the delta,
 - P2: An empty name raises ValueError — `greet.py:2-3` (`ValueError`)
 ```
 
-`steps.md` names the steps, S, R, `G1` with `Owns: GREET.S1`, and C. Run the `redline-auditor`
-agent with `Audit add-greet` and write its reply unedited to `audit.md`; resolve its findings by
-fixing the spec and running it again. Commit, then `redline pr`.
+`steps.md` names the steps, S, R, `G1` with `Owns: GREET.S1`, and C. Commit, run the `redline-auditor`
+agent with the text `redline audit-brief add-greet` prints, and write its reply unedited to
+`audit.md`; resolve its findings by fixing the spec, committing and running it again, two
+rounds at most at standard. Commit, then `redline pr`.
 
 **R, the red tests.** `redline start add-greet/R`, then write the tests, `new` as a strict
 expected failure:

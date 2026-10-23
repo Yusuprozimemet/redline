@@ -13,8 +13,8 @@ def run(repo, capsys, change: str = "add-login") -> tuple[int, list[str]]:
 
 
 def audit(text: str, model: str | None = "claude-fable-5-1") -> dict[str, str]:
-    """The audit, its first line the model the auditor names (§9), or none."""
-    return {DELTA: "### Premises\n", AUDIT: (f"Model: {model}\n" if model else "") + text}
+    """The audit, its first line the model the auditor names (§9), or none, then its round and the commit it read."""
+    return {DELTA: "### Premises\n", AUDIT: (f"Model: {model}\n" if model else "") + f"Round: 1\nAudited: {'0' * 40}\n" + text}
 
 
 @pytest.mark.parametrize("model", ["claude-fable-5-1", "claude-opus-5-5", "Claude Opus 5.5"])
@@ -30,8 +30,8 @@ WEAKER = "is neither a Fable nor an Opus model; run the auditor on Fable, or on 
 @pytest.mark.parametrize(("text", "why"), [
     ("# Audit: add-login\n\nNo findings.\n", f"{AUDIT}: no `Model:` line; {NAMES}"),
     ("# Audit: add-login\n## F1 [closed]: fine\nResolution: fixed\nModel: claude-opus-5-5\n", f"{AUDIT}: no `Model:` line; {NAMES}"),
-    ("# Audit: add-login\nModel: claude-sonnet-5-5\n\nNo findings.\n", f"{AUDIT}:2: Model: claude-sonnet-5-5 {WEAKER}"),
-    ("# Audit: add-login\nModel: \n\nNo findings.\n", f"{AUDIT}:2: Model:  {WEAKER}"),
+    ("# Audit: add-login\nModel: claude-sonnet-5-5\n\nNo findings.\n", f"{AUDIT}:4: Model: claude-sonnet-5-5 {WEAKER}"),
+    ("# Audit: add-login\nModel: \n\nNo findings.\n", f"{AUDIT}:4: Model:  {WEAKER}"),
 ], ids=["none", "after-a-finding", "sonnet", "empty"])
 def test_an_audit_with_no_model_or_a_weaker_one_fails(repo, capsys, text, why):
     repo.commit("audit", audit(text, None))
@@ -81,8 +81,8 @@ def test_each_open_finding_is_reported_with_its_line(repo, capsys):
     code, out = run(repo, capsys)
     assert code == 1
     assert out == [
-        f"{AUDIT}:2: F1 is open: P2 is wrong; `auth/login.py:30` already calls `verify_code`",
-        f"{AUDIT}:5: F3 is open: THEN clause of AUTH.S2 can't be checked",
+        f"{AUDIT}:4: F1 is open: P2 is wrong; `auth/login.py:30` already calls `verify_code`",
+        f"{AUDIT}:7: F3 is open: THEN clause of AUTH.S2 can't be checked",
     ]
 
 
@@ -99,10 +99,10 @@ def test_closed_needs_a_resolution_and_waived_needs_a_person(repo, capsys):
     code, out = run(repo, capsys)
     assert code == 1
     assert out == [
-        f"{AUDIT}:2: F1 is closed with no `Resolution:` line",
-        f"{AUDIT}:5: F2 is waived with no `Waived-by: @person: <reason>` line",
-        f"{AUDIT}:8: F3 is closed with no `Resolution:` line",
-        f"{AUDIT}:10: F4 is waived with no `Waived-by: @person: <reason>` line",
+        f"{AUDIT}:4: F1 is closed with no `Resolution:` line",
+        f"{AUDIT}:7: F2 is waived with no `Waived-by: @person: <reason>` line",
+        f"{AUDIT}:10: F3 is closed with no `Resolution:` line",
+        f"{AUDIT}:12: F4 is waived with no `Waived-by: @person: <reason>` line",
     ]
 
 
@@ -117,8 +117,8 @@ def test_a_malformed_or_repeated_finding_is_reported(repo, capsys):
     code, out = run(repo, capsys)
     assert code == 1
     assert out == [
-        f"{AUDIT}:4: not a finding; a finding is `## F<n> [open|closed|waived]: <text>`",
-        f"{AUDIT}:5: F1 is repeated (first at line 2)",
+        f"{AUDIT}:6: not a finding; a finding is `## F<n> [open|closed|waived|deferred]: <text>`",
+        f"{AUDIT}:7: F1 is repeated (first at line 4)",
     ]
 
 

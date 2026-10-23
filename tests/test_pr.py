@@ -5,7 +5,7 @@ from redline.start import open_step_file
 from test_start import CHANGE, DELTA, change, fresh_branch, merge_step, start  # noqa: F401 (change is a fixture)
 
 URL = "https://github.com/toy/toy/pull/1"
-AUDIT = {f"{CHANGE}/audit.md": "# Audit: add-greet\nModel: claude-fable-5-1\n\nNo findings.\n"}
+AUDIT = {f"{CHANGE}/audit.md": f"# Audit: add-greet\nModel: claude-fable-5-1\nRound: 1\nAudited: {'0' * 40}\n\nNo findings.\n"}
 PUSHED = "2026-10-22T10:00:00Z"  # when the fake PR's head was pushed
 LABELLED = "2026-10-22T11:00:00Z"  # when a fake label given as its applier alone was applied, after the push
 HEAD = ("f" * 40, PUSHED)
@@ -224,14 +224,14 @@ def test_spec_step_refuses_without_an_audit(change, capsys, github):
 def test_spec_step_refuses_on_an_unresolved_finding(change, capsys, github):
     begin(change, capsys, "S", "spec")
     change.commit("audit", {f"{CHANGE}/audit.md": (
-        "# Audit: add-greet\nModel: claude-fable-5-1\n\n"
+        f"# Audit: add-greet\nModel: claude-fable-5-1\nRound: 1\nAudited: {'0' * 40}\n\n"
         "## F1 [open]: P1 says only a placeholder exists; say what greet.py must not do yet\n"
         "## F2 [waived]: GREET.S2's THEN clause is vague\n"
     )})
     code, out = pr(change, capsys)
     assert code == 1
-    assert f"check-audit: {CHANGE}/audit.md:4: F1 is open: P1 says only a placeholder exists" in out
-    assert f"check-audit: {CHANGE}/audit.md:5: F2 is waived with no `Waived-by: @person: <reason>` line" in out
+    assert f"check-audit: {CHANGE}/audit.md:6: F1 is open: P1 says only a placeholder exists" in out
+    assert f"check-audit: {CHANGE}/audit.md:7: F2 is waived with no `Waived-by: @person: <reason>` line" in out
     assert all(not fake.calls for fake in github.fakes)
 
 

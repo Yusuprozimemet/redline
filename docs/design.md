@@ -174,22 +174,29 @@ followed by a symbol in brackets. `redline check-premises` checks that the file 
 are within it, and the symbol is on them; a premise with no citation fails too.
 
 Audit findings, written by the auditor only (closing a finding is a re-audit, never the main
-session's word); a waiver names the person who approved it. Before the first finding, a `Model:`
-line names the model the auditor ran on (§9):
+session's word); a waiver or a deferral names the person who approved it. Before the first
+finding, a `Model:` line names the model the auditor ran on, `Round:` which round this is, and
+`Audited:` the commit it read (§9, Rounds). A closed finding keeps only its heading and its
+`Resolution:`; its evidence stays in git history:
 
 ```markdown
 # Audit: add-2fa
 Model: claude-fable-5-1
+Round: 2
+Audited: 3f2a9c1e5b7d4a6c8e0f2b4d6a8c0e2f4b6d8a0c
 ## F1 [open]: P2 is wrong; `auth/login.py:30` already calls `verify_code`
 ## F2 [closed]: P1 cited the wrong line
 Resolution: P1 now cites `auth/session.py:42`
 ## F3 [waived]: no test for the lockout timing
 Waived-by: @maintainer: timing is a manual check (O2)
+## F4 [deferred]: a code reused within its window isn't refused
+Deferred-to: O-2FA3, by @maintainer
 ```
 
-`pr` at S refuses if `audit.md` is missing, has no `Model:` line naming a Fable or Opus model, or
-any finding is `[open]`, a `[closed]` one has no `Resolution:` or a `[waived]` one has no
-`Waived-by:`.
+`pr` at S refuses if `audit.md` is missing, has no `Model:` line naming a Fable or Opus model, no
+`Round:` line or one above the change's limit, no `Audited:` line, or any finding is `[open]`, a
+`[closed]` one has no `Resolution:`, a `[waived]` one no `Waived-by:` or a `[deferred]` one no
+`Deferred-to:`.
 
 A test is linked to its scenario with a marker, e.g. `@pytest.mark.spec("AUTH.2FA.S1")`. A marker
 counts only where its runner reads one: pytest's as a decorator of a test function, Jest's as a
@@ -1778,6 +1785,29 @@ can't limit Write to one file, so the auditor stays read-only and replies with t
 `audit.md`, which the main session writes unedited. A re-run reads the old `audit.md`, keeps
 every finding and closes only what it has checked. The `Waived-by:` line is the maintainer's.
 
+**Rounds.** A change's spec gets at most one audit round at lite, two at standard and three at
+critical. Each answer to a finding is new text, which the next round can open
+a finding on, so without a limit the rounds never end, and each one cost a fresh read of
+everything. `redline audit-brief <change>` prints the auditor's whole prompt: `Audit <change>`,
+`Round: <n> of <limit>`, `Audited: <HEAD>` and `Since: <commit>`, then `git diff <since> HEAD`
+without `audit.md`. The main session gives the agent that text alone, and the agent refuses any
+prompt without a `Round:` and an `Audited:` line. `n` is the old `audit.md`'s `Round:` plus one,
+1 without one; `Since:` is its `Audited:`, or `none` on the first round or when that commit is no
+longer in HEAD's history, as after a rebase. An `audit.md` from before the limit, with no `Round:`
+line, gets one last round, `n` the limit, `Since:` the parent of the last commit that changed it.
+The brief refuses a working tree with uncommitted changes, since the agent reads the tree and
+`Audited:` names a commit, and refuses once round `n` of the limit has run: each finding still
+open is then the maintainer's, waived, or deferred to an open problem with an owning step. With
+`Since: none` the agent audits the whole spec; otherwise it checks each open finding and the
+changed text, with what that text cites or contradicts, and doesn't re-check a closed finding.
+Each round's commit message records the agent's token and tool-call counts, as its result gives
+them, so the cost of each audit stays in `git log`.
+
+What it doesn't prove: that the main session gave the agent the brief unchanged, and wrote back
+the reply's `Round:` as the agent gave it, which is its word, as an unedited reply is, though
+`git log` of `audit.md` shows each round (§12, Judgments); and that a re-round missed nothing outside the
+changed text, which is the reason for the first round's full read.
+
 **When Fable isn't available**, as when its usage runs out, the main session runs the agent with
 Opus instead (the Agent tool's `model: opus`), and the definition's `effort: max` keeps the
 highest effort. The agent refuses any model but a Claude Fable or Opus one, replying `REFUSED:`,
@@ -1900,9 +1930,11 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    each PR gated by the Redline at its merge-base (O-SELF3); part 27, Redline's own tree passing its
    gates (O-SELF5); part 28, a change's scenarios needing tests only from its R step on, in every
    change's gates (O-LINK1); part 29, the auditors on Opus at max effort when Fable isn't
-   available, each audit naming its model (O-AUDIT1); then the change `note-run`, Redline's first
+   available, each audit naming its model (O-AUDIT1); part 29a, a change's audit rounds limited
+   by its level, each after the first reading only what changed (O-AUDIT2); then the change `note-run`, Redline's first
    build step run as a change, S, R, G1 and C (O-NOTE1, O-SELF1); part 30, a workflow an adopting
-   repository installs (O-SELF4); part 31, the PR's code run apart from the gate's job (O-CI10).
+   repository installs (O-SELF4); part 31, the PR's code run apart from the gate's job (O-CI10); part 32, the plan
+   and end-of-initiative audits' rounds limited too (O-AUDIT3).
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
@@ -2109,6 +2141,15 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   `Model:` line before its first finding, and each relabel in a `# Model:` line before its first
   entry; `unnamed` in `redline/audit.py` fails one with none or with a model weaker than Opus, for
   check-audit, the plan and end-of-initiative audits, and check-relabel (§9).
+- O-AUDIT2 [closed, build 9 part 29a]: nothing limited a change's audit rounds, and each re-run
+  read the whole spec, design and audit again: note-run/S's fifth round cost 219,894 tokens and
+  49 tool calls, and opened two findings on the fourth's answers. Now `redline audit-brief` gives
+  each round its number, refuses past the change's level (1, 2, 3), and gives a re-round only the
+  diff since the commit the last one read; check-audit fails an audit without `Round:` and
+  `Audited:` lines or past the limit, and a finding the maintainer defers needs `Deferred-to:` (§9,
+  Rounds).
+- O-AUDIT3 [build 9 part 32]: the plan and end-of-initiative audits have no limit on their
+  rounds, and each re-run reads its whole initiative again.
 - O-NOTE1 [build 9, the change note-run]: a note is trusted because CI writes it, but anyone with the
   `write` role, the agent's own account among them (§7, Repository settings), can push
   `refs/notes/redline-ci`, which no ruleset covers, and write `result: pass` or a `break:` map on
