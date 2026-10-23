@@ -285,14 +285,15 @@ removed. `merged` is the first commit on `main`'s first-parent line that contain
 is the commit CI ran on after the merge: the first commit of that line that is `commit` or one of
 its descendants, which `git rev-list --ancestry-path <commit>..main` lists in one call however
 long the line (O-PERF1). With `--first-parent` it would walk first parents only and miss the
-merge of a PR of two commits. `result` is that run's outcome: `pass`, `fail`, or
-`unverified` when no result is recorded. `break` is the mutation evidence (§5) and is `null` for a
+merge of a PR of two commits. `result` is that run's outcome: `pass`, `fail`, `unverified` when
+no result is recorded, or `unconfirmed` when the note doesn't match its run on GitHub (below). `break` is the mutation evidence (§5) and is `null` for a
 `new` scenario. A `hold` scenario is the other way round: its test carries no `new=True`, so it
 has no red and no green, and both stay `null`. Its `break` is `{commit, merged, result}`:
 `commit` is the first commit of the change's R step (one on `main` carrying `Redline-Step:
 <change>/R`) whose tests link the scenario without `new=True`, `merged` is found as for red, and
 `result` is the scenario's entry in the `break:` map of the CI note on `merged` (`pass` or
-`fail`). It is `unverified` when that note, or its entry, is missing. The R step's merge is the
+`fail`). It is `unverified` when that note, or its entry, is missing, and `unconfirmed` when the
+note doesn't match its run (below). The R step's merge is the
 only one whose note has a `break:` map (§5), so a break is never read from another change's.
 
 **A change's evidence is its own.** A scenario ID outlives the change that added it: a later
@@ -323,9 +324,51 @@ merged. It can't know whether the tests really failed or passed there. Only a CI
 that. After a run on a merged commit, CI records the outcome as a git note on that commit under
 `refs/notes/redline-ci` (`result: pass` or `result: fail`, then `run: <url>`), and the rebuild
 reads that note. Until the note exists, the result is `unverified`. Once it lands, the committed
-ledger is stale, and the next step's PR refreshes it. A note is only as trustworthy as the people
-who can push to `refs/notes/redline-ci`, because branch protection doesn't cover that ref. CI's
-own code isn't among them: the job that writes the note runs none of the repository's code (§7).
+ledger is stale, and the next step's PR refreshes it. Branch protection doesn't cover
+`refs/notes/redline-ci`, so anyone who can push to the repository can push a note. CI's own code
+can't: the job that writes the note runs none of the repository's code (§7).
+
+**A note is checked against its run.** Anyone with the `write` role, the agent's own account among
+them (§7, Repository settings), could otherwise write `result: pass` on any commit. So the rebuild
+reads each note it uses against GitHub's Actions API, through `push_run` in the `GitHub` seam. A
+note **checks out** when its `run:` is a run's URL, `https://github.com/<owner>/<repo>/actions/runs/<id>`;
+`gh api repos/{owner}/{repo}/actions/runs/<id>`, asked of the checkout's own repository with only
+the id taken from the note, gives that URL as its `html_url`, `push` as its `event`, the noted
+commit as its `head_sha`, `main` as its `head_branch` and `.github/workflows/redline.yml` as its
+`path`; and the run's `redline` job (`…/runs/<id>/jobs`) concluded `success` exactly when the note
+records no failure. A failure is `result: fail`, or a `break:` entry `fail` naming a `hold`
+scenario whose break the ledger reads from that note: CI writes a `break:` map only on an R merge,
+keyed by exactly the change's `hold` scenarios (§5), notes `result: pass` beside a failed break
+and fails the job, so that note reads `pass` with that break `fail`. An entry for any other
+scenario counts for nothing, so it can't excuse a failed job, and a delta that drops a `hold`
+scenario after R still reads its R note when that scenario's break passed; when it failed, the
+note records no failure the ledger counts beside the job's `failure`, so it reads `unconfirmed`
+(O-NOTE3). A break is read as its entry only from a note that says
+`result: pass`; from one that says `result: fail` every break is
+`fail`, so a forged entry can't turn a failed run into a passing break. A run whose jobs have no
+`redline` job confirms nothing.
+
+A note that doesn't check out reads as a fourth result, `unconfirmed`, whatever it says, `fail`
+included: a run GitHub doesn't have (a 404, answered at once, with no retry), a `run:` that isn't
+a run's URL or is missing, and any field that differs. Its breaks are `unconfirmed` too, an entry
+it lacks included. Errors aren't results, since either answer would be a guess: a note that isn't
+YAML, or whose `result:` is neither `pass` nor `fail`, before GitHub is asked; a machine without
+`gh`; a 404 for the checkout's own repository, which the rebuild reads once before any run, since
+GitHub answers 404 too for a repository the token can't see; and any other failure to read a
+run. A note's error names its commit, and a run's its `run:`; the repository's says only that GitHub
+doesn't show the token the checkout's repository, as `gh`'s 404 names none. So a ledger is now
+rebuilt with `gh` and a token that can read the repository's Actions API. GitHub is asked about each
+run once in a rebuild, however many entries read its note. It lists a run's jobs from its latest
+attempt, so a push run whose job failed only because GitHub couldn't be read for the claims record
+(§7), and whose note says `result: pass`, reads `unconfirmed` until a re-run of it passes, which
+GitHub allows for 30 days (O-NOTE3).
+
+What it doesn't prove: a confirmed run says how the run ended, not what else its note says. Its
+`claims:` record, and which `hold` scenario's `break:` entry failed when one did, are still the
+text of whoever pushed the note (O-NOTE2). GitHub's answers are trusted as GitHub is (§12). And a
+note CI really wrote can read `unconfirmed` for good: a run past its 30 days, a run deleted, which
+anyone with `write` can do, and every run of a repository renamed or transferred, whose `html_url`
+no longer matches the notes (O-NOTE3).
 
 The contract lock, `redline/contracts/lock.yaml`, freezes each change's `hold` tests:
 
@@ -638,8 +681,9 @@ What it still doesn't prove:
   after the merge, not when it was pressed. §7's limits hold too: who pressed the button, and
   what they saw.
 - **That a record is CI's**: a note is only as trustworthy as the people who can push
-  `refs/notes/redline-ci`, which branch protection doesn't cover. Whoever can push it can write
-  or rewrite a record.
+  `refs/notes/redline-ci`, which branch protection doesn't cover. The ledger checks a note's
+  result against its run (above), but not its `claims:`: whoever can push the ref can write or
+  rewrite a record (O-NOTE2).
 - **The labels of a claim with no record**: commits merged before build 6 part 11 have none, nor
   does a merge whose push run couldn't read GitHub until a re-run adds it. For those, `claims`
   reads labels and roles now, so a label removed after the merge reads as missing, one added
@@ -1083,6 +1127,11 @@ it is waiting, not wrong: once the note on that commit lands, fetch it (`git fet
 'refs/notes/*:refs/notes/*'`), run `redline ledger <change>`, commit and push. The committed ledger
 must then say `pass` too, or check-ledger fails. Nothing else in the PR needs to change.
 
+`unconfirmed` refuses too, and says the note is wrong, not late: `<ID>: <red|green|break> is
+unconfirmed: the CI note on <commit> doesn't match its run on GitHub` (§4). Fetching the notes
+changes nothing until the note does, or, for a job that failed only on reading GitHub, until a
+re-run of it passes, within GitHub's 30 days (O-NOTE3).
+
 What it doesn't prove: that the scenario's own test ran. A result is the whole suite's on the
 merged commit, and a test skipped there passes with it (O-CLOSE6).
 
@@ -1224,7 +1273,8 @@ does: no count refuses or fails.
 CI is `.github/workflows/redline.yml`, a thin wrapper around `redline ci`; every rule lives in the
 CLI. It checks out the full history, `main` and `refs/notes/*`. A second job, `runners`, runs the
 real Jest and Stryker on a toy project, the real mutmut on toy repositories (§5) and the real
-`gh api` calls on one of this repository's merged PRs (Approvals, below), and records nothing. The mutmut toys hold a scenario whose test kills no mutant beside a test that kills them
+`gh api` calls on one of this repository's merged PRs and one of its push runs (Approvals, below),
+and records nothing. The mutmut toys hold a scenario whose test kills no mutant beside a test that kills them
 all, so a kill credited to the wrong test shows. A repository with Jest tests
 installs Node and runs `npm ci` in its workflow before `redline ci`, so the suite can run them. A
 third job, `windows`, runs Redline's own suite on Windows with a read-only token, and records
@@ -1386,12 +1436,15 @@ names, read with the trailer's own form, and null for the three claims that name
 record judges nothing: a label applied by someone who isn't a maintainer, by someone other than
 the named person, or before the head was pushed, is recorded as it is. A merge without claims gets no `claims:`, and `result:`, `run:`
 and `break:` are as before, so the ledger reads the note as it did. If GitHub can't be read, the
-note is written without the record and the run fails, so the result is kept and the gap is seen.
+note is written without the record and the run fails, so the result is kept and the gap is seen:
+the ledger reads that note `unconfirmed` until a re-run of the job passes, within GitHub's 30
+days (§4, O-NOTE3).
 GitHub's own answers fail now and then: `commits/<sha>/pulls` answered HTTP 500 with an empty body
 to about four calls in ten when the real calls were first tested (O-GH3), each call alone, and
 GraphQL's `associatedPullRequests` to about one in six. So every `gh api` read the seam makes is
 tried up to eight times, waiting a second longer each time up to three seconds, and fails only when
-the eighth fails. Pushing and opening a PR aren't retried: they aren't reads.
+the eighth fails. Pushing and opening a PR aren't retried: they aren't reads. Nor is a run's 404 in
+`push_run`: a run GitHub doesn't have makes its note `unconfirmed` at once (§4).
 A re-run of the push job keeps a record an earlier run wrote: labels read later are what the
 record exists to avoid.
 
@@ -1402,7 +1455,8 @@ write `result: pass` or a `break:` map on any commit, which is the evidence this
 So the workflow's default token is `contents: read`, and each job says what it holds:
 
 - **`redline`**, on both events, holds `contents: read`, with `issues: read` and `pull-requests:
-  read` for the labels. Its checkout sets `persist-credentials: false`, and the step that fetches
+  read` for the labels, and `actions: read` for the runs the ledger checks notes against (§4). No job holds `actions:
+  write`, so no code a PR runs can re-run, cancel or delete a run the ledger trusts. Its checkout sets `persist-credentials: false`, and the step that fetches
   `main` and the notes passes the token to that one `git fetch` itself, so a private repository
   still fetches. On a push it runs `redline ci push --note <file>`: the suite, check-break at R
   and the claims record as above, but the note's text goes to the file, nothing is added under
@@ -1417,8 +1471,8 @@ So the workflow's default token is `contents: read`, and each job says what it h
   repository doesn't carry. The commit it notes is the workflow's, not something `redline` said,
   so merged code can choose only the text of its own merge commit's note, as before.
 - **`runners`** and **`windows`** hold `contents: read` and set `persist-credentials: false`;
-  `runners` also holds `redline`'s `issues: read` and `pull-requests: read`, for the real `gh api`
-  calls (Approvals, below).
+  `runners` also holds `redline`'s `issues: read`, `pull-requests: read` and `actions: read`, for
+  the real `gh api` calls (Approvals, below).
 
 A test reads the workflow and fails when any job but `note` holds `contents: write`, when a job
 that runs repository code keeps its credentials, and when `note` has a step that isn't
@@ -1508,8 +1562,9 @@ among it (each run's log names its build), and setup-python and setup-node fetch
 Python and Node builds from a manifest they read as they run, which no hash of Redline's checks
 (§12). Nor does it prove the note's text, which merged code
 still writes for its own merge commit, as it runs the suite that says `pass`. A token with
-`contents: write` held elsewhere, a maintainer's or an agent's given one, still writes any note
-(§4).
+`contents: write` held elsewhere, a maintainer's or an agent's given one, still writes any note,
+but the ledger reads its result only when its run checks out (§4); its `claims:` stay its writer's
+(O-NOTE2).
 
 ### Approvals
 
@@ -1635,14 +1690,18 @@ renamed, a jq path that selects nothing, a ref the activity API reads another wa
 seam makes, through the seam, on PR #60, merged with known answers: `pulls` of its head gives 60;
 `pushed` gives its head and the activity API's `branch_creation` time, which `moment` parses;
 `labels` gives the one label still on it, with who applied it and when, after another was applied
-and removed; and `role` gives its author's role. One more test reads the PR's issue events one
+and removed; and `role` gives its author's role. `push_run` reads run 39848744114, the push run of
+b41ea41, and gives its URL, `push`, b41ea41, `main`, `.github/workflows/redline.yml` and its
+`redline` job's `success`, so a note on b41ea41 naming it checks out (§4); no push run has failed
+lately, so only the fake answers `failure`. It also reads a run GitHub doesn't have and gets the
+404 that makes a note `unconfirmed` at once, which only `gh`'s message tells from other errors. One more test reads the PR's issue events one
 per page with `--paginate` and gets every line a single page gives, as `labels` and `pushed`
 rely on. PR #60 carries no claim, so its labels approve nothing and are recorded nowhere, and no
 PR claims `Oversized` to be tested.
 
 The tests are skipped unless `REDLINE_REAL_GITHUB` is set, and run in a step of the `runners` job,
 which holds the `redline` job's read permissions and token, so they read what CI's own token can,
-the activity API included. They aren't in `redline ci`'s suite: a GitHub outage or a changed API
+the activity API and the Actions API included. They aren't in `redline ci`'s suite: a GitHub outage or a changed API
 fails the `runners` job, where it is seen, and never a PR's gates or a merged commit's note. Nor
 do they run on Windows. If GitHub stops keeping PR #60's records, the tests fail and move to a
 newer PR. What they don't prove is a label that approves a claim in a real `redline ci pr` run:
@@ -1669,8 +1728,9 @@ these guarantees rests on one, and without it the guarantee is a convention:
    `write`, which isn't `admin` or `maintain`, so its labels approve nothing, with no change to
    Redline. A maintainer is then not the author of its PRs, so the ruleset can require their
    review before a merge, the maintainer's role in §9. `write` still pushes
-   `refs/notes/redline-ci`, which no ruleset covers (§4), so the agent can write a note on any
-   commit (O-NOTE1).
+   `refs/notes/redline-ci`, which no ruleset covers, so the agent can write a note on any commit;
+   the ledger reads its result only when its run checks out (§4), and its `claims:` not at all
+   (O-NOTE2).
 4. **Merge commits or squash merges only.** The push run reads the step and the claims of the
    merged commit's own range, `<merged>^..<merged>`, so a PR merged by rebase records no claim but
    its last commit's (§4).
@@ -1847,7 +1907,9 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
 11. **Per-scenario outcomes from CI** (O-CLOSE6, the review's item 19): each linked test's
-   outcome in the note, so red, green and a break are the scenario's own tests', not the suite's.
+   outcome in the note, so red, green and a break are the scenario's own tests', not the suite's;
+   and the note's text beyond its run's outcome (O-NOTE2), and evidence CI wrote whose run can no
+   longer confirm it (O-NOTE3).
 
 ## 12. Open problems
 
@@ -1883,7 +1945,8 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   set is named by the departure's spec, which the auditor reads at S.
 - **What Redline can't observe**: what an agent read, and that its reply was written unedited
   (§4, §9); who pressed a label's button, and the role a person had before CI ran (§7); that
-  GitHub's times for a label and a push are true, and what a maintainer read before labelling (§7); that
+  GitHub's times for a label and a push are true, and its record of a run a note names (§4), and
+  what a maintainer read before labelling (§7); that
   GitHub enforces the permissions it is given, and that a pinned action's commit is sound; that
   PyPI's files were sound when their hashes were taken; what a hosted runner brings under the pins,
   its image's weekly build under a version label and the Python and Node builds the setup actions
@@ -2049,8 +2112,20 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
 - O-NOTE1 [build 9, the change note-run]: a note is trusted because CI writes it, but anyone with the
   `write` role, the agent's own account among them (§7, Repository settings), can push
   `refs/notes/redline-ci`, which no ruleset covers, and write `result: pass` or a `break:` map on
-  any commit (§4). The plan: the rebuild checks each note's `run:` against GitHub's Actions API: a
-  push run of the workflow, on that commit, whose outcome is the note's `result:`.
+  any commit (§4). The plan, at note-run's G1: the rebuild checks each note it reads against its
+  `run:` on GitHub's Actions API, through `GitHub.push_run`: a push run of
+  `.github/workflows/redline.yml` on `main`, in this repository, on the noted commit, whose
+  `redline` job concluded `success` exactly when the note records no failure; any other note reads
+  `unconfirmed`, which check-close refuses as a note that doesn't match its run (§4, §5).
+- O-NOTE2 [build 11]: a run that checks out confirms how it ended, not the rest of its note: the
+  `claims:` record, which anyone with the `write` role can still rewrite, and which `break:` entry
+  failed when one did, since the job's outcome says only that one failed (§4).
+- O-NOTE3 [build 11]: a note CI really wrote can read `unconfirmed` for good, and its change can
+  then never close: a run GitHub no longer re-runs, after 30 days; a run deleted, which anyone
+  with the `write` role can do; and every run of a repository renamed or transferred, whose
+  `html_url` no longer matches its notes; and an R merge whose failed break names a `hold`
+  scenario a later step drops from the delta, whose note then records no failure the ledger
+  counts beside the job's `failure` (§4). What then confirms that evidence is open.
 - O-LOCK1 [closed, build 5 part 3]: a departure's approval was a recorded line, not proof. Now
   `redline ci pr` checks a maintainer's `redline:departure` label, with the same function that
   checks `Oversized` (§7, Approvals), and §7 says what that still doesn't prove.
