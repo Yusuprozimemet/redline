@@ -1,7 +1,7 @@
 # Audit: install-workflow
 Model: claude-opus-5-5
-Round: 2
-Audited: 4b84a11b02db031ee2b5d33021eb41b307fd609c
+Round: 3
+Audited: 9df4e98edc9d72000485b21bde90e1c8129f0dcb
 
 ## F1 [closed]: rigor `standard` is too low: the change widens a public command and writes every adopting repository's CI, token handling included; raise it to `critical`
 Resolution: `redline/changes/install-workflow/proposal.md:3` says `Rigor: critical`, with its reasons at `redline/changes/install-workflow/proposal.md:50-53`. `redline/changes/install-workflow/steps.md:18` gives C the blind relabel as O4, and the brief's limit is 3.
@@ -18,13 +18,5 @@ Resolution: P8 cites `check_helpers` and both of its callers (`redline/changes/i
 ## F5 [closed]: §7 says the test compares the workflow "line for line", but S2 compares it parsed as YAML
 Resolution: §7 now says the test compares both files parsed as YAML, comments aside (`docs/design.md:1349-1350`).
 
-## F6 [open]: S2 compares four of the `redline` job's keys, not the whole job: a `name:` on the job, or a job-level `if` that skips it on a push, passes S1 and S2, and the adopting repository's notes then read `unconfirmed` or are never written
-S2 compares the `redline` job's `runs-on`, `permissions`, `outputs` and steps (`redline/changes/install-workflow/specs/install/delta.md:26`). At the top level it compares only `on`, `permissions` and `concurrency` (`redline/changes/install-workflow/specs/install/delta.md:25`). Those are the keys Redline's own job and workflow have today. No THEN compares a key that only the template has, or one that Redline's own workflow gains later.
-
-Two such keys break the adopting repository's evidence:
-- A `name:` on the `redline` job. GitHub lists a job by its key only when it has no `name:` (`redline/changes/note-run/specs/ledger/delta.md:94`, `.github/workflows/redline.yml:20`). The ledger keys a run's jobs by that listed name (`src/redline/pr.py:105`) and reads `unconfirmed` when no job is named `redline` (`src/redline/ledger.py:63`). The proposal's own reason for the change is a workflow that "differs in a name" (`redline/changes/install-workflow/proposal.md:12-14`).
-- `if: github.event_name == 'pull_request'` on the job. A push run then skips the job, and the `note` job, which needs it, never runs (`.github/workflows/redline.yml:73-74`). The new THEN says the install "runs on a push as on a PR" (`redline/changes/install-workflow/specs/install/delta.md:18`), but it checks only the step's `if`.
-
-The requirement says the `redline` job is Redline's own outside the install and the PR gate (`redline/changes/install-workflow/specs/install/delta.md:7-9`). §7 says the test fails on "a change to Redline's workflow that an adopter needs" (`docs/design.md:1349-1351`). S2 checks neither claim. A job-level `env`, `defaults` or `timeout-minutes` that Redline's own job gains passes it, and so does a top-level `env` or `defaults`.
-
-S2 should compare the two documents whole once the known differences are taken out: the `runners` and `windows` jobs, the merge-base's install, the install step and the PR gate's `run`. Then the `redline` job's `name` and `if` are compared too, along with any key either file gains.
+## F6 [closed]: S2 compares four of the `redline` job's keys, not the whole job: a `name:` on the job, or a job-level `if` that skips it on a push, passes S1 and S2, and the adopting repository's notes then read `unconfirmed` or are never written
+Resolution: S2 now takes the `runners` and `windows` jobs, the merge-base's install, the install step and the PR gate's `run` out of both files, then requires the two documents to be equal whole, every key at every level, including the `redline` job's `name` and `if` (`redline/changes/install-workflow/specs/install/delta.md:25-26`). Redline's own `redline` job has neither key (`.github/workflows/redline.yml:20-29`). So a `name:` or an `if:` on the template's job fails S2, and so does any key either file gains at any level, such as an `env` or `defaults` on a job or on the workflow. S2 still checks where the install step sits and what the PR gate's `run` is (`redline/changes/install-workflow/specs/install/delta.md:27`). The proposal and §7 say the same (`redline/changes/install-workflow/proposal.md:27-30`, `docs/design.md:1349-1352`).
