@@ -3,26 +3,44 @@
 change: install-workflow
 scenarios:
   INSTALL.WF.S1:
-    red: null
+    red:
+      commit: d7e17dac063382eae597cbf4aa3cfa7ad4675e14
+      merged: 092e3316e83eafed1664627bf1b5e74d5e9bb323
+      result: pass
     green: null
     break: null
   INSTALL.WF.S2:
-    red: null
+    red:
+      commit: d7e17dac063382eae597cbf4aa3cfa7ad4675e14
+      merged: 092e3316e83eafed1664627bf1b5e74d5e9bb323
+      result: pass
     green: null
     break: null
   INSTALL.WF.S3:
-    red: null
+    red:
+      commit: d7e17dac063382eae597cbf4aa3cfa7ad4675e14
+      merged: 092e3316e83eafed1664627bf1b5e74d5e9bb323
+      result: pass
     green: null
     break: null
   INSTALL.WF.S4:
-    red: null
+    red:
+      commit: d7e17dac063382eae597cbf4aa3cfa7ad4675e14
+      merged: 092e3316e83eafed1664627bf1b5e74d5e9bb323
+      result: pass
     green: null
     break: null
   INSTALL.WF.S5:
-    red: null
+    red:
+      commit: d7e17dac063382eae597cbf4aa3cfa7ad4675e14
+      merged: 092e3316e83eafed1664627bf1b5e74d5e9bb323
+      result: pass
     green: null
     break: null
   INSTALL.WF.H1:
     red: null
     green: null
-    break: null
+    break:
+      commit: d7e17dac063382eae597cbf4aa3cfa7ad4675e14
+      merged: 092e3316e83eafed1664627bf1b5e74d5e9bb323
+      result: pass
