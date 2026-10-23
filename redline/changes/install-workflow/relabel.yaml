@@ -1,0 +1,26 @@
+# Relabel: install-workflow
+# Model: claude-opus-5-5
+D1:
+  cause: premise
+  note: The proposal based rigor `standard` on its claim that the workflow "decides no evidence", and the entry shows the workflow's own jobs write every note and hold the token's write permission.
+D2:
+  cause: spec
+  note: The headline says no THEN checked that the package ships the template, and the fix added that check to scenario S5, so a scenario was missing.
+D3:
+  cause: spec
+  note: S1 and S2 never said the install step runs on a push or where the project's own install goes, and the fix made S1 say both.
+D4:
+  cause: spec
+  note: No scenario kept check-helpers off the written workflow or `install jest` writing over its helper, and the fix put them into S1 and H1.
+D5:
+  cause: spec
+  note: The design text in §7 said the wrong thing about what the test compares while the delta's S2 was right, and only §7 changed.
+D6:
+  cause: spec
+  note: Scenario S2 itself compared only four of the job's keys, and the fix rewrote S2 to compare the two documents whole, so the scenario said too little.
+D7:
+  cause: tooling
+  note: Redline's check-break copied the cited file out of its package so the test imported unmutated code, and the fix went into Redline's own build (part 35, O-MUT3) rather than this change.
+D8:
+  cause: handoff
+  note: R's note had reached main, yet G1's first push carried the ledger as S left it, so R's result was lost between the steps while check-ledger itself answered correctly.

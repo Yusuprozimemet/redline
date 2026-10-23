@@ -1,7 +1,10 @@
 # Defects: install-workflow
 
 ## D1: the proposal set rigor `standard`, though the file it writes holds an adopting repository's evidence, token and gate
-Cause: spec
+Cause: premise
+Decided: changed from spec to the relabel's premise; the rigor rested on the proposal's
+unchecked claim that the workflow decides no evidence, a belief about what the file does in an
+adopting repository, not a scenario that said too little.
 Found-by: install-workflow/S
 The proposal said the workflow "decides no evidence" (F1). In an adopting repository its jobs
 write every note, its steps hold the token's permissions and the one `contents: write`, its
@@ -33,6 +36,8 @@ jest` writing over an edited helper.
 
 ## D5: §7 said the test compares the workflow line for line, where S2 compares it parsed as YAML
 Cause: handoff
+Decided: kept handoff over the relabel's spec; S2 said what was wanted, and only §7, the text
+the next steps read beside the delta, was out of step with it, as note-run's D7 was with its proposal.
 Found-by: install-workflow/S
 The design text and the delta disagreed (F5); line for line would have tied the template to
 Redline's own comments, one of which points at a `docs/design.md` an adopter doesn't have. §7 now
