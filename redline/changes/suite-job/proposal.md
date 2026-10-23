@@ -22,26 +22,31 @@ then the PR's to decide.
   any step it runs the suite alone.
 - `redline ci pr --suite-result <result>`, `<result>` one of `success`, `failure`, `cancelled` and
   `skipped`, the results a GitHub job can have: every gate and check-ledger, as `ci pr` runs them,
-  but not check-break or the suite, which no process of the PR's code then runs; a result other
-  than `success` is the failure `suite: the suite job's result is <result>`. Without it, `ci pr`
-  runs everything as before. `--suite-result` is for `ci pr` alone, and `--python` for `ci pr` and
-  `ci suite`; elsewhere each exits 2.
+  but not the suite or the part of check-break that runs tests, so no process of the PR's code
+  runs; check-break's two refusals that run no test, a `hold` scenario no test links without
+  `new=True` and premises that cite no file to mutate, stay. A result other than `success` is the
+  failure `suite: the suite job's result is <result>`. Without the option, `ci pr` runs everything
+  as before. `--suite-result` is for `ci pr` alone, and `ci suite` takes `--base` and `--python`
+  alone; elsewhere each exits 2, saying so.
 - Redline's own workflow gets a `suite` job, `if: github.event_name == 'pull_request'`, holding
   `contents: read` alone: the `redline` job's checkout, fetch and setup-python, the merge-base's
   install, the PR's editable install and `"$RUNNER_TEMP/gate/bin/redline" ci suite --base main
-  --python "$(command -v python)"`. The `redline` job `needs: suite` with `if: ${{ !cancelled() }}`,
-  its editable install runs on a push alone, and its PR gate runs `ci pr` with
-  `--suite-result "$SUITE"`, `SUITE` set in the step's `env` to `${{ needs.suite.result }}`.
+  --python "$(command -v python)"`, and no `outputs`. The `redline` job `needs: suite` with
+  `if: always()`, its editable install runs on a push alone, and its PR gate runs `ci pr` with
+  `--suite-result "$SUITE"`, `SUITE` set in the step's `env` to `${{ needs.suite.result }}`, the one
+  thing of `suite` the workflow reads.
 - The template `redline install workflow` writes follows: a `suite` job with the clone install, a
   comment after it marking the project's install, and `redline ci suite --base main`; the
   `redline` job's install as before, its comment saying the project's install goes there on a
   push alone, and its PR gate `redline ci pr --base main --pr <n> --suite-result "$SUITE"`.
 - The README's command table names `ci suite`, and its setup step 3 the `suite` job.
 
-Moving check-break and the suite out of the gate's job loses nothing: their verdicts were the PR's
-code's already, since a `conftest.py` can turn any test's outcome, a mutant's run included. A
-skipped required check reads as passed, so the `redline` job runs whatever `suite` concluded, and
-fails on anything but `success`.
+Moving the suite and check-break's test runs out of the gate's job loses nothing: their verdicts
+were the PR's code's already, since a `conftest.py` can turn any test's outcome, a mutant's run
+included. check-break's refusals that run no test aren't the PR's code's, so they stay in the gate.
+A skipped required check reads as passed, so the `redline` job runs whatever `suite` concluded, and
+in a cancelled run too, through `always()`, where it fails on the result `cancelled`; it fails on
+anything but `success`.
 
 It is critical (§8): it decides which code runs in the job that gates every PR, in Redline's own
 workflow and in each adopting repository's, and it widens a public command.

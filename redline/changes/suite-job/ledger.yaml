@@ -18,6 +18,10 @@ scenarios:
     red: null
     green: null
     break: null
+  CI.APART.S5:
+    red: null
+    green: null
+    break: null
   CI.APART.H1:
     red: null
     green: null
