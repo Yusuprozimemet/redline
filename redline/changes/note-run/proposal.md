@@ -24,15 +24,16 @@ evidence (O-SELF1). This change is the first of Redline's build steps run as a c
   `.github/workflows/redline.yml` as `path`, and its `redline` job concluded `success` exactly when
   the note records no failure: `result: pass` and no failing `break:` entry naming a `hold`
   scenario read from that note. A failed break, `result: pass` with its entry `fail` beside the
-  job's `failure`, reads `pass` with that break `fail`; an entry for any other scenario makes the
-  note `unconfirmed`, and a `result: fail` note's breaks read `fail`. On 2026-10-22 run 39848744114, the push run of b41ea41, gave exactly those fields, and its
+  job's `failure`, reads `pass` with that break `fail`; an entry for any other scenario counts for
+  nothing, so it can't excuse a failed job, and a `result: fail` note's breaks read `fail`. On 2026-10-22 run 39848744114, the push run of b41ea41, gave exactly those fields, and its
   `redline` job concluded `success`.
 - A note that doesn't check out reads as a fourth result, `unconfirmed`: a run GitHub doesn't have
   (a 404, answered at once, with no retry), a `run:` that isn't a run's URL or is missing, and any
-  field that differs. `fail` notes are checked too. Any other failure to read GitHub is an error
-  naming the run, as are a missing `gh`, a 404 for the checkout's own repository, read once first,
-  and, before GitHub is asked, a note that isn't YAML or whose `result:` is neither `pass` nor
-  `fail`. Each run is asked about once in a rebuild.
+  field that differs. `fail` notes are checked too. Any other failure to read a run is an error
+  naming the run. So are a missing `gh`; a 404 for the checkout's own repository, read once first,
+  which says only that GitHub doesn't show the token that repository; and, before GitHub is
+  asked, a note that isn't YAML or whose `result:` is neither `pass` nor `fail`, naming its commit.
+  Each run is asked about once in a rebuild.
 - check-close refuses `unconfirmed`, saying the note doesn't match its run on GitHub, not that it
   is waiting.
 - The workflow's `redline` and `runners` jobs get `actions: read`, and no job `actions: write`;
@@ -61,7 +62,8 @@ in each adopting repository, now reads GitHub.
   G1's code at its merge-base.
 - **Who can push the ref.** That is a repository setting (§7), and stays one.
 - **Evidence a run can no longer confirm**: a run past GitHub's 30 days to re-run, a deleted run,
-  or a renamed repository's runs (O-NOTE3, build 11).
+  a renamed repository's runs, or an R note whose failed break names a `hold` scenario a later
+  step drops from the delta (O-NOTE3, build 11).
 - **Per-scenario outcomes** (O-CLOSE6, build 11).
 
 ## Steps

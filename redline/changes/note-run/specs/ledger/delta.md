@@ -28,14 +28,14 @@ repository GitHub doesn't show, and any other failure to read a run than a 404.
 
 #### Scenario LEDGER.RUN.S3 [new]: the redline job's outcome must agree with the note
 - GIVEN a note on its own run, as in LEDGER.RUN.S1, on the R merge of a change with a `hold` scenario H
-- WHEN the note says `result: pass` and the `redline` job concluded `failure`, or `result: fail` and `success`, or `result: pass` with H's `break:` entry `fail` and `success`, or the run's jobs have no `redline` job
+- WHEN the note says `result: pass`, with H's entry `pass` or none, and the `redline` job concluded `failure`, or `result: fail` and `success`, or `result: pass` with H's `break:` entry `fail` and `success`, or the run's jobs have no `redline` job
 - OR the job concluded `failure` and the note says `result: pass` with H's entry `pass` and an entry `fail` for a scenario the ledger reads no break of from that note
-- OR the note is on the merge of a green of the change, which the ledger reads no break from, and says `result: pass` with H's entry `fail` beside the job's `failure`
 - THEN the result, and H's break, is `unconfirmed`, in each case, H's too when the note has no entry for it
 - AND `result: fail` with the job's `failure` reads `fail`, and H's break `fail` whatever its entry says
 - AND `result: pass` with H's entry `fail` and the job's `failure` reads `pass`, H's break `fail`
 - AND `result: pass` with H's entry `pass` and the job's `success` reads `pass`, H's break `pass`
 - AND `result: pass` with H's entry `pass`, an entry `fail` for a scenario the change no longer holds, and the job's `success` reads `pass`, H's break `pass`
+- AND with the R merge's note on its own run and H's entry `pass`, a note on the merge of a green of the change, which the ledger reads no break from, that says `result: pass` with H's entry `fail` beside the job's `failure` makes that green's result `unconfirmed`, and H's break still reads `pass`
 
 #### Scenario LEDGER.RUN.S4 [new]: a missing run, a URL that isn't a run or no run line reads unconfirmed at once
 - GIVEN a note whose `run:` GitHub answers with a 404, a note whose `run:` isn't `…/actions/runs/<id>`, and a note with no `run:` line
@@ -48,7 +48,7 @@ repository GitHub doesn't show, and any other failure to read a run than a 404.
 - GIVEN a note whose run GitHub answers with an error other than a 404, on every try
 - WHEN `redline ledger <change>` runs
 - THEN it exits 2, with an error naming the note's `run:`, and writes no ledger
-- AND when GitHub answers the checkout's own repository with a 404, it exits 2 naming that repository, and no run is asked for
+- AND when GitHub answers the checkout's own repository with a 404, it exits 2, saying GitHub doesn't show the checkout's repository to the token, and no run is asked for
 - AND without `gh` on the path it exits 2, saying `gh` is needed to check the CI notes, with no traceback
 - AND a note that isn't YAML, or whose `result:` is neither `pass` nor `fail`, exits 2 naming its commit, with no traceback, and GitHub isn't asked
 - AND once GitHub answers with the run, it exits 0
