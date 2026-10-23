@@ -3,7 +3,8 @@
 Every scenario the change's deltas declare gets `red`, `green` and `break` entries. Red and green
 are check-order's commits on main, each with `merged`, the first commit on main's first-parent
 line that contains it (the commit CI ran on), and `result`, which only CI knows: it comes from the
-git note CI left on `merged` under refs/notes/redline-ci, and is `unverified` without one. Commits
+git note CI left on `merged` under refs/notes/redline-ci, and is `unverified` without one, and
+`unconfirmed` when the note's `run:` isn't the push run that wrote it, as GitHub has it (§4). Commits
 not reachable from main aren't evidence. A `hold` scenario has no red or green; its `break` is the
 commit where its test landed, with the result CI noted for it under `break:` (see redline.breaks).
 A change's evidence is its own (§4): red and green count only from its window, the PRs from its
@@ -40,20 +41,31 @@ def declared(repo: Path, change: str) -> list[str]:
     return ids
 
 
-def ci_result(repo: Path, commit: str, broken: str | None = None) -> str:
-    """The suite's result in the CI note on `commit`, or with `broken`, that scenario's break."""
+def ci_result(repo: Path, commit: str, github, counted=(), broken: str | None = None) -> str:
+    """The suite's result in the CI note on `commit`, or with `broken`, that scenario's break; `unconfirmed`
+    unless the note's run checks out (§4). `counted` are the hold scenarios whose breaks are read from it."""
     shown = git(repo, "notes", f"--ref={NOTES}", "show", commit)
     if shown.returncode:
         return "unverified"
-    data = yaml.safe_load(shown.stdout)
+    try:
+        data = yaml.safe_load(shown.stdout)
+    except yaml.YAMLError:
+        data = None
     result = data.get("result") if isinstance(data, dict) else None
     if result not in ("pass", "fail"):
         raise RuntimeError(f"the CI note on {commit[:7]} has no result: pass or fail")
-    if broken is None:
+    breaks = data.get("break") if isinstance(data.get("break"), dict) else {}
+    failed = result == "fail" or any(breaks.get(sid) == "fail" for sid in counted)
+    url = data.get("run")
+    run = github.push_run(url) if isinstance(url, str) else None
+    want = {"html_url": url, "event": "push", "head_sha": commit, "head_branch": "main",
+            "path": ".github/workflows/redline.yml"}
+    if (run is None or any(run.get(key) != value for key, value in want.items()) or "redline" not in run["jobs"]
+            or (run["jobs"]["redline"] == "success") == failed):
+        return "unconfirmed"
+    if broken is None or result == "fail":
         return result
-    breaks = data.get("break")
-    result = breaks.get(broken) if isinstance(breaks, dict) else None
-    return result if result in ("pass", "fail") else "unverified"
+    return breaks[broken] if breaks.get(broken) in ("pass", "fail") else "unverified"
 
 
 def stamped(repo: Path, name: str, main: str) -> list[str]:
@@ -64,6 +76,9 @@ def stamped(repo: Path, name: str, main: str) -> list[str]:
 
 
 def rebuild(repo: Path, change: str, main: str = "main") -> dict:
+    from redline.pr import GitHub  # here, as pr imports close, which imports this
+
+    github = GitHub(repo)  # one per rebuild, so each run is asked about once
     ids = declared(repo, change)
     listing = git(repo, "rev-list", "--first-parent", "--reverse", main)
     if listing.returncode:
@@ -81,19 +96,27 @@ def rebuild(repo: Path, change: str, main: str = "main") -> dict:
         reds = stamped(repo, f"{change}/R", main)
     found = {r.scenario: r for r in check_order(repo, until or main, since)}
 
+    held = set(holds(repo, change))
+    landed = {  # its R step's first commit that links it; without an S step, where it landed
+        sid: next((c for c in reds if scan(repo, c).get(sid) == "green"), None) if spec else (r := found.get(sid)) and r.green
+        for sid in ids if sid in held}
+    counted: dict[str, set[str]] = {}  # each merged commit, the hold scenarios whose breaks are read from its note
+    for sid, commit in landed.items():
+        if commit:
+            counted.setdefault(merge(commit), set()).add(sid)
+
     def evidence(commit: str | None, broken: str | None = None) -> dict | None:
         if commit is None:
             return None
         merged = merge(commit)
-        return {"commit": commit, "merged": merged, "result": ci_result(repo, merged, broken)}
+        return {"commit": commit, "merged": merged,
+                "result": ci_result(repo, merged, github, counted.get(merged, ()), broken)}
 
-    held = set(holds(repo, change))
     scenarios = {}
     for sid in ids:
         result = found.get(sid)
-        if sid in held:  # its R step's first commit that links it; without an S step, where it landed
-            landed = next((c for c in reds if scan(repo, c).get(sid) == "green"), None) if spec else result and result.green
-            scenarios[sid] = {"red": None, "green": None, "break": evidence(landed, sid)}
+        if sid in held:
+            scenarios[sid] = {"red": None, "green": None, "break": evidence(landed[sid], sid)}
             continue
         scenarios[sid] = {
             "red": evidence(result and result.red),

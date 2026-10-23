@@ -65,7 +65,7 @@ def test_fake_actions_answers_only_the_runs_a_test_registers_and_404_for_any_oth
     assert github.run("git", "--version").startswith("git version")  # any other command runs as before
 
 
-@pytest.mark.spec("LEDGER.RUN.S1", new=True)
+@pytest.mark.spec("LEDGER.RUN.S1")
 def test_a_note_on_its_own_run_keeps_its_result_and_a_copy_on_another_commit_is_unconfirmed(change, capsys, actions):
     _, red = land(change, "red", {"tests/test_greet.py": RED})
     _, green = land(change, "green", {"tests/test_greet.py": GREEN})
@@ -97,7 +97,7 @@ CRAFTED = {  # each run is on the noted commit and its redline job concluded suc
 
 
 @pytest.mark.parametrize(("fields", "named"), CRAFTED.values(), ids=CRAFTED)
-@pytest.mark.spec("LEDGER.RUN.S2", new=True)
+@pytest.mark.spec("LEDGER.RUN.S2")
 def test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing(change, capsys, actions, fields, named):
     _, red = land(change, "red", {"tests/test_greet.py": RED})
     noted(change, red, "pass", actions.register(1, red))
@@ -107,7 +107,7 @@ def test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing(change, 
     assert rebuilt(change, capsys)["scenarios"]["GREET.S1"]["red"]["result"] == "unconfirmed"
 
 
-@pytest.mark.spec("LEDGER.RUN.S2", new=True)
+@pytest.mark.spec("LEDGER.RUN.S2")
 def test_another_repositorys_run_confirms_nothing_though_github_has_it_there(change, capsys, actions):
     _, red = land(change, "red", {"tests/test_greet.py": RED})
     noted(change, red, "pass", actions.register(1, red))
@@ -133,7 +133,7 @@ DISAGREE = {  # (the note's result, its break map, the run's jobs)
 
 
 @pytest.mark.parametrize(("result", "breaks", "jobs"), DISAGREE.values(), ids=DISAGREE)
-@pytest.mark.spec("LEDGER.RUN.S3", new=True)
+@pytest.mark.spec("LEDGER.RUN.S3")
 def test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks(change, capsys, actions,
                                                                                       result, breaks, jobs):
     merged = held(change, "GREET.H1")
@@ -141,7 +141,7 @@ def test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_b
     assert read(change, capsys) == ("unconfirmed", "unconfirmed")
 
 
-@pytest.mark.spec("LEDGER.RUN.S3", new=True)
+@pytest.mark.spec("LEDGER.RUN.S3")
 def test_a_note_its_redline_job_agrees_with_keeps_its_result_and_a_fail_note_fails_every_break(change, capsys, actions):
     merged = held(change, "GREET.H1")
     agree = [("pass", {"GREET.H1": "pass"}, None, ("pass", "pass")),
@@ -156,7 +156,7 @@ def test_a_note_its_redline_job_agrees_with_keeps_its_result_and_a_fail_note_fai
 
 
 @pytest.mark.parametrize("how", ["dropped", "retagged"])
-@pytest.mark.spec("LEDGER.RUN.S3", new=True)
+@pytest.mark.spec("LEDGER.RUN.S3")
 def test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing(change, capsys, actions, how):
     merged = held(change, "GREET.H1", "GREET.H2")
     delta = (change.path / f"{CHANGE}/specs/greet/delta.md").read_text(encoding="utf-8")
@@ -168,7 +168,7 @@ def test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing(c
     assert read(change, capsys) == ("unconfirmed", "unconfirmed")
 
 
-@pytest.mark.spec("LEDGER.RUN.S3", new=True)
+@pytest.mark.spec("LEDGER.RUN.S3")
 def test_a_greens_note_whose_entry_fails_beside_a_failed_job_is_unconfirmed_and_reads_no_break(change, capsys, actions):
     merged = held(change, "GREET.H1")
     noted(change, merged, "pass", actions.register(1, merged), {"GREET.H1": "pass"})
@@ -192,7 +192,7 @@ NO_RUN = {  # what the green's note names, beside run 2, a push run on the green
 
 
 @pytest.mark.parametrize("named", NO_RUN.values(), ids=NO_RUN)
-@pytest.mark.spec("LEDGER.RUN.S4", new=True)
+@pytest.mark.spec("LEDGER.RUN.S4")
 def test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed(change, capsys, actions, named):
     _, red = land(change, "red", {"tests/test_greet.py": RED})
     _, green = land(change, "green", {"tests/test_greet.py": GREEN})
@@ -203,7 +203,7 @@ def test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed(ch
     assert (entry["red"]["result"], entry["green"]["result"]) == ("pass", "unconfirmed")
 
 
-@pytest.mark.spec("LEDGER.RUN.S4", new=True)
+@pytest.mark.spec("LEDGER.RUN.S4")
 def test_each_run_is_asked_about_once_in_a_rebuild_and_a_404_at_once(change, capsys, actions, monkeypatch):
     waits = []
     monkeypatch.setattr(time, "sleep", waits.append)
@@ -226,7 +226,7 @@ ERRORS = {
 
 
 @pytest.mark.parametrize("error", ERRORS.values(), ids=ERRORS)
-@pytest.mark.spec("LEDGER.RUN.S5", new=True)
+@pytest.mark.spec("LEDGER.RUN.S5")
 def test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger(change, capsys, actions,
                                                                                      monkeypatch, error):
     monkeypatch.setattr(time, "sleep", lambda seconds: None)
@@ -241,7 +241,7 @@ def test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_led
     assert ledger(change, capsys)[0] == 0
 
 
-@pytest.mark.spec("LEDGER.RUN.S5", new=True)
+@pytest.mark.spec("LEDGER.RUN.S5")
 def test_a_repository_github_doesnt_show_or_no_gh_is_an_error_and_no_run_is_asked_for(change, capsys, actions):
     _, red = land(change, "red", {"tests/test_greet.py": RED})
     noted(change, red, "pass", actions.register(1, red))
@@ -256,7 +256,7 @@ def test_a_repository_github_doesnt_show_or_no_gh_is_an_error_and_no_run_is_aske
     assert ledger(change, capsys)[0] == 0
 
 
-@pytest.mark.spec("LEDGER.RUN.S5", new=True)
+@pytest.mark.spec("LEDGER.RUN.S5")
 def test_a_note_that_isnt_yaml_or_has_no_result_is_an_error_naming_its_commit_before_github_is_asked(
         change, capsys, actions):
     _, red = land(change, "red", {"tests/test_greet.py": RED})
@@ -267,7 +267,7 @@ def test_a_note_that_isnt_yaml_or_has_no_result_is_an_error_naming_its_commit_be
         assert code == 2 and red[:7] in out and actions.asked == [], (text, out)
 
 
-@pytest.mark.spec("LEDGER.RUN.S6", new=True)
+@pytest.mark.spec("LEDGER.RUN.S6")
 def test_check_close_refuses_a_note_that_doesnt_match_its_run_and_isnt_waiting(change, capsys, actions):
     red, green = red_and_green(change)
     noted(change, red, "pass", actions.register(1, red))
@@ -281,7 +281,7 @@ def test_check_close_refuses_a_note_that_doesnt_match_its_run_and_isnt_waiting(c
     assert close(change, capsys) == (0, "ok: 2 scenarios, each with its evidence on main\n")
 
 
-@pytest.mark.spec("LEDGER.RUN.S7", new=True)
+@pytest.mark.spec("LEDGER.RUN.S7")
 def test_the_workflow_notes_its_own_run_and_grants_actions_read_to_the_jobs_that_read_runs():
     flow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     push = next(s for s in flow["jobs"]["redline"]["steps"] if "redline ci push" in s.get("run", ""))

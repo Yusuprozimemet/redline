@@ -48,6 +48,15 @@ class FakeActions:
                                       for name, conclusion in ({"redline": "success"} if jobs is None else jobs).items()]
         return self.url(run, named)
 
+    def push_run(self, commit: str, result: str = "pass", breaks: dict | None = None, url: str | None = None) -> str:
+        """The push run CI notes on `commit`, its redline job failed when the note records a failure, as
+        `redline ci push` writes it; gives the URL the note names: `url`, when CI was given one."""
+        failed = result == "fail" or "fail" in (breaks or {}).values()
+        run = int(url.rsplit("/", 1)[1]) if url else int(commit[:7], 16)
+        named = self.register(run, commit, {"redline": "failure" if failed else "success"},
+                              **({"html_url": url} if url else {}))
+        return url or named
+
     def answer(self, real, github: GitHub, command: tuple[str, ...]) -> str:
         if command[0] == "gh" and self.missing:
             raise FileNotFoundError(2, "No such file or directory", "gh")
@@ -79,6 +88,7 @@ def actions(request, monkeypatch):
         return
     fake, real = FakeActions(), GitHub.run
     monkeypatch.setattr(GitHub, "run", lambda github, *command: fake.answer(real, github, command))
+    monkeypatch.setattr(FakeActions, "current", fake, raising=False)  # for helpers that write a note
     yield fake
 
 

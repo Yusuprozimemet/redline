@@ -17,8 +17,11 @@ the PR doesn't exist yet, `pr` only reports that CI will need it.
 If every gate passes, each commit of the step gets the `Redline-Step: <change>/<step>` trailer
 (once), the branch is pushed, the PR is opened with `gh`, and the step stops being open. Pushing and `gh` sit behind `GitHub`, which tests replace;
 its `gh api` reads are retried, as GitHub answers 500 now and then, and tests/test_github.py makes them for real.
+`push_run` reads the run a CI note names, for the ledger (§4); a 404 there isn't retried.
 """
 
+import json
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -45,6 +48,7 @@ from redline.steps import check_steps, edited, since
 from redline.track import check_track
 
 TRIES = 8  # GitHub answers a read with HTTP 500 now and then (O-GH3)
+RUN = re.compile(r"https://github\.com/[^/]+/[^/]+/actions/runs/(\d+)")  # a run's URL, as CI notes it
 
 
 class GitHub:
@@ -52,6 +56,8 @@ class GitHub:
 
     def __init__(self, repo: Path):
         self.repo = repo
+        self.shown = False  # GitHub has shown the token the checkout's repository
+        self.runs: dict[str, dict | None] = {}  # each run push_run asked about, by id
 
     def run(self, *command: str) -> str:
         done = subprocess.run(command, cwd=self.repo, capture_output=True, encoding="utf-8", errors="replace")
@@ -67,6 +73,38 @@ class GitHub:
             except RuntimeError:
                 time.sleep(min(attempt, 3))
         return self.run(*command)
+
+    def ask(self, path: str, url: str) -> dict | None:
+        """`gh api <path>` as JSON, for the note whose `run:` is `url`; None on a 404, at once, and any other
+        error tried as `read` tries it, then raised naming `url`."""
+        for attempt in range(1, TRIES + 1):
+            try:
+                return json.loads(self.run("gh", "api", path))
+            except FileNotFoundError:
+                raise RuntimeError("`gh` is needed to check the CI notes") from None
+            except RuntimeError as error:
+                if "(HTTP 404)" in str(error):
+                    return None
+                if attempt == TRIES:
+                    raise RuntimeError(f"the CI note's run: {url}: {error}") from None
+                time.sleep(min(attempt, 3))
+
+    def push_run(self, url: str) -> dict | None:
+        """The run a CI note's `run:` names, asked of the checkout's own repository by its id alone, with its
+        jobs' conclusions by name under `jobs`; None when `url` isn't a run's URL or GitHub has no such run.
+        The repository is read first, once, and each run once."""
+        if not (named := RUN.fullmatch(url)):
+            return None
+        if not self.shown:
+            if self.ask("repos/{owner}/{repo}", url) is None:  # gh's 404 names no repository (P13)
+                raise RuntimeError("GitHub doesn't show the checkout's repository to the token")
+            self.shown = True
+        if (run := named[1]) not in self.runs:
+            found = self.ask(f"repos/{{owner}}/{{repo}}/actions/runs/{run}", url)
+            jobs = found and self.ask(f"repos/{{owner}}/{{repo}}/actions/runs/{run}/jobs", url)
+            self.runs[run] = {**found, "jobs": {job.get("name"): job.get("conclusion") for job in jobs.get("jobs", [])}
+                              } if found and jobs else None
+        return self.runs[run]
 
     def push(self, branch: str) -> None:
         self.run("git", "push", "-u", "origin", branch)

@@ -1,5 +1,6 @@
 import yaml
 
+from conftest import FakeActions
 from redline.cli import main
 from test_start import CHANGE, change  # noqa: F401 (change is a fixture)
 
@@ -20,8 +21,9 @@ def land(repo, branch: str, files: dict[str, str]) -> tuple[str, str]:
 
 
 def note(repo, commit: str, result: str) -> None:
-    """What CI records after a run on a merged commit."""
-    repo.git("notes", "--ref=redline-ci", "add", "-f", "-m", f"result: {result}\nrun: https://ci/1", commit)
+    """What CI records after a run on a merged commit, from the push run it names."""
+    run = FakeActions.current.push_run(commit, result)
+    repo.git("notes", "--ref=redline-ci", "add", "-f", "-m", f"result: {result}\nrun: {run}", commit)
 
 
 def ledger(repo, capsys, command: str = "ledger") -> tuple[int, str]:
