@@ -186,12 +186,13 @@ def test_a_pr_checks_the_ledger_against_its_base(change, capsys):
     assert code == 0, out
 
 
-def test_a_push_to_main_notes_the_suite_result_on_the_merged_commit(change, capsys, remote):
+def test_a_push_to_main_notes_the_suite_result_on_the_merged_commit(change, capsys, remote, actions):
     _, merge = land(change, "red", {"tests/test_greet.py": RED})
     code, out = ci(change, capsys, "push", "--run-url", RUN)
     assert code == 0, out
     assert change.git("notes", "--ref=redline-ci", "show", merge) == f"result: pass\nrun: {RUN}"
     assert remote.pushed == [f"result: pass\nrun: {RUN}"]
+    actions.push_run(merge, url=RUN)
     assert main(["ledger", "add-greet", "--repo", str(change.path)]) == 0
     ledger = yaml.safe_load((change.path / LEDGER).read_text(encoding="utf-8"))
     assert ledger["scenarios"]["GREET.S1"]["red"]["result"] == "pass"

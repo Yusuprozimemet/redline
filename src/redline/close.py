@@ -6,7 +6,8 @@ scenario a break, each with `result: pass`. A scenario is `new`, `hold` or `manu
 a `manual` one needs a person's check instead: a `Redline-Manual: <ID> checked-by @person: <what was seen>`
 trailer in the C PR's own commits (base..HEAD) and, in CI, the label of the person it names, a maintainer (approval.py). A trailer
 that isn't in that form, or names no manual scenario of the change, fails, and so does one in any other
-PR (`misplaced`). `unverified` refuses too, with a line saying the PR is waiting for CI's note, not wrong.
+PR (`misplaced`). `unverified` refuses too, with a line saying the PR is waiting for CI's note, not wrong;
+`unconfirmed` refuses as a note that doesn't match its run on GitHub, which waiting doesn't change.
 """
 
 import re
@@ -59,6 +60,9 @@ def check_close(repo: Path, change: str, main: str = "main", approvals: Approval
             elif evidence["result"] == "unverified":
                 waiting = True
                 bad.append(f"{sid}: {kind} is unverified: no CI note on {evidence['merged'][:7]} yet")
+            elif evidence["result"] == "unconfirmed":
+                bad.append(f"{sid}: {kind} is unconfirmed: the CI note on {evidence['merged'][:7]} "
+                           "doesn't match its run on GitHub")
             elif evidence["result"] != "pass":
                 bad.append(f"{sid}: {kind} failed: the CI note on {evidence['merged'][:7]} says {evidence['result']}")
     if waiting:

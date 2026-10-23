@@ -52,13 +52,15 @@ def test_a_closed_changes_ledger_stays_as_it_was(change):
     assert rebuild(change.path, "add-greet") == before
 
 
-def test_a_modified_hold_scenarios_break_is_the_later_changes_r_step(change):
+def test_a_modified_hold_scenarios_break_is_the_later_changes_r_step(change, actions):
     change.commit("a hold scenario", {f"{CHANGE}/specs/greet/delta.md": HOLD})
     _, old = land(change, "old-hold", {"tests/test_hold.py": HELD})
-    change.git("notes", "--ref=redline-ci", "add", "-m", "result: pass\nrun: https://ci/1\nbreak:\n  GREET.H1: pass\n", old)
+    run = actions.push_run(old, "pass", {"GREET.H1": "pass"})
+    change.git("notes", "--ref=redline-ci", "add", "-m", f"result: pass\nrun: {run}\nbreak:\n  GREET.H1: pass\n", old)
     step(change, "add-greet/S")
     assert rebuild(change.path, "add-greet")["scenarios"]["GREET.H1"]["break"] is None
     commit, merged = step(change, "add-greet/R", {"tests/test_greet.py": RED})
-    change.git("notes", "--ref=redline-ci", "add", "-m", "result: pass\nrun: https://ci/2\nbreak:\n  GREET.H1: fail\n", merged)
+    run = actions.push_run(merged, "pass", {"GREET.H1": "fail"})
+    change.git("notes", "--ref=redline-ci", "add", "-m", f"result: pass\nrun: {run}\nbreak:\n  GREET.H1: fail\n", merged)
     entry = rebuild(change.path, "add-greet")["scenarios"]["GREET.H1"]
     assert entry["break"] == {"commit": commit, "merged": merged, "result": "fail"}

@@ -7,6 +7,7 @@ REDLINE_REAL_GITHUB, so GitHub being down fails that job and never the gates.
 """
 
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,7 @@ pytestmark = pytest.mark.skipif(os.environ.get("REDLINE_REAL_GITHUB") != "1",
 ROOT = Path(__file__).resolve().parent.parent
 PR, HEAD, AUTHOR = 60, "726bf21a9d05ddd70133250a72a8b3cba763bbc3", "Yusuprozimemet"
 CREATED = "2026-10-22T14:06:29Z"  # its branch's creation pushed the head; nothing pushed it again
+RUN, NOTED = "https://github.com/Yusuprozimemet/redline/actions/runs/39848744114", "b41ea41d08c326addfba33bd3b1a072a704a675a"
 
 
 @pytest.fixture
@@ -47,6 +49,20 @@ def test_the_label_still_on_the_pr_is_read_with_who_applied_it_and_when(github):
 
 def test_a_role_is_read_from_github(github):
     assert github.role(AUTHOR) in MAINTAINER
+
+
+def test_a_push_run_is_read_from_the_actions_api_as_its_note_names_it(github):
+    run = github.push_run(RUN)  # b41ea41's own push run, which its note names
+    assert [run.get(key) for key in ("html_url", "event", "head_sha", "head_branch", "path")] == [
+        RUN, "push", NOTED, "main", ".github/workflows/redline.yml"]
+    assert run["jobs"]["redline"] == "success"
+
+
+def test_a_run_github_doesnt_have_is_a_404_answered_at_once(github, monkeypatch):
+    waits = []
+    monkeypatch.setattr(time, "sleep", waits.append)
+    assert github.push_run(RUN.replace("39848744114", "1")) is None
+    assert waits == []
 
 
 def test_paginate_joins_every_page_line_by_line(github):

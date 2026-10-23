@@ -20,6 +20,7 @@ jobs:
   redline:  # runs the repository's code, the PR's own on a PR, so it can't write the notes
     runs-on: ubuntu-24.04  # by version: -latest moves to a new OS
     permissions:
+      actions: read  # the push run each CI note names, for the ledger; no job can write the runs
       contents: read
       issues: read  # who applied a PR's approval labels
       pull-requests: read
@@ -93,6 +94,7 @@ jobs:
   runners:  # the real Jest, Stryker, mutmut and gh api calls, which the suite fakes (docs/design.md, sections 5 and 7)
     runs-on: ubuntu-24.04  # by version: -latest moves to a new OS
     permissions:  # the redline job's, so the real gh api calls read what its token can; records nothing
+      actions: read
       contents: read
       issues: read
       pull-requests: read

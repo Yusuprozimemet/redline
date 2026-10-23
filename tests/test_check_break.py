@@ -156,7 +156,7 @@ def test_check_break_does_not_run_at_a_green_step(holds, capsys, mutator, github
     assert mutator.calls == []
 
 
-def test_a_push_after_the_red_step_notes_each_break_and_fills_the_ledger(holds, capsys, mutator, remote):
+def test_a_push_after_the_red_step_notes_each_break_and_fills_the_ledger(holds, capsys, mutator, remote, actions):
     mutator.outcomes["GREET.H3"] = (2, 0)
     hold = holds.commit("R\n\nRedline-Step: add-greet/R", {"tests/test_greet.py": RED_TESTS, "test_hold.py": PASSING})
     code, out = ci(holds, capsys, "push", "--run-url", RUN)
@@ -164,6 +164,7 @@ def test_a_push_after_the_red_step_notes_each_break_and_fills_the_ledger(holds, 
     assert "check-break: GREET.H3: its tests survive every mutant" in out
     noted = yaml.safe_load(holds.git("notes", "--ref=redline-ci", "show", hold))
     assert noted == {"result": "pass", "run": RUN, "break": {"GREET.H1": "pass", "GREET.H2": "pass", "GREET.H3": "fail"}}
+    actions.push_run(hold, "pass", noted["break"], RUN)
     assert main(["ledger", "add-greet", "--repo", str(holds.path)]) == 0
     scenarios = yaml.safe_load((holds.path / LEDGER).read_text(encoding="utf-8"))["scenarios"]
     assert scenarios["GREET.H1"] == {"red": None, "green": None, "break": {"commit": hold, "merged": hold, "result": "pass"}}

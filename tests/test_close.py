@@ -60,15 +60,17 @@ def test_an_unverified_result_says_it_is_waiting_and_a_failed_one_refuses(change
                    f"GREET.S2: green failed: the CI note on {green[:7]} says fail\n")
 
 
-def test_a_hold_scenario_needs_a_break_that_passed(change, capsys):
+def test_a_hold_scenario_needs_a_break_that_passed(change, capsys, actions):
     change.commit("a hold scenario", {f"{CHANGE}/specs/greet/delta.md": HOLD})
     for merged in red_and_green(change):
         note(change, merged, "pass")
     assert close(change, capsys)[1] == "GREET.H1: no break on main\n"
     _, merged = land(change, "hold", {"tests/test_hold.py": HELD})
-    change.git("notes", "--ref=redline-ci", "add", "-m", "result: pass\nrun: https://ci/2\nbreak:\n  GREET.H1: fail\n", merged)
+    run = actions.push_run(merged, "pass", {"GREET.H1": "fail"})
+    change.git("notes", "--ref=redline-ci", "add", "-m", f"result: pass\nrun: {run}\nbreak:\n  GREET.H1: fail\n", merged)
     assert close(change, capsys) == (1, f"GREET.H1: break failed: the CI note on {merged[:7]} says fail\n")
-    change.git("notes", "--ref=redline-ci", "add", "-f", "-m", "result: pass\nrun: https://ci/2\nbreak:\n  GREET.H1: pass\n", merged)
+    run = actions.push_run(merged, "pass", {"GREET.H1": "pass"})
+    change.git("notes", "--ref=redline-ci", "add", "-f", "-m", f"result: pass\nrun: {run}\nbreak:\n  GREET.H1: pass\n", merged)
     assert close(change, capsys) == (0, "ok: 3 scenarios, each with its evidence on main\n")
 
 
