@@ -2421,15 +2421,15 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   how mutmut reads its settings went unseen. Now the `runners` CI job runs `Mutmut` on toy
   repositories, one with `[tool.mutmut]`, and checks each scenario's kills against a test that
   kills every mutant (§7).
-- O-MUT3 [build 9 part 35]: mutmut copies only the cited files, so a cited file in a package
+- O-MUT3 [closed, build 9 part 35]: mutmut copies only the cited files, so a cited file in a package
   landed in a copy of that package with no `__init__.py`, a namespace portion that loses to the
   package the tests can import from anywhere else, such as the checkout an editable install
   points at. The tests ran the unmutated code and reached no mutant, mutmut stopped, and the run
   failed: INSTALL.WF.H1 on `src/redline/runner.py`, in install-workflow/R's CI (PR #75), the first
   `hold` scenario check-break ran on Redline's own code. The real mutmut had run only on a
-  top-level module. The plan: `also_copy` adds each cited file's outermost package (§5), and the
-  `runners` job runs the real mutmut on a `src/` package the tests can also import from the
-  original tree.
+  top-level module. Now `also_copy` adds each cited file's outermost package, by `package` in
+  `redline/breaks.py` (§5), and the `runners` job runs the real mutmut on a `src/` package the
+  tests can also import from the original tree.
 - O-RUN5 [closed, build 5 part 7]: the helper had been checked under real Jest by hand only, and
   Stryker not at all. Now the `runners` CI job runs both on a toy project (§5). It found that Jest
   took the helper, then `redline/runners/spec.js`, for a test file and failed every run, so the
