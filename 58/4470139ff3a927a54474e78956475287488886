@@ -1,0 +1,12 @@
+result: pass
+run: https://github.com/Yusuprozimemet/redline/actions/runs/40105729300
+claims:
+- commit: 524118ca5795b27e20db95baee75aea28563e2ae
+  claim: 'Oversized: a move of design.md''s 2,520 lines into specs/ and plan.md, its text unchanged, approved by the maintainer as a one-time oversize (2026-10-24)'
+  pr: 80
+  label: redline:oversized
+  by: Yusuprozimemet
+  role: admin
+  at: '2026-10-24T15:04:36Z'
+  pushed: '2026-10-24T14:31:37Z'
+  named: null
