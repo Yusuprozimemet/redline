@@ -1,7 +1,7 @@
 """The real Jest and Stryker on the toy project in tests/toys/jest. Skipped unless REDLINE_REAL_RUNNERS=1,
 which the `runners` CI job sets after `npm ci` there; with it, a missing tool fails. They prove the helper,
 REDLINE_SPEC, Stryker's counts, and check-break end to end on a git repository holding the toy.
-See docs/design.md, §5."""
+See specs/, §5."""
 
 import os
 import shutil

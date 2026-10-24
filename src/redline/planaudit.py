@@ -1,4 +1,4 @@
-"""Plan audits of a critical initiative, at each phase's start and end. See docs/design.md §4, §6, §9.
+"""Plan audits of a critical initiative, at each phase's start and end. See specs/ §4, §6, §9.
 
 The plan-auditor's reply is redline/initiatives/<id>/audits/phase-<n>-start.md or phase-<n>-end.md,
 in the form of audit.md (audit.py). An initiative is critical when any change it lists is. `start`

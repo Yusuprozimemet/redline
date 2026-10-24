@@ -1,4 +1,4 @@
-"""scripts/hashes.py writes each pin's hashes: the wheels that install on CI's Pythons only (docs/design.md, section 7)."""
+"""scripts/hashes.py writes each pin's hashes: the wheels that install on CI's Pythons only (specs/, section 7)."""
 import importlib.util
 from pathlib import Path
 

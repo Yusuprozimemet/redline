@@ -6,10 +6,11 @@ until a test has proved it can fail.
 A change is a spec, then tests that fail, then the code that makes them pass, then a close, each
 step one PR of at most 400 lines and one agent session. Redline doesn't take the agent's word for
 any of it: CI runs on each merged commit and records what it saw, and the next step's gates read
-that record from git. [docs/design.md](docs/design.md) is the whole design.
+that record from git. [plan.md](plan.md) is the big picture, and
+[specs/](specs/README.md) the whole design, one file per section.
 
-**Status:** being built, in the order of [§11](docs/design.md#11-build-order-riskiest-first) of the
-design; [§12](docs/design.md#12-open-problems) lists what is still open, each item with the step
+**Status:** being built, in the order of [plan.md](plan.md#build-order-riskiest-first);
+[§12](specs/12-open-problems.md) lists what is still open, each item with the step
 that owns it. Nothing has been released, so pin a commit.
 
 ## Install
@@ -54,13 +55,13 @@ the tests import.
    read-only job and hands the note to a job that runs git alone to add and push it. A note
    counts only from a push run of `.github/workflows/redline.yml` on `main` whose `redline` job runs `redline ci push` with
    `--run-url` its own run's URL (`${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`),
-   and whose outcome agrees with the note; any other reads `unconfirmed` ([§4](docs/design.md#4-files)).
+   and whose outcome agrees with the note; any other reads `unconfirmed` ([§4](specs/04-files.md)).
    The jobs that rebuild a ledger hold `actions: read`, and no job `actions: write`. The written
    workflow is Redline's own [workflow](.github/workflows/redline.yml)'s `redline` and `note` jobs,
    so keep its lines as they are. To move to another commit, reinstall Redline from it, remove the
    file and run the command again.
 4. **The repository settings** Redline's guarantees rest on. Without them a gate is advice. Each is
-   explained in [§7, Repository settings](docs/design.md#repository-settings):
+   explained in [§7, Repository settings](specs/07-trust-model.md#repository-settings):
    - [ ] A ruleset on `main`: require a pull request and the `redline` status check; block force
      pushes and deletion.
    - [ ] The five labels: `redline:departure`, `redline:oversized`, `redline:track`,

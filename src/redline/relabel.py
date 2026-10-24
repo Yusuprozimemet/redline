@@ -1,4 +1,4 @@
-"""Blind relabelling of a change's defects, at critical. See docs/design.md, §4 and §9.
+"""Blind relabelling of a change's defects, at critical. See specs/, §4 and §9.
 
 `redline blind <change>` prints defects.md without its Cause: and Decided: lines, for the
 relabeller agent, whose reply is relabel.yaml: per defect, a `cause` (a label or `unclear`) and a

@@ -1,5 +1,5 @@
 """Jest beside pytest: the spec helper, its markers in the links, the order and the lock, and its runs in
-check-break, with Jest's run faked. See docs/design.md, §5."""
+check-break, with Jest's run faked. See specs/, §5."""
 
 import hashlib
 import shutil

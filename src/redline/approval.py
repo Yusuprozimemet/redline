@@ -1,4 +1,4 @@
-"""A person's approval: a label on the PR, applied by a maintainer. See docs/design.md, §7.
+"""A person's approval: a label on the PR, applied by a maintainer. See specs/, §7.
 
 A trailer in the PR's own commits makes a claim: `Redline-Departure` lets a frozen test's lock
 entry change, `Oversized` lets the PR pass 400 lines, `Redline-Track` lets a G step change files

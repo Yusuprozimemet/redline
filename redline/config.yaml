@@ -1,4 +1,4 @@
-# Redline configuration. See docs/design.md, section 4.
+# Redline configuration. See specs/, section 4.
 
 # Lockfiles and generated files: they don't count toward the 400-line gate.
 # A glob without a slash matches the file name in any directory.

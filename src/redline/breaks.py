@@ -3,7 +3,7 @@
 Its tests (spec marker without `new=True`) must pass unmutated, and fail under at least one mutant
 of the files its premises cite, mutated by their runner's tool. Each tool is in `MUTATORS`, keyed
 by runner name, which tests replace whole: mutmut for pytest, which doesn't run on Windows, so there
-the mutation is skipped (CI runs it), and Stryker for Jest. See docs/design.md, §5.
+the mutation is skipped (CI runs it), and Stryker for Jest. See specs/, §5.
 """
 
 import configparser

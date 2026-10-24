@@ -1,4 +1,4 @@
-"""Writes each pin's `--hash` lines in the requirements files CI installs from (docs/design.md, section 7).
+"""Writes each pin's `--hash` lines in the requirements files CI installs from (specs/, section 7).
 
 For each `name==version` line it asks PyPI for that release's files and keeps the sha256 of every wheel that installs
 on one of CI's Pythons: CPython 3.12 on Linux x86_64 (ubuntu-24.04's glibc, 2.39) and on Windows x64. Every other line

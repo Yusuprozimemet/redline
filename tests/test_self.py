@@ -1,5 +1,5 @@
 """Redline's own checkout passes check-links and check-order, as every step from R on runs them. check-order
-reads the whole history, so the tests are skipped in a shallow clone. See docs/design.md, §5 and O-SELF5."""
+reads the whole history, so the tests are skipped in a shallow clone. See specs/, §5 and O-SELF5."""
 
 import subprocess
 from pathlib import Path

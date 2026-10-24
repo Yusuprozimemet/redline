@@ -1,4 +1,4 @@
-"""`redline ci pr` repeats `start`'s phase and plan-audit refusals, read at the merge-base. See docs/design.md §6, §7."""
+"""`redline ci pr` repeats `start`'s phase and plan-audit refusals, read at the merge-base. See specs/ §6, §7."""
 
 from test_ci import ci
 from test_plan import PLAN, VALID, complete, planned  # noqa: F401 (planned is a fixture)

@@ -1,4 +1,4 @@
-"""A plan audit is tied to the plan it read, by the blob in its `Plan:` line. See docs/design.md §4, §9."""
+"""A plan audit is tied to the plan it read, by the blob in its `Plan:` line. See specs/ §4, §9."""
 
 from test_initiative_audit import SIDES, every_phase_audited, resolved
 from test_plan import PLAN, VALID, check_plan

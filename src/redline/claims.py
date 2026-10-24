@@ -1,4 +1,4 @@
-"""`redline claims <initiative>`: the claims main's history holds, for the process auditor. See docs/design.md §4, §7, §9.
+"""`redline claims <initiative>`: the claims main's history holds, for the process auditor. See specs/ §4, §7, §9.
 
 The changes are every change any version of the plan on main's first-parent line listed (`listed`), so a
 change taken out of the plan keeps its claims; those it no longer lists are named, with where they left.

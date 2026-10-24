@@ -1,4 +1,4 @@
-"""The progress the brief ends with, and `merged` prints after C (docs/design.md §6, O-PROG1)."""
+"""The progress the brief ends with, and `merged` prints after C (specs/ §6, O-PROG1)."""
 import os
 import subprocess
 import sys

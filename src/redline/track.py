@@ -1,4 +1,4 @@
-"""check-track: a Green PR changes only its own track. See docs/design.md, §5.
+"""check-track: a Green PR changes only its own track. See specs/, §5.
 
 A G step's track is the `Track:` line under its heading in steps.md, read at the merge-base with
 main (as the auditor saw it), not from the PR. Each file the step's diff adds, edits or deletes
