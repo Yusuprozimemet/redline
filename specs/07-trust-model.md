@@ -392,7 +392,7 @@ but the ledger reads its result only when its run checks out (§4); its `claims:
 
 A person's approval is a label on the PR, applied by a maintainer. A commit trailer in the PR's
 own commits (`base..HEAD`) says what is approved and why, and stays in `main`'s history. The label
-says a maintainer agreed. Five claims need one:
+says a maintainer agreed. Six claims need one:
 
 | Trailer | Allows | Label |
 |---|---|---|
@@ -401,6 +401,7 @@ says a maintainer agreed. Five claims need one:
 | `Redline-Track: <reason>` | a G step changing files outside its track (§5) | `redline:track` |
 | `Redline-Rigor: <reason>` | a change to `rigor:` in `redline/config.yaml` or to a plan's `Rigor:` line; a change's level lowered; a glob added to its `generated:` or `support:`; a plan deleted, or a change taken out of one | `redline:rigor` |
 | `Redline-Manual: <ID> checked-by @person: <what was seen>` | a `manual` scenario to close at C (§5) | `redline:manual` |
+| `Redline-Relabel: waived-by @person: <reason>` | a critical change to close at C without its blind relabel (§4) | `redline:relabel` |
 
 A person's check is evidence at the C step only, where check-close reads it. A `Redline-Manual`
 trailer in any other step's PR, or in a PR outside any step, fails, naming it: no gate would read
@@ -541,8 +542,8 @@ these guarantees rests on one, and without it the guarantee is a convention:
    push run only records `result: fail` after the merge. Only `redline` is required: `runners` and
    `windows` record nothing, and a GitHub outage fails `runners` (Approvals, above), which mustn't
    hold up a merge.
-2. **The five labels** of the Approvals table: `redline:departure`, `redline:oversized`,
-   `redline:track`, `redline:rigor` and `redline:manual`. Without them no claim can be approved,
+2. **The six labels** of the Approvals table: `redline:departure`, `redline:oversized`,
+   `redline:track`, `redline:rigor`, `redline:manual` and `redline:relabel`. Without them no claim can be approved,
    so every PR that makes one fails.
 3. **The agent in an account of its own, with the `write` role.** The agent runs `gh` with the
    credentials it is given. With a maintainer's, a label it applies is that maintainer's, and

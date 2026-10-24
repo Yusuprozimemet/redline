@@ -69,8 +69,8 @@ the tests import.
    explained in [§7, Repository settings](specs/07-trust-model.md#repository-settings):
    - [ ] A ruleset on `main`: require a pull request and the `redline` status check; block force
      pushes and deletion.
-   - [ ] The five labels: `redline:departure`, `redline:oversized`, `redline:track`,
-     `redline:rigor` and `redline:manual`.
+   - [ ] The six labels: `redline:departure`, `redline:oversized`, `redline:track`,
+     `redline:rigor`, `redline:manual` and `redline:relabel`.
    - [ ] The agent in an account of its own with the `write` role, never a maintainer's
      credentials, so its labels approve nothing; then require a maintainer's review.
    - [ ] Merge commits or squash merges only, never rebase merges.

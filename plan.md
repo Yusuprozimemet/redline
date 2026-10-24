@@ -80,7 +80,9 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    package mutated in a copy of its whole package (O-MUT3), found by install-workflow/R's
    check-break and merged before that step; part 36, the URL a written workflow clones held to
    what a git URL needs (O-SELF6); part 37, an adopting repository's dependencies installed once for
-   both jobs, and its gate kept apart from them on a push too (O-CI11).
+   both jobs, and its gate kept apart from them on a push too (O-CI11); part 38, a critical
+   change's blind relabel waived by a maintainer's label (O-RELABEL1), found at suite-job/C and
+   merged before that step.
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.

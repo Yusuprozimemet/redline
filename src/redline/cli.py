@@ -361,8 +361,9 @@ def run_check_specs(repo: Path, change: str, base: str) -> int:
 
 
 def run_check_relabel(repo: Path, change: str) -> int:
+    approvals = Approvals()
     try:
-        report = check_relabel(repo, change)
+        report = check_relabel(repo, change, approvals=approvals)
     except RuntimeError as error:
         print(f"redline: {error}")
         return 2
@@ -370,6 +371,11 @@ def run_check_relabel(repo: Path, change: str) -> int:
         print(line)
     if report.bad:
         return 1
+    for line in approvals.pending:
+        print(f"note: {line}")
+    if report.waived:
+        print(f"ok: redline/changes/{change}/relabel.yaml: waived by @{report.waived}, no defect relabelled blind")
+        return 0
     n = len(report.disagreements)
     print(f"ok: {report.labelled} defects relabelled blind, {n} disagreement{'' if n == 1 else 's'}")
     return 0
