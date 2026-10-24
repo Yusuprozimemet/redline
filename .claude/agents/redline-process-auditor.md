@@ -1,6 +1,6 @@
 ---
 name: redline-process-auditor
-description: Independent read-only process auditor of a complete critical Redline initiative, one of three end-of-initiative auditors. Give it only the initiative id and the plan's blob, e.g. "2fa-rollout with plan 3f2a9c1e…", then the text `redline claims <initiative>` prints. It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/initiative-process.md. Run it again to close findings; never close one yourself.
+description: Independent read-only process auditor of a complete critical Redline initiative, one of three end-of-initiative auditors. Give it only the text `redline plan-audit-brief <initiative> <target>` prints (target is process), then the text `redline claims <initiative>` prints. It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/initiative-process.md. Run it again to close findings; never close one yourself.
 tools: Read, Grep, Glob
 model: fable
 effort: max

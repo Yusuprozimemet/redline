@@ -1,6 +1,6 @@
 ---
 name: redline-plan-auditor
-description: Independent read-only auditor of a critical Redline initiative's plan, at each phase's start and end. Give it only `<initiative> phase <n> start|end with plan <blob>`, e.g. "2fa-rollout phase 1 start with plan 3f2a9c1e…". It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/phase-<n>-<start|end>.md. Run it again to close findings; never close one yourself.
+description: Independent read-only auditor of a critical Redline initiative's plan, at each phase's start and end. Give it only the text `redline plan-audit-brief <initiative> <target>` prints (target is phase-<n>-start or phase-<n>-end). It returns the complete audit file; write its reply unedited to redline/initiatives/<initiative>/audits/phase-<n>-<start|end>.md. Run it again to close findings; never close one yourself.
 tools: Read, Grep, Glob
 model: fable
 effort: max

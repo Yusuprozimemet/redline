@@ -99,20 +99,20 @@ def due(repo: Path, plan: Plan, index: int) -> str:
     if not critical(repo, plan):
         return ""
     number = plan.phases[index].number
-    said = (f"Its end audit is due: run {AGENT} on `{plan.name} phase {number} end`; write its reply unedited "
+    said = (f"Its end audit is due: run {AGENT} on the text `redline plan-audit-brief {plan.name} phase-{number}-end` prints; write its reply unedited "
             f"to {audit_path(plan, number, 'end')}, in a PR outside any step. Until it lands with every finding "
             f"resolved, check-plan fails on every PR.\n"
-            f"Give each auditor `with plan {blob(repo, plan, 'main')}` after its arguments: its `Plan:` line.\n")
+            "Give each auditor only its brief text, which includes the plan blob and round metadata.\n")
     said += ("Use `redline plan-audit-brief <initiative> <target>` for each prompt: target is "
              "phase-<n>-start, phase-<n>-end, security, architecture or process; at most three rounds each.\n")
     if index + 1 < len(plan.phases):
         following = plan.phases[index + 1].number
         said += (f"Before phase {following}'s first step, its start audit is due too: "
-                 f"`{plan.name} phase {following} start` ({audit_path(plan, following, 'start')}).\n")
+                 f"`redline plan-audit-brief {plan.name} phase-{following}-start` ({audit_path(plan, following, 'start')}).\n")
         return said
     said += ("The three end-of-initiative audits are due too, beside it and independently: none reads "
              "another's reply or the plan audits.\n")
-    said += "".join(f"- run redline-{side}-auditor on `{plan.name}`; write its reply unedited to "
+    said += "".join(f"- run redline-{side}-auditor on the text `redline plan-audit-brief {plan.name} {side}` prints; write its reply unedited to "
                     f"{side_path(plan, side)}\n" for side in SIDES)
     said += f"Give redline-process-auditor, after its arguments, the text `redline claims {plan.name}` prints.\n"
     return said + "Until all three land with every finding resolved, check-plan fails on every PR.\n"

@@ -105,6 +105,6 @@ def test_merged_at_the_last_stopping_point_says_all_three_are_due(critical, caps
     assert code == 0, out
     assert "The initiative greetings is complete." in out
     for side in SIDES:
-        assert f"run redline-{side}-auditor on `greetings`; write its reply unedited to {AUDITS}/initiative-{side}.md" in out
+        assert f"run redline-{side}-auditor on the text `redline plan-audit-brief greetings {side}` prints; write its reply unedited to {AUDITS}/initiative-{side}.md" in out
     assert "independently: none reads another's reply or the plan audits" in out
     assert "Until all three land with every finding resolved, check-plan fails on every PR." in out

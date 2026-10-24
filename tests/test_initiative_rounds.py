@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import pytest
+import yaml
 
 from redline.cli import main
 from redline.plan import read_plan
@@ -76,5 +77,10 @@ def test_bad_targets_dirty_tree_and_bad_metadata_refuse(critical, capsys):
 @pytest.mark.parametrize("agent", ("plan", "security", "architecture", "process"))
 def test_agents_require_metadata_and_incremental_scope(agent):
     text = (Path(__file__).parents[1] / f".claude/agents/redline-{agent}-auditor.md").read_text(encoding="utf-8")
+    description = yaml.safe_load(text.split("---\n", 2)[1])["description"]
+    assert "Give it only the text `redline plan-audit-brief <initiative> <target>` prints" in description
+    assert "with plan" not in description
+    if agent == "process":
+        assert "`redline claims <initiative>` prints" in description
     assert "plan-audit-brief" in text and "REFUSED: missing Round: or Audited:" in text
     assert "Since: none" in text and "Deferred-to:" in text
