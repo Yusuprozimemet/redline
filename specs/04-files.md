@@ -725,8 +725,14 @@ disagreement too: an entry nobody else can label is a weak record.
 
 `redline check-relabel <change>` prints each disagreement, then fails on:
 
-- **A missing `relabel.yaml`** at the C step, at critical. Below critical it is optional; if it
-  exists, it is checked. Run on its own, the command checks as at C.
+- **A missing `relabel.yaml`** at the C step, at critical, unless a maintainer waived the relabel:
+  a `Redline-Relabel: waived-by @person: <reason>` trailer in the C PR's own commits, approved by
+  the `redline:relabel` label applied by the person it names (§7, Approvals). A waiver is a
+  recorded choice not to have the second label, not a second label: the defects keep the main
+  session's causes alone. Below critical the file is optional; if it exists, it is checked. Run on
+  its own, the command checks as at C, reading the PR's commits from `main`.
+- **A `Redline-Relabel` trailer** not in that form, beside a `relabel.yaml`, or in any other step's
+  PR, where no gate would read it.
 - **No `# Model:` line naming a Fable or Opus model** before the first entry (§9).
 - **A defect with no label**, or a label for an ID the log doesn't have. A defect added after the
   relabel needs the relabeller run again; a re-run keeps every earlier entry.
