@@ -4,9 +4,12 @@ from pathlib import Path
 import pytest
 import yaml
 
+from redline import approval, claims
+from redline.approval import Approvals
 from redline.defects import CAUSES
 from redline.pr import gates
 from test_defects import LOG, VALID, run
+from test_pr import FakeGitHub
 from test_start import CHANGE, change  # noqa: F401 (change is a fixture)
 
 RELABEL = f"{CHANGE}/relabel.yaml"
@@ -134,3 +137,64 @@ def test_a_model_line_after_the_first_entry_names_nothing(logged, capsys):
     late = labels().replace("# Model: claude-fable-5-1\n", "") + "# Model: claude-fable-5-1\n"
     logged.commit("relabel", {RELABEL: late})
     assert check(logged, capsys)[1].startswith(f"{RELABEL}: no `# Model:` line;")
+
+
+WAIVER = "Redline-Relabel: waived-by @alice: the maintainer chose to skip the relabel"
+WAIVED = f"{RELABEL}: waived by @alice"
+
+
+def critical(logged, *trailers: str):
+    logged.commit("critical", {f"{CHANGE}/proposal.md": "# Proposal\n\nRigor: critical\n"})
+    if trailers:
+        logged.commit("waived\n\n" + "\n".join(trailers))
+
+
+def relabelling(logged, step: str = "C", approvals=None) -> list[str]:
+    return [f for f in gates(logged.path, "add-greet", step, approvals) if f.startswith("check-relabel")]
+
+
+def test_a_maintainers_waiver_stands_in_for_a_missing_relabel_at_c(logged, capsys):
+    critical(logged, WAIVER)
+    local = Approvals()
+    assert relabelling(logged, approvals=local) == []
+    assert local.pending == [f"{WAIVED}: CI will need the `redline:relabel` label applied by @alice, a maintainer"]
+    assert check(logged.path, capsys) == (0, f"note: {WAIVED}: CI will need the `redline:relabel` label applied by "
+                                             f"@alice, a maintainer\nok: {WAIVED}, no defect relabelled blind\n")
+
+    def closing(applied: dict) -> list[str]:
+        github = FakeGitHub(logged, applied=applied, roles={"maintainer": "admin", "alice": "admin"})
+        return relabelling(logged, approvals=Approvals(github, 1))
+
+    assert closing({}) == [f"check-relabel: {WAIVED}: needs the `redline:relabel` label from a maintainer"]
+    assert closing({"redline:relabel": "bob"}) == [
+        f"check-relabel: {WAIVED}: `redline:relabel` was applied by @bob, who isn't a maintainer"]
+    assert closing({"redline:relabel": "maintainer"}) == [
+        f"check-relabel: {WAIVED}: `redline:relabel` was applied by @maintainer, but the trailer names @alice: "
+        "only @alice's label approves it"]
+    assert closing({"redline:relabel": "alice"}) == []
+
+
+@pytest.mark.parametrize("trailer, why", [
+    ("Redline-Relabel: skipped", "allows nothing: it needs `waived-by @person: <reason>`"),
+    ("Redline-Relabel: waived-by alice: skipped", "allows nothing: it needs `waived-by @person: <reason>`"),
+    ("Redline-Relabel: waived-by @alice:", "allows nothing: it needs `waived-by @person: <reason>`"),
+])
+def test_a_waiver_that_allows_nothing_fails(logged, trailer, why):
+    critical(logged, trailer)
+    assert relabelling(logged) == [
+        f"check-relabel: {trailer}: {why}",
+        f"check-relabel: {RELABEL}: missing; at C a critical change has its defects relabelled blind"]
+
+
+def test_a_waiver_waives_nothing_beside_a_relabel_below_critical_or_before_c(logged):
+    logged.commit("waived\n\n" + WAIVER)
+    assert relabelling(logged) == [f"check-relabel: {WAIVER}: waives nothing: add-greet isn't critical"]
+    critical(logged)
+    assert relabelling(logged, "G1") == [f"check-relabel: {WAIVER}: a relabel waiver counts at the C step only"]
+    logged.commit("relabel", {RELABEL: labels()})
+    assert relabelling(logged) == [f"check-relabel: {WAIVER}: waives nothing: {RELABEL} is there"]
+
+
+def test_the_claims_record_reads_a_waiver_and_the_person_it_names():
+    assert claims.LABELS["Redline-Relabel"] == approval.RELABEL == "redline:relabel"
+    assert approval.named("Redline-Relabel", WAIVER.split(": ", 1)[1]) == "alice"

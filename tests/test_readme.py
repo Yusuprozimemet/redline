@@ -13,7 +13,7 @@ from redline import approval
 from redline.cli import main
 
 ROOT = Path(__file__).resolve().parent.parent
-LABELS = {approval.DEPARTURE, approval.OVERSIZED, approval.TRACK, approval.RIGOR, approval.MANUAL}
+LABELS = {approval.DEPARTURE, approval.OVERSIZED, approval.TRACK, approval.RIGOR, approval.MANUAL, approval.RELABEL}
 
 
 def readme() -> str:
