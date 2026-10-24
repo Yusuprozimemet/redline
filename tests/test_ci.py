@@ -231,7 +231,7 @@ SUITE_STEP = '"$RUNNER_TEMP/gate/bin/redline" ci suite --base main --python "$(c
 PUSH_ONLY = "github.event_name == 'push'"
 
 
-@pytest.mark.spec("CI.APART.S4", new=True)  # O5: takes over the test that pinned the one-job workflow (O-SELF3, PR #81)
+@pytest.mark.spec("CI.APART.S4")  # O5: takes over the test that pinned the one-job workflow (O-SELF3, PR #81)
 def test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own():
     flow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     for job in ("redline", "suite"):
@@ -253,7 +253,7 @@ def named(step: dict) -> str:
     return step.get("uses", step.get("name", "")).split("@")[0] or step.get("run", "").strip()
 
 
-@pytest.mark.spec("CI.APART.S4", new=True)
+@pytest.mark.spec("CI.APART.S4")
 def test_the_workflow_runs_the_prs_code_in_its_suite_job_alone_and_the_gate_reads_only_its_result():
     text = WORKFLOW.read_text(encoding="utf-8")
     jobs = yaml.safe_load(text)["jobs"]

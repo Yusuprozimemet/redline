@@ -17,7 +17,44 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  redline:  # runs the repository's code, the PR's own on a PR, so it can't write the notes
+  suite:  # runs all of the PR's code, so it holds nothing to write and hands on nothing but its result (specs/, section 7)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04  # by version: -latest moves to a new OS
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          fetch-depth: 0  # the ledger and check-order read the whole history
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}  # the PR's own commits, not a merge
+          persist-credentials: false
+      - name: Fetch main and the CI notes
+        run: |
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" fetch --no-tags origin '+refs/heads/main:refs/heads/main' '+refs/notes/*:refs/notes/*'
+        env:
+          GH_TOKEN: ${{ github.token }}  # for this fetch alone, since the checkout keeps no credentials
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12.15"  # exact: "3.12" gave Linux and Windows different patches
+      - name: Install the merge-base's Redline into a venv of its own, to gate the PR, before any of the PR's code runs
+        run: |  # not editable, with the merge-base's own pins, so the PR can't weaken the gate that checks it
+          git worktree add --detach "$RUNNER_TEMP/base" "$(git merge-base main HEAD)"
+          cd "$RUNNER_TEMP/base"  # first: python -m puts its directory, the PR's checkout, on sys.path
+          python -m venv "$RUNNER_TEMP/gate"
+          "$RUNNER_TEMP/gate/bin/python" -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
+          "$RUNNER_TEMP/gate/bin/python" -m pip install --require-hashes --force-reinstall -r requirements.txt
+          "$RUNNER_TEMP/gate/bin/python" -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index .
+      - run: |  # pip, every package by hash (mutmut, for check-break), then the PR's Redline, which downloads nothing
+          python -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
+          python -m pip install --require-hashes --force-reinstall -r requirements.txt
+          python -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index -e .
+      - name: Check-break at an R step, then the suite, for the PR's step
+        run: |  # the merge-base's Redline; the suite runs with the setup-python environment, the PR's own Redline
+          "$RUNNER_TEMP/gate/bin/redline" ci suite --base main --python "$(command -v python)"
+
+  redline:  # on a PR, the gates on the suite job's result and none of the PR's code; on a push, main's suite
+    needs: suite
+    if: always()  # a failed or cancelled suite job still gates, where a skipped gate would read as passed
     runs-on: ubuntu-24.04  # by version: -latest moves to a new OS
     permissions:
       actions: read  # the push run each CI note names, for the ledger; no job can write the runs
@@ -49,15 +86,17 @@ jobs:
           "$RUNNER_TEMP/gate/bin/python" -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
           "$RUNNER_TEMP/gate/bin/python" -m pip install --require-hashes --force-reinstall -r requirements.txt
           "$RUNNER_TEMP/gate/bin/python" -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index .
-      - run: |  # pip, every package by hash (mutmut, for check-break), then Redline, which downloads nothing
+      - if: github.event_name == 'push'  # on a PR the PR's code runs in the suite job alone
+        run: |  # pip, every package by hash (mutmut, for check-break), then Redline, which downloads nothing
           python -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
           python -m pip install --require-hashes --force-reinstall -r requirements.txt
           python -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index -e .
-      - name: Gates, suite and ledger for the PR's step, or the gates for a PR outside any step
+      - name: Gates and ledger for the PR's step on the suite job's result, or the gates for a PR outside any step
         if: github.event_name == 'pull_request'
-        run: |  # the merge-base's gate; the suite runs with the setup-python environment, the PR's own Redline
-          "$RUNNER_TEMP/gate/bin/redline" ci pr --base main --pr ${{ github.event.pull_request.number }} --python "$(command -v python)"
+        run: |  # the merge-base's gate, reading the suite job's result and running none of the PR's code
+          "$RUNNER_TEMP/gate/bin/redline" ci pr --base main --pr ${{ github.event.pull_request.number }} --suite-result "$SUITE"
         env:
+          SUITE: ${{ needs.suite.result }}  # through env, as the job's result is all that reaches the gate
           GH_TOKEN: ${{ github.token }}
       - name: Run the suite and write the note for the merged commit
         if: github.event_name == 'push'
