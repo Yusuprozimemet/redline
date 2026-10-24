@@ -73,17 +73,20 @@ def firsts(repo: Path, change: str, log: str, path: str) -> dict[str, str]:
     return found
 
 
+def stray(repo: Path, base: str) -> list[str]:
+    """Each relabel waiver in base..HEAD, outside a C step, where no gate reads it."""
+    return [f"{KEY}: {value}: a relabel waiver counts at the C step only" for value in claims(repo, base, KEY)]
+
+
 def check_relabel(repo: Path, change: str, required: bool = True, approvals: Approvals | None = None,
                   base: str = "main") -> RelabelReport:
     log, path = f"redline/changes/{change}/defects.md", f"redline/changes/{change}/relabel.yaml"
     approvals = approvals or Approvals()
-    report = RelabelReport()
+    report = RelabelReport(bad=[] if required else stray(repo, base))
     there, critical = (repo / path).is_file(), rigor(repo, change) == "critical"
-    for value in claims(repo, base, KEY):
+    for value in claims(repo, base, KEY) if required else []:
         claim = f"{KEY}: {value}"
-        if not required:
-            report.bad.append(f"{claim}: a relabel waiver counts at the C step only")
-        elif not (waiver := WAIVED.match(value)):
+        if not (waiver := WAIVED.match(value)):
             report.bad.append(f"{claim}: allows nothing: it needs `waived-by @person: <reason>`")
         elif there:
             report.bad.append(f"{claim}: waives nothing: {path} is there")

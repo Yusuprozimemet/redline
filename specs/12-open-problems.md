@@ -232,7 +232,7 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   Now a `Redline-Relabel: waived-by @person: <reason>` trailer in the C PR's own commits stands in
   for the missing file, approved by the `redline:relabel` label applied by the person it names, a
   maintainer, through `check_relabel` in `redline/relabel.py`; in another form, beside a
-  `relabel.yaml`, below critical or in any other step's PR it fails, and `redline ci push` records
+  `relabel.yaml`, below critical, in any other step's PR or outside any step it fails, and `redline ci push` records
   it under `claims:` (§4, Blind relabelling; §7, Approvals).
 - O-NOTE1 [closed, build 9, the change note-run]: a note was trusted because CI writes it, but anyone
   with the `write` role, the agent's own account among them (§7, Repository settings), can push

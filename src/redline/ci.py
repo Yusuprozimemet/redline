@@ -43,6 +43,7 @@ from redline.approval import Approvals
 from redline.plan import check_plan
 from redline.planaudit import check_plan_audits
 from redline.pr import GitHub, gates, rigor_claim, size, touched
+from redline.relabel import stray
 from redline.runner import JEST, RUNNERS, Runner, check_helpers, interpreter, run
 from redline.start import TRAILER, Refused, may_begin, merged_steps, next_step
 
@@ -107,6 +108,7 @@ def outside(repo: Path, base: str, approvals: Approvals, result: str | None = No
     if files := touched(repo, base, STEPS_ONLY):
         raise Refused(f"outside any step a PR can't touch a change, the lock or the specs: {', '.join(files)}")
     failures = size(repo, approvals) + rigor_claim(repo, approvals) + misplaced(repo, base)
+    failures += [f"check-relabel: {bad}" for bad in stray(repo, base)]
     failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad + check_plan_audits(repo)]
     failures += [f"check-helpers: {bad}" for bad in check_helpers(repo)]
     for change in sorted(read_lock(repo)):  # no Redline-Step, so no departure: the lock can't change here
