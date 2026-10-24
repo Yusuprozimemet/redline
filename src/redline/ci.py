@@ -7,7 +7,10 @@ itself not merged; and its phase ready, as `start` refuses, with the plans, the 
 levels and the plan audits read at the merge-base. Then the step's gates, the test suite (each runner's the
 repository uses, which fails when none is or when Jest is listed but can't run) and check-ledger against
 the base run, and every failure is reported; with `--python` the suite and check-break's unmutated
-runs use that interpreter, so a gate installed apart can test the PR's own code. A PR with no trailer is outside any step: it may not
+runs use that interpreter, so a gate installed apart can test the PR's own code. With `--suite-result`
+the suite ran in a job of its own, `ci suite`, so neither it nor check-break's test runs run here, only
+check-break's refusals that run no test, and a result other than `success` fails (§7, O-CI10); `ci
+suite` runs check-break at an R step, then the suite, and no gate. A PR with no trailer is outside any step: it may not
 touch a change, the lock or the specs, and gets check-lines, the rigor claim, check-plan, check-lock
 on every locked change and the suite; a `Redline-Manual` trailer fails there, as it is a C step's.
 A departure, an Oversized trailer or a manual check needs its label
@@ -99,7 +102,7 @@ def pr_step(repo: Path, base: str) -> str:
     return steps[0]
 
 
-def outside(repo: Path, base: str, approvals: Approvals) -> list[str]:
+def outside(repo: Path, base: str, approvals: Approvals, result: str | None = None) -> list[str]:
     """A PR outside any step: refused if it touches a step's files, else the gates for any PR."""
     if files := touched(repo, base, STEPS_ONLY):
         raise Refused(f"outside any step a PR can't touch a change, the lock or the specs: {', '.join(files)}")
@@ -108,24 +111,42 @@ def outside(repo: Path, base: str, approvals: Approvals) -> list[str]:
     failures += [f"check-helpers: {bad}" for bad in check_helpers(repo)]
     for change in sorted(read_lock(repo)):  # no Redline-Step, so no departure: the lock can't change here
         failures += [f"check-lock: {change}: {bad}" for bad in check_lock(repo, change).bad]
-    return failures + suite(repo)
+    return failures + suite_or(repo, result)
 
 
-def ci_pr(repo: Path, base: str, number: int | None = None, python: str | None = None) -> tuple[str, list[str]]:
-    """`python`: run the suite and check-break's unmutated runs with it, not the gate's own (§7, O-SELF2)."""
+def suite_or(repo: Path, result: str | None) -> list[str]:
+    """The suite, or with `result` the suite job's verdict on it: a failure unless it is `success`."""
+    if result is None:
+        return suite(repo)
+    return [] if result == "success" else [f"suite: the suite job's result is {result}"]
+
+
+def ci_pr(repo: Path, base: str, number: int | None = None, python: str | None = None,
+          result: str | None = None) -> tuple[str, list[str]]:
+    """`python`: run the suite and check-break's unmutated runs with it, not the gate's own (§7, O-SELF2).
+    `result`: the suite job's, so neither runs here (§7, O-CI10)."""
     with interpreter(python) if python else nullcontext():
-        return step_pr(repo, base, number)
+        return step_pr(repo, base, number, result)
 
 
-def step_pr(repo: Path, base: str, number: int | None) -> tuple[str, list[str]]:
+def ci_suite(repo: Path, base: str, python: str | None = None) -> tuple[str, list[str]]:
+    """What runs the PR's code: check-break at an R step, its step from the trailers, then the suite; no gate."""
+    with interpreter(python) if python else nullcontext():
+        name = pr_step(repo, base)
+        change, _, step = name.partition("/")
+        broken = check_break(repo, change).bad if step == "R" else {}
+        return name, [f"check-break: {sid}: {why}" for sid, why in broken.items()] + suite(repo)
+
+
+def step_pr(repo: Path, base: str, number: int | None, result: str | None = None) -> tuple[str, list[str]]:
     name = pr_step(repo, base)
     approvals = Approvals(GitHub(repo), number)
     if not name:
-        return "", outside(repo, base, approvals)
+        return "", outside(repo, base, approvals, result)
     fork = next_step(repo, name, base)  # before any gate: a step's name decides which gates run
     change, _, step = name.partition("/")
     may_begin(repo, change, merged_steps(repo, base), fork)  # start's phase refusals, read where the PR can't edit
-    failures = gates(repo, change, step, approvals) + suite(repo)
+    failures = gates(repo, change, step, approvals, tests=result is None) + suite_or(repo, result)
     failures += [f"check-ledger: {p}" for p in check_ledger(repo, change, base)]
     return name, failures
 

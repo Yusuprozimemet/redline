@@ -50,7 +50,7 @@ def starting(out: str, *prefixes: str) -> list[str]:
 
 
 @pytest.mark.parametrize("at", ["R", "outside"])
-@pytest.mark.spec("CI.APART.S1", new=True)
+@pytest.mark.spec("CI.APART.S1")
 def test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code(change, capsys, tmp_path, at):
     written = tmp_path / "ran"
     files = {"tests/test_broken.py": BROKEN, **conftest(written)}
@@ -63,7 +63,7 @@ def test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_pr
     assert code == 1 and written.exists()
 
 
-@pytest.mark.spec("CI.APART.S2", new=True)
+@pytest.mark.spec("CI.APART.S2")
 def test_a_suite_result_other_than_success_fails_the_gate_beside_the_gates_failures(change, capsys, tmp_path, remote):
     over = "check-lines: 401 changed lines, over the limit of 400"
     outside(change, {"notes.md": "a note\n"})
@@ -93,7 +93,7 @@ def test_a_suite_result_other_than_success_fails_the_gate_beside_the_gates_failu
     assert code == 2 and "--suite-result" in out
 
 
-@pytest.mark.spec("CI.APART.S2", new=True)
+@pytest.mark.spec("CI.APART.S2")
 def test_a_suite_result_fails_a_step_over_400_lines_beside_check_lines(change, capsys):
     merge_step(change, "S")
     change.commit("red\n\nRedline-Step: add-greet/R", {"tests/test_greet.py": RED_TESTS})
@@ -123,7 +123,7 @@ def logging_python(where: Path, log: Path) -> str:
     return str(path)
 
 
-@pytest.mark.spec("CI.APART.S3", new=True)
+@pytest.mark.spec("CI.APART.S3")
 def test_ci_suite_runs_check_break_at_an_r_step_then_the_suite_and_no_gate(change, capsys, tmp_path):
     r_step(change, capsys, {"tests/test_broken.py": BROKEN, "notes.md": lines(401)})
     code, out = ci(change, capsys, "suite", "--base", "main")
@@ -133,7 +133,7 @@ def test_ci_suite_runs_check_break_at_an_r_step_then_the_suite_and_no_gate(chang
     code, out = ci(change, capsys, "suite", "--base", "main", "--python", logging_python(tmp_path, log))
     assert code == 1, out
     ran = log.read_text(encoding="utf-8").splitlines()
-    assert len(ran) == 2 and sum("--redline-spec GREET.H1" in line for line in ran) == 1, ran
+    assert len(ran) == 2 and sum("--redline-spec=GREET.H1" in line for line in ran) == 1, ran
     merge_step(change, "R")
     fresh_branch(change, "g1")
     change.commit("G1\n\nRedline-Step: add-greet/G1", {"test_hold.py": FAILING, "tests/test_broken.py": BROKEN})
@@ -141,7 +141,7 @@ def test_ci_suite_runs_check_break_at_an_r_step_then_the_suite_and_no_gate(chang
     assert starting(out, SUITE) and not starting(out, "check-break:"), out
 
 
-@pytest.mark.spec("CI.APART.S3", new=True)
+@pytest.mark.spec("CI.APART.S3")
 def test_ci_suite_outside_any_step_runs_the_suite_alone_and_refuses_two_steps(change, capsys):
     outside(change, {"notes.md": lines(401)})
     code, out = ci(change, capsys, "suite", "--base", "main")
@@ -156,7 +156,7 @@ def test_ci_suite_outside_any_step_runs_the_suite_alone_and_refuses_two_steps(ch
     (ONE_HOLD, NEW_ONLY, "no test links it without new=True"),
     (NO_CODE, FAILING, "nothing to mutate: the change's premises cite no file its tests' runners mutate"),
 ], ids=["new-only", "no-code"])
-@pytest.mark.spec("CI.APART.S5", new=True)
+@pytest.mark.spec("CI.APART.S5")
 def test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test(change, capsys, tmp_path, spec, hold, why):
     written = tmp_path / "ran"
     r_step(change, capsys, conftest(written), spec, hold)

@@ -3,34 +3,58 @@
 change: suite-job
 scenarios:
   CI.APART.S1:
-    red: null
+    red:
+      commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
+      merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
+      result: pass
     green: null
     break: null
   CI.APART.S2:
-    red: null
+    red:
+      commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
+      merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
+      result: pass
     green: null
     break: null
   CI.APART.S3:
-    red: null
+    red:
+      commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
+      merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
+      result: pass
     green: null
     break: null
   CI.APART.S4:
-    red: null
+    red:
+      commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
+      merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
+      result: pass
     green: null
     break: null
   CI.APART.S5:
-    red: null
+    red:
+      commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
+      merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
+      result: pass
     green: null
     break: null
   CI.APART.H1:
     red: null
     green: null
-    break: null
+    break:
+      commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
+      merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
+      result: pass
   INSTALL.WF.S1:
-    red: null
+    red:
+      commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
+      merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
+      result: pass
     green: null
     break: null
   INSTALL.WF.S2:
-    red: null
+    red:
+      commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
+      merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
+      result: pass
     green: null
     break: null

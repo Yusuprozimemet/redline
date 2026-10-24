@@ -29,7 +29,7 @@ from urllib.parse import quote
 
 from redline.approval import OVERSIZED, RIGOR, Approvals, claims, moment
 from redline.audit import check_audit
-from redline.breaks import check_break, holds
+from redline.breaks import check_break, holds, refusals
 from redline.close import check_close, misplaced
 from redline.config import LEVELS, load_config, rigor
 from redline.defects import check_defects
@@ -209,7 +209,8 @@ def touched(repo: Path, base: str, prefixes: tuple[str, ...]) -> list[str]:
     return [p for p in diff.stdout.splitlines() if p.startswith(prefixes)]
 
 
-def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None) -> list[str]:
+def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None, tests: bool = True) -> list[str]:
+    """`tests=False`: check-break makes only its refusals that run no test; the suite job runs the rest (§7)."""
     approvals = approvals or Approvals()
     failures = size(repo, approvals) + rigor_claim(repo, approvals)
     failures += [f"check-plan: {bad}" for bad in check_plan(repo).bad + check_plan_audits(repo)]
@@ -227,7 +228,8 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
         failures += [f"check-order: {r.scenario}: green {r.green[:7]} has no red commit among its ancestors"
                      for r in failed(check_order(repo), set(holds(repo)))]
     if step == "R":
-        failures += [f"check-break: {sid}: {why}" for sid, why in check_break(repo, change).bad.items()]
+        broken = check_break(repo, change).bad if tests else refusals(repo, change)
+        failures += [f"check-break: {sid}: {why}" for sid, why in broken.items()]
     own = step == "R" or step.startswith("G")
     if own:  # at G its new entries need approved departures too
         base = None if step == "R" else "main"

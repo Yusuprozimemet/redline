@@ -112,7 +112,7 @@ Records and helpers:
 | `redline retro <change>` | groups the defects by cause and proposes rules; writes nothing |
 | `redline claims <initiative>` | prints every approved claim in `main`'s history, for the process auditor |
 | `redline install jest\|workflow` | writes the Jest `spec` helper into `redline/runners/`, or the CI workflow into `.github/workflows/redline.yml` |
-| `redline ci pr\|push` | what CI runs: a PR's gates and suite, or a merged commit's suite and note |
+| `redline ci pr\|suite\|push` | what CI runs: a PR's gates (with `--suite-result`, the suite job's result in place of its suite), a PR's suite and check-break apart, or a merged commit's suite and note |
 
 ## A change from S to C
 

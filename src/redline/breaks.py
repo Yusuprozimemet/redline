@@ -30,6 +30,8 @@ HOLD = re.compile(r"^#### Scenario (\S+) \[hold\]:")
 UNCOPIED = (".git", ".venv", "mutants")
 TABLE = re.compile(r"\s*\[\[?[^\[\]=]+\]\]?\s*(#.*)?$")  # a table's header line
 MUTMUT_TABLE = re.compile(r"\s*\[\[?\s*tool\s*\.\s*mutmut\s*[\].]")  # [tool.mutmut] or one of its subtables
+UNLINKED = "no test links it without new=True"
+NOTHING = "nothing to mutate: the change's premises cite no file its tests' runners mutate"
 
 
 def without_mutmut(pyproject: Path) -> None:
@@ -234,16 +236,31 @@ def mutate(repo: Path, change: str, sid: str, runners: list[Runner], tests: list
         report.skipped[sid] = "; ".join(skipped)
         return None
     if not files:
-        return "nothing to mutate: the change's premises cite no file its tests' runners mutate"
+        return NOTHING
     return f"its tests survive every mutant ({killed} of {made} killed, in {', '.join(files)})"
+
+
+def runners_of(tests: dict[str, str]) -> list[Runner]:
+    return [r for r in RUNNERS if any(runner_for(test) is r for test in tests)]
+
+
+def refusals(repo: Path, change: str) -> dict[str, str]:
+    """check-break's refusals that run no test, from the links and the premises alone (§7, `ci pr --suite-result`)."""
+    found = {}
+    for sid, tests in hold_tests(repo, change).items():
+        if not tests:
+            found[sid] = UNLINKED
+        elif not any(touched(repo, change, r) for r in runners_of(tests)):
+            found[sid] = NOTHING
+    return found
 
 
 def check_break(repo: Path, change: str) -> BreakReport:
     report = BreakReport()
     for sid, tests in hold_tests(repo, change).items():
-        runners = [r for r in RUNNERS if any(runner_for(test) is r for test in tests)]
+        runners = runners_of(tests)
         if not tests:
-            report.results[sid] = "no test links it without new=True"
+            report.results[sid] = UNLINKED
         elif failed := next((why for r in runners if (why := unmutated(repo, r, sid))), None):
             report.results[sid] = failed
         else:
