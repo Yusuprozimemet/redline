@@ -229,7 +229,8 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   `Audited:` lines or past the limit, and a finding the maintainer defers needs `Deferred-to:` (§9,
   Rounds).
 - O-AUDIT3 [build 9 part 32]: the plan and end-of-initiative audits have no limit on their
-  rounds, and each re-run reads its whole initiative again.
+  rounds, and each re-run reads its whole initiative again. Part 32 specifies independent
+  three-round budgets and incremental prompts in §9, including legacy migration.
 - O-RELABEL1 [closed, build 9 part 38]: at the C step of a critical change, check-relabel failed
   without `relabel.yaml`, and nothing let a maintainer waive the relabel, as an audit finding can
   be waived, so a change whose maintainer chose to skip it couldn't close (found at suite-job/C).

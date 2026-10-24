@@ -498,6 +498,8 @@ Two gates refuse without it. `start` refuses every step of a change in phase n w
 `phase-<n>-start.md` on `main` is missing or unresolved, or an earlier phase's end audit is.
 check-plan fails on a complete phase's end audit, as above.
 
+Each audit uses the independent three-round budget and incremental brief in §9 (O-AUDIT3).
+
 **Tied to the plan it read.** The auditor is given the plan's blob hash with its arguments,
 `<initiative> phase <n> start with plan <blob>`, and its reply's second line records it:
 `Plan: <blob>`. An audit is **current** when that is the blob of `plan.md` in the tree being read

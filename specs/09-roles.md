@@ -41,6 +41,25 @@ the reply's `Round:` as the agent gave it, which is its word, as an unedited rep
 `git log` of `audit.md` shows each round (§12, Judgments); and that a re-round missed nothing outside the
 changed text, which is the reason for the first round's full read.
 
+**Initiative rounds (O-AUDIT3, build 9 part 32).** Each phase-start, phase-end and
+end-of-initiative side has its own three-round budget: these audits run only at critical.
+`redline plan-audit-brief <initiative> <target>` prints the prompt; target is
+`phase-<n>-start`, `phase-<n>-end`, `security`, `architecture` or `process`.
+It validates the phase, names the current plan blob, `Round:`, `Audited:` and `Since:`,
+and refuses dirty tracked files or a fourth round. A changed plan never resets the budget.
+The first round reads the existing scope in §4; later rounds read only their own previous
+reply, open findings and the diff since its `Audited:` commit, following citations or
+contradictions as needed. The diff excludes this initiative's audit directory, preserving
+side independence. A missing ancestor falls back to a full read without resetting the round.
+The process side still receives the current `redline claims` text separately each round.
+Agents refuse prompts without round/commit metadata and copy those lines into their reply.
+At exhaustion, a maintainer waives or defers each open finding using the existing syntax;
+model, resolution, deferral and plan-currentness checks still apply.
+Legacy replies with neither metadata line remain readable; their next brief is the final
+round, diffing from the parent of their last edit. Once either metadata field appears,
+start/check-plan require both valid fields and a round at most three. Malformed metadata
+is refused, not treated as legacy. The same trust limits as change rounds apply.
+
 **When Fable isn't available**, as when its usage runs out, the main session runs the agent with
 Opus instead (the Agent tool's `model: opus`), and the definition's `effort: max` keeps the
 highest effort. The agent refuses any model but a Claude Fable or Opus one, replying `REFUSED:`,
