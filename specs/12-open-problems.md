@@ -166,14 +166,18 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   of its own with the merge-base's pins, before any of the PR's code runs, and calls that venv's
   `redline ci pr --python "$(command -v python)"`, so the suite tests the PR's own Redline; a push
   run is unchanged (§7, the merge-base's Redline).
-- O-CI10 [build 9 part 31, the change `suite-job`]: the PR's code, its install, suite and
-  check-break's runs, runs in the gate's job as the same user, so it could rewrite a file the gate
+- O-CI10 [closed, build 9 part 31, the change `suite-job`]: the PR's code, its install, suite and
+  check-break's runs, ran in the gate's job as the same user, so it could rewrite a file the gate
   imports after it, in the standard library, the gate's venv or, in an adopting repository, the
-  site-packages it shares with the gate (§7, the merge-base's Redline). The plan: on a PR a `suite`
-  job runs all of the PR's code with `redline ci suite`, and the `redline` job, which `needs` it,
-  runs none: `ci pr --suite-result` runs every other gate and reads the suite job's result, in
-  Redline's own workflow and the one `redline install workflow` writes (§7, the PR's code runs in a
-  job of its own).
+  site-packages it shares with the gate (§7, the merge-base's Redline). Now, on a PR, a `suite`
+  job with `contents: read` and no outputs installs the merge-base's Redline, then the PR's own,
+  and runs `redline ci suite`: check-break at an R step, then the suite. The `redline` job, which
+  `needs` it and runs `if: always()`, installs only the merge-base's Redline, `cd`d out of the
+  PR's checkout before `python -m venv`, and runs `ci pr --suite-result`, every other gate and
+  check-break's two refusals that run no test, reading the suite job's result and nothing else of
+  it, in Redline's own workflow and the one `redline install workflow` writes (§7, the PR's code
+  runs in a job of its own). Its C step passed check-close, each red and green and H1's break,
+  confirmed by its push run (§4).
 - O-CI11 [build 9 part 37]: in an adopting repository's workflow the project's dependencies install
   twice, in the `suite` job and, on a push alone, in the `redline` job, each by hand; nothing checks
   that a step there has `if: github.event_name == 'push'`, without which the PR's code runs in the
