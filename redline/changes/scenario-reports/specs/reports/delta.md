@@ -7,16 +7,13 @@ instances, observed phases/outcomes and marker provenance, scenario aggregates a
 Every required instance must qualify; no any-one-pass aggregation. Skipped, deselected,
 uncollected, aborted, missing, conflicting and unexpected-pass results never prove red/green.
 Unknown/absent report versions remain legacy/unavailable; never backfill from suite success.
-This change produces reports only. Ledger, check-close and PR execution enforcement belong to
-scenario-outcomes; O-CLOSE6 remains open. Positive evidence there must require today's
-run-confirmed passing suite AND complete qualifying per-scenario outcomes in the change window,
-preserving ancestry, owning steps and R-only hold/break provenance and suite/break consistency.
+This change produces reports only.
 
 Per-test outcomes, like the suite result, come from a job running the PR's code. The PR-gate
 execution check catches accidental skips caused by deselection, configuration or conftest hooks;
 it does not protect against a hostile PR, whose code can forge reports or change test outcomes.
-That execution check is future consumer behavior. Retain job isolation: the gate must not import
-or execute PR code to obtain reports. Writable notes can forge detail; O-NOTE2/O-NOTE3 remain
+Retain job isolation: the gate must not import or execute PR code to obtain reports.
+Writable notes can forge detail; O-NOTE2/O-NOTE3 remain
 deferred. No authentication, signing keys or recovery guarantee is introduced.
 
 #### Scenario REPORT.PY.S1 [new]: pytest distinguishes strict body assertion failure from other outcomes

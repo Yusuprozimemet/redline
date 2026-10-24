@@ -11,6 +11,8 @@ through this C. O-CLOSE6/review item 19 stays open for scenario-outcomes. That c
 both today's run-confirmed passing suite AND qualifying complete per-scenario outcomes, retain
 repository/commit/workflow/event/job checks, ancestry, owning step, change window and R-only
 hold-break provenance, and never let detailed passes override suite/break inconsistency.
+The PR-gate execution check in the delta's trust-limit wording is future consumer behavior.
+The corresponding text in specs/07-trust-model.md belongs at scenario-outcomes' C.
 
 No legacy note is rewritten or given inferred outcomes. Reports begin with the producer's
 deployment, including active changes' subsequent runs. Missing/unknown-version detail is legacy

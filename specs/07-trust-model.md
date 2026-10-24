@@ -101,15 +101,6 @@ option keeps the current interpreter. This separates installed packages, not sam
 access on a push: project code can still rewrite the gate's files. PR isolation continues to depend
 on separate hosted jobs. Workflow triggers and Redline's own workflow stay unchanged.
 
-Per-test outcomes, like the suite result, come from a job running the PR's code. The PR-gate
-execution check catches accidental skips caused by deselection, configuration or conftest hooks;
-it does not protect against a hostile PR, whose code can forge reports or change test outcomes.
-Report production precedes that execution check; ledger/close consumption and the check are
-separate future work. The gate must not import or execute PR code to obtain reports. Qualifying
-per-scenario detail must supplement today's run-confirmed passing suite, never override suite or
-break inconsistency. Legacy suite success supplies no per-test outcomes. Writable notes still
-permit forged detail; O-NOTE2/O-NOTE3 remain open, with no signing keys or recovery added here.
-
 What it doesn't prove:
 
 - **The workflow.** On `pull_request` GitHub runs the PR's own workflow file, so a PR can call its
