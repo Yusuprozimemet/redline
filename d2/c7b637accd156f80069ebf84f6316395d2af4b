@@ -1,0 +1,12 @@
+result: pass
+run: https://github.com/Yusuprozimemet/redline/actions/runs/40132202777
+claims:
+- commit: de94c6bad61a42a96c98351edb5f798e78c0336c
+  claim: 'Redline-Relabel: waived-by @Yusuprozimemet: the maintainer chose to skip the relabel, as with suite-job''s third audit round'
+  pr: 88
+  label: redline:relabel
+  by: Yusuprozimemet
+  role: admin
+  at: '2026-10-24T20:49:36Z'
+  pushed: '2026-10-24T20:43:08Z'
+  named: Yusuprozimemet
