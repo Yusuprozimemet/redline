@@ -542,8 +542,8 @@ these guarantees rests on one, and without it the guarantee is a convention:
    push run only records `result: fail` after the merge. Only `redline` is required: `runners` and
    `windows` record nothing, and a GitHub outage fails `runners` (Approvals, above), which mustn't
    hold up a merge.
-2. **The five labels** of the Approvals table: `redline:departure`, `redline:oversized`,
-   `redline:track`, `redline:rigor` and `redline:manual`. Without them no claim can be approved,
+2. **The six labels** of the Approvals table: `redline:departure`, `redline:oversized`,
+   `redline:track`, `redline:rigor`, `redline:manual` and `redline:relabel`. Without them no claim can be approved,
    so every PR that makes one fails.
 3. **The agent in an account of its own, with the `write` role.** The agent runs `gh` with the
    credentials it is given. With a maintainer's, a label it applies is that maintainer's, and

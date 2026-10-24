@@ -226,13 +226,14 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   Rounds).
 - O-AUDIT3 [build 9 part 32]: the plan and end-of-initiative audits have no limit on their
   rounds, and each re-run reads its whole initiative again.
-- O-RELABEL1 [build 9 part 38]: at the C step of a critical change, check-relabel fails without
-  `relabel.yaml`, and nothing lets a maintainer waive the relabel, as an audit finding can be
-  waived, so a change whose maintainer chose to skip it can't close (found at suite-job/C). The
-  plan: a `Redline-Relabel: waived-by @person: <reason>` trailer in the C PR's own commits stands
-  in for the missing file, approved by the `redline:relabel` label applied by the person it names,
-  a maintainer; in any other step's PR, or beside a `relabel.yaml`, it fails (§4, Blind
-  relabelling; §7, Approvals).
+- O-RELABEL1 [closed, build 9 part 38]: at the C step of a critical change, check-relabel failed
+  without `relabel.yaml`, and nothing let a maintainer waive the relabel, as an audit finding can
+  be waived, so a change whose maintainer chose to skip it couldn't close (found at suite-job/C).
+  Now a `Redline-Relabel: waived-by @person: <reason>` trailer in the C PR's own commits stands in
+  for the missing file, approved by the `redline:relabel` label applied by the person it names, a
+  maintainer, through `check_relabel` in `redline/relabel.py`; in another form, beside a
+  `relabel.yaml`, below critical or in any other step's PR it fails, and `redline ci push` records
+  it under `claims:` (§4, Blind relabelling; §7, Approvals).
 - O-NOTE1 [closed, build 9, the change note-run]: a note was trusted because CI writes it, but anyone
   with the `write` role, the agent's own account among them (§7, Repository settings), can push
   `refs/notes/redline-ci`, which no ruleset covers, and write `result: pass` or a `break:` map on

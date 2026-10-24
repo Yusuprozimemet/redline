@@ -3,11 +3,11 @@
 A trailer in the PR's own commits makes a claim: `Redline-Departure` lets a frozen test's lock
 entry change, `Oversized` lets the PR pass 400 lines, `Redline-Track` lets a G step change files
 outside its track, `Redline-Rigor` lets the config's default level or a plan's level change, a plan be deleted or a change
-be taken out of one, and `Redline-Manual` lets a `manual` scenario close at the C step with a person's check
-(close.py). One label covers every claim of its kind. In CI the claim needs its label, read
+be taken out of one, `Redline-Manual` lets a `manual` scenario close at the C step with a person's check
+(close.py), and `Redline-Relabel` lets a critical change close there without its blind relabel (relabel.py). One label covers every claim of its kind. In CI the claim needs its label, read
 through the `GitHub` seam, applied after the PR's head was last pushed: a label isn't tied to a commit,
 so one applied before a push would cover what the push added. A departure names who approved it and a manual
-check who made it, and only that person's label approves it. Locally there is no PR yet, so the claim is noted
+check or a relabel waiver who made it, and only that person's label approves it. Locally there is no PR yet, so the claim is noted
 as pending instead.
 """
 
@@ -22,10 +22,12 @@ OVERSIZED = "redline:oversized"
 TRACK = "redline:track"
 RIGOR = "redline:rigor"
 MANUAL = "redline:manual"
+RELABEL = "redline:relabel"
 MAINTAINER = ("admin", "maintain")
 DEPARTED = re.compile(r"^(.+) approved-by @(\S+): \S")  # the test is all before the last approved-by (O-RUN7)
 CHECKED = re.compile(r"^(\S+) checked-by @(\S+): \S")
-FORMS = {"Redline-Departure": DEPARTED, "Redline-Manual": CHECKED}
+WAIVED = re.compile(r"^(waived)-by @(\S+): \S")
+FORMS = {"Redline-Departure": DEPARTED, "Redline-Manual": CHECKED, "Redline-Relabel": WAIVED}
 
 
 def moment(at: str) -> datetime:
@@ -34,7 +36,7 @@ def moment(at: str) -> datetime:
 
 
 def named(key: str, value: str) -> str | None:
-    """The person a departure's or a manual check's trailer names, or None for a claim that names nobody."""
+    """The person a departure's, a manual check's or a relabel waiver's trailer names, or None for a claim that names nobody."""
     return found[2] if key in FORMS and (found := FORMS[key].match(value)) else None
 
 

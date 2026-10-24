@@ -3,7 +3,9 @@
 `redline blind <change>` prints defects.md without its Cause: and Decided: lines, for the
 relabeller agent, whose reply is relabel.yaml: per defect, a `cause` (a label or `unclear`) and a
 `note`. check-relabel prints each disagreement with the log's Cause: and fails on a missing
-relabel at C (critical), a defect with no label or a label with no defect, an unknown label or no
+relabel at C (critical), unless a `Redline-Relabel: waived-by @person: <reason>` trailer in the C
+PR's own commits waives it, with that person's `redline:relabel` label (approval.py); on a waiver in
+another form, beside a relabel, below critical or before C; on a defect with no label or a label with no defect, an unknown label or no
 note, and a disagreement, or a Cause: changed since the relabel first labelled it, with no
 Decided: line.
 """
@@ -14,6 +16,7 @@ from pathlib import Path
 
 import yaml
 
+from redline.approval import RELABEL, WAIVED, Approvals, claims
 from redline.audit import unnamed
 from redline.config import rigor
 from redline.defects import CAUSE, CAUSES, DEFECT, check_defects
@@ -21,6 +24,7 @@ from redline.order import git
 from redline.start import Refused
 
 DECIDED = re.compile(r"^Decided:\s*\S")
+KEY = "Redline-Relabel"
 
 
 @dataclass
@@ -28,6 +32,7 @@ class RelabelReport:
     labelled: int = 0
     disagreements: list[str] = field(default_factory=list)
     bad: list[str] = field(default_factory=list)
+    waived: str | None = None  # who waived the relabel, by a waiver in its form
 
 
 def causes(text: str) -> dict[str, tuple[str, bool]]:
@@ -68,11 +73,28 @@ def firsts(repo: Path, change: str, log: str, path: str) -> dict[str, str]:
     return found
 
 
-def check_relabel(repo: Path, change: str, required: bool = True) -> RelabelReport:
+def check_relabel(repo: Path, change: str, required: bool = True, approvals: Approvals | None = None,
+                  base: str = "main") -> RelabelReport:
     log, path = f"redline/changes/{change}/defects.md", f"redline/changes/{change}/relabel.yaml"
+    approvals = approvals or Approvals()
     report = RelabelReport()
-    if not (repo / path).is_file():
-        if required and rigor(repo, change) == "critical":
+    there, critical = (repo / path).is_file(), rigor(repo, change) == "critical"
+    for value in claims(repo, base, KEY):
+        claim = f"{KEY}: {value}"
+        if not required:
+            report.bad.append(f"{claim}: a relabel waiver counts at the C step only")
+        elif not (waiver := WAIVED.match(value)):
+            report.bad.append(f"{claim}: allows nothing: it needs `waived-by @person: <reason>`")
+        elif there:
+            report.bad.append(f"{claim}: waives nothing: {path} is there")
+        elif not critical:
+            report.bad.append(f"{claim}: waives nothing: {change} isn't critical")
+        else:
+            report.waived = waiver[2]
+            if why := approvals.approve(RELABEL, f"{path}: waived by @{waiver[2]}", waiver[2]):
+                report.bad.append(why)
+    if not there:
+        if required and critical and not report.waived:
             report.bad.append(f"{path}: missing; at C a critical change has its defects relabelled blind")
         return report
     text = (repo / path).read_text(encoding="utf-8")

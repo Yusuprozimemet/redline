@@ -146,6 +146,7 @@ WAIVED = f"{RELABEL}: waived by @alice"
 def critical(logged, *trailers: str):
     logged.commit("critical", {f"{CHANGE}/proposal.md": "# Proposal\n\nRigor: critical\n"})
     if trailers:
+        logged.git("checkout", "-q", "-b", "close")  # the C step's branch: its own commits are main..HEAD
         logged.commit("waived\n\n" + "\n".join(trailers))
 
 
@@ -158,7 +159,7 @@ def test_a_maintainers_waiver_stands_in_for_a_missing_relabel_at_c(logged, capsy
     local = Approvals()
     assert relabelling(logged, approvals=local) == []
     assert local.pending == [f"{WAIVED}: CI will need the `redline:relabel` label applied by @alice, a maintainer"]
-    assert check(logged.path, capsys) == (0, f"note: {WAIVED}: CI will need the `redline:relabel` label applied by "
+    assert check(logged, capsys) == (0, f"note: {WAIVED}: CI will need the `redline:relabel` label applied by "
                                              f"@alice, a maintainer\nok: {WAIVED}, no defect relabelled blind\n")
 
     def closing(applied: dict) -> list[str]:
@@ -187,6 +188,7 @@ def test_a_waiver_that_allows_nothing_fails(logged, trailer, why):
 
 
 def test_a_waiver_waives_nothing_beside_a_relabel_below_critical_or_before_c(logged):
+    logged.git("checkout", "-q", "-b", "close")
     logged.commit("waived\n\n" + WAIVER)
     assert relabelling(logged) == [f"check-relabel: {WAIVER}: waives nothing: add-greet isn't critical"]
     critical(logged)

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import yaml
 
-from redline.approval import DEPARTURE, MANUAL, OVERSIZED, RIGOR, TRACK, named
+from redline.approval import DEPARTURE, MANUAL, OVERSIZED, RELABEL, RIGOR, TRACK, named
 from redline.ledger import NOTES
 from redline.order import git, merged_into
 from redline.plan import ROOT, parse_plan
@@ -22,7 +22,7 @@ from redline.pr import GitHub
 from redline.start import TRAILER
 
 LABELS = {"Oversized": OVERSIZED, "Redline-Track": TRACK, "Redline-Departure": DEPARTURE, "Redline-Rigor": RIGOR,
-          "Redline-Manual": MANUAL}
+          "Redline-Manual": MANUAL, "Redline-Relabel": RELABEL}
 CONFIG = "redline/config.yaml"
 
 

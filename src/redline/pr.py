@@ -219,7 +219,7 @@ def gates(repo: Path, change: str, step: str, approvals: Approvals | None = None
     for other in sorted(edited(repo) - {change}):  # nothing else stops a step editing another change's
         failures += [f"check-steps: {other}: {bad}" for bad in check_steps(repo, other) + since(repo, other)]
     failures += [f"check-defects: {bad}" for bad in check_defects(repo, change, step == "C").bad]
-    failures += [f"check-relabel: {bad}" for bad in check_relabel(repo, change, step == "C").bad]
+    failures += [f"check-relabel: {bad}" for bad in check_relabel(repo, change, step == "C", approvals).bad]
     if step == "S":
         failures += [f"check-premises: {bad}" for bad in check_premises(repo, change).bad]
         failures += [f"check-audit: {bad}" for bad in check_audit(repo, change).bad]
