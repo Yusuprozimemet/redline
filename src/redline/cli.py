@@ -17,7 +17,7 @@ from redline.approval import Approvals
 from redline.lock import check_lock, write_lock
 from redline.order import check_order, failed
 from redline.plan import check_plan
-from redline.planaudit import check_plan_audits
+from redline.planaudit import check_plan_audits, plan_audit_brief
 from redline.pr import pr
 from redline.premises import check_premises
 from redline.relabel import blind, check_relabel
@@ -47,6 +47,10 @@ def main(argv: list[str] | None = None) -> int:
     planned = commands.add_parser("check-plan", help="check the structure of every initiative's plan, or one")
     planned.add_argument("initiative", nargs="?", help="check this initiative only (default: every one)")
     planned.add_argument("--repo", type=Path, default=Path.cwd())
+    prompt = commands.add_parser("plan-audit-brief", help="print the next critical initiative audit round's prompt")
+    prompt.add_argument("initiative")
+    prompt.add_argument("target", help="phase-<n>-start|end, security, architecture or process")
+    prompt.add_argument("--repo", type=Path, default=Path.cwd())
     audit = commands.add_parser("check-audit", help="fail on a missing audit or an unresolved finding")
     audit.add_argument("change", help="the change, e.g. add-greet")
     audit.add_argument("--repo", type=Path, default=Path.cwd())
@@ -144,6 +148,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check_steps(args.repo, args.change, args.base)
     if args.command in ("retro", "blind", "audit-brief"):
         return run_retro(args.repo, args.change, {"retro": retro, "blind": blind, "audit-brief": brief}[args.command])
+    if args.command == "plan-audit-brief":
+        return run_retro(args.repo, args.initiative, lambda repo, name: plan_audit_brief(repo, name, args.target))
     if args.command == "claims":
         return run_retro(args.repo, args.initiative, claims)
     if args.command == "check-close":

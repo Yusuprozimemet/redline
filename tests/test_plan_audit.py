@@ -129,7 +129,8 @@ def test_merged_at_a_critical_stopping_point_says_which_audits_are_due(critical,
     code, out = merged(critical, capsys, "add-greet/C")
     assert code == 0, out
     assert "is at a stopping point" in out
-    assert f"redline-plan-auditor on `greetings phase 1 end`; write its reply unedited to {AUDITS}/phase-1-end.md" in out
+    assert f"redline-plan-auditor on the text `redline plan-audit-brief greetings phase-1-end` prints; write its reply unedited to {AUDITS}/phase-1-end.md" in out
     assert "Until it lands with every finding resolved, check-plan fails on every PR." in out
-    assert f"`greetings phase 2 start` ({AUDITS}/phase-2-start.md)" in out
-    assert f"Give each auditor `with plan {critical.git('rev-parse', f'main:{PLAN}')}`" in out
+    assert f"`redline plan-audit-brief greetings phase-2-start` ({AUDITS}/phase-2-start.md)" in out
+    assert "Give each auditor only its brief text, which includes the plan blob and round metadata." in out
+    assert "Give each auditor `with plan" not in out
