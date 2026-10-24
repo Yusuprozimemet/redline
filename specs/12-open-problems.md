@@ -200,14 +200,14 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   Redline's own outside the install and the PR gate, and the README's setup step 3 names it (§7,
   an adopting repository's workflow). Its C step passed check-close, each red and green, and H1's
   break, confirmed by its push run (§4).
-- O-SELF6 [build 9 part 36]: `redline install workflow` writes `direct_url.json`'s URL into the
-  install step's script quoted for the shell alone, as the spec takes any URL with a git commit. A
-  URL holding `${{` would be an Actions expression, and one holding a line break would end the
-  YAML block, before the quoting counts. pip writes the URL the person installing typed, and the
-  file is reviewed under CODEOWNERS before it runs, so it is their own; still, the command should
-  refuse a URL outside the characters a git URL needs. The design in §7 now defines the exact
-  ASCII character boundary, rejects a leading option hyphen, preserves supported git addresses,
-  and requires rejection before creating directories; implementation and verification remain.
+- O-SELF6 [closed, build 9 part 36]: `redline install workflow` quoted `direct_url.json`'s URL
+  for the shell alone, allowing Actions expressions and YAML line breaks before quoting counted.
+  Now `write_workflow` enforces §7's ASCII character boundary and refuses a leading option hyphen,
+  before creating directories or writing a workflow, while keeping shell quoting. The install
+  tests cover supported git addresses through YAML and shell parsing in both jobs, every excluded
+  ASCII character, expressions, line breaks, non-ASCII and non-string values, and an existing file.
+  All 55 rejection cases failed before implementation and with the guard deliberately disabled;
+  the focused install-workflow suite passes with the guard restored.
 - O-SELF5 [closed, build 9 part 27]: Redline's own tree failed check-links and check-order, which
   every step from R on runs: `tests/toys/jest/src/adult.test.js` linked TOY.H1 and TOY.H2, which no
   spec declares, and check-order read their green with no red in af3968c, which stays in history.

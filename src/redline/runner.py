@@ -240,14 +240,20 @@ def write_workflow(repo: Path) -> str:
     direct = json.loads(text) if text else {}
     vcs = direct.get("vcs_info", {})
     commit = vcs.get("commit_id", "")
-    if vcs.get("vcs") != "git" or not re.fullmatch(r"[0-9a-f]{40}", commit) or not direct.get("url"):
+    if vcs.get("vcs") != "git" or not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise RuntimeError("Redline wasn't installed from a git commit, so the workflow has none to install; "
                            'install it with `pip install "redline @ git+<url>@<commit>"` and run this again')
+    url = direct.get("url")
+    # YAML and Actions read this before the shell; quoting alone cannot contain them (O-SELF6).
+    if (not isinstance(url, str) or not re.fullmatch(r"[A-Za-z0-9._~:/?#\[\]@!&'()*+,;=%-]+", url)
+            or url.startswith("-")):
+        raise RuntimeError("unsupported git URL in direct_url.json; use ASCII URL characters, "
+                           "percent-encode spaces and non-ASCII characters, and do not start with '-'")
     if (repo / WORKFLOW).exists():
         raise RuntimeError(f"{WORKFLOW} exists and is the repository's own; to write Redline's, remove it first")
     template = files("redline").joinpath("helpers", "redline.yml").read_text(encoding="utf-8")
     (repo / WORKFLOW).parent.mkdir(parents=True, exist_ok=True)
-    (repo / WORKFLOW).write_bytes(template.replace("{url}", shlex.quote(direct["url"])).replace("{commit}", commit).encode())
+    (repo / WORKFLOW).write_bytes(template.replace("{url}", shlex.quote(url)).replace("{commit}", commit).encode())
     return WORKFLOW
 
 
