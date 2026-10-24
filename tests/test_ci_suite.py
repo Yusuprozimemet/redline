@@ -84,8 +84,8 @@ def test_a_suite_result_other_than_success_fails_the_gate_beside_the_gates_failu
         (("suite", "--pr", "1"), "redline: ci suite takes --base and --python alone"),
         (("suite", "--run-url", "u"), "redline: ci suite takes --base and --python alone"),
         (("suite", "--note", str(tmp_path / "note")), "redline: ci suite takes --base and --python alone"),
-        (("push", "--run-url", "u", "--python", fake_python(tmp_path)),
-         "redline: --python is for ci pr and ci suite only: a push run's suite is the merged code's own"),
+        (("push", "--run-url", "u", "--python", str(tmp_path / "missing")),
+         f"redline: --python {tmp_path / 'missing'} isn't a file"),
     ]:
         assert ci(change, capsys, *args) == (2, said + "\n")
     assert not written.exists() and remote.pushed == []
