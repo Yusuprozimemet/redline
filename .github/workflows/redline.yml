@@ -44,8 +44,8 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |  # not editable, with the merge-base's own pins, so the PR can't weaken the gate that checks it
           git worktree add --detach "$RUNNER_TEMP/base" "$(git merge-base main HEAD)"
+          cd "$RUNNER_TEMP/base"  # first: python -m puts its directory, the PR's checkout, on sys.path
           python -m venv "$RUNNER_TEMP/gate"
-          cd "$RUNNER_TEMP/base"
           "$RUNNER_TEMP/gate/bin/python" -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
           "$RUNNER_TEMP/gate/bin/python" -m pip install --require-hashes --force-reinstall -r requirements.txt
           "$RUNNER_TEMP/gate/bin/python" -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index .
