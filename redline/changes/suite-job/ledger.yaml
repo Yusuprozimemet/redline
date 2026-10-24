@@ -37,7 +37,10 @@ scenarios:
       commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
       merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
       result: pass
-    green: null
+    green:
+      commit: 2bc84f7d1e9512f866f176075618fc059a977399
+      merged: 43f21493b2ab6cc5851deae4c0e536af047fed1b
+      result: pass
     break: null
   CI.APART.S5:
     red:
@@ -61,12 +64,18 @@ scenarios:
       commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
       merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
       result: pass
-    green: null
+    green:
+      commit: 2bc84f7d1e9512f866f176075618fc059a977399
+      merged: 43f21493b2ab6cc5851deae4c0e536af047fed1b
+      result: pass
     break: null
   INSTALL.WF.S2:
     red:
       commit: 5cea97eab99c6b5c3f2aa51189056fe895b509d9
       merged: e688f9dd750d4c4b809ba2a8792174d527fa6dd6
       result: pass
-    green: null
+    green:
+      commit: 2bc84f7d1e9512f866f176075618fc059a977399
+      merged: 43f21493b2ab6cc5851deae4c0e536af047fed1b
+      result: pass
     break: null
