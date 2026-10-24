@@ -1,0 +1,40 @@
+# A cache of evidence, rebuilt from main's history by `redline ledger <change>`.
+# CI rebuilds it and fails on a mismatch, so never edit it by hand. See docs/design.md, section 4.
+change: scenario-reports
+scenarios:
+  REPORT.PY.S1:
+    red: null
+    green: null
+    break: null
+  REPORT.PY.S2:
+    red: null
+    green: null
+    break: null
+  REPORT.PY.S3:
+    red: null
+    green: null
+    break: null
+  REPORT.JS.S1:
+    red: null
+    green: null
+    break: null
+  REPORT.JS.S2:
+    red: null
+    green: null
+    break: null
+  REPORT.ALL.S1:
+    red: null
+    green: null
+    break: null
+  REPORT.CI.S1:
+    red: null
+    green: null
+    break: null
+  REPORT.CI.H1:
+    red: null
+    green: null
+    break: null
+  REPORT.CI.H2:
+    red: null
+    green: null
+    break: null
