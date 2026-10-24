@@ -9,23 +9,22 @@
 
 CI is `.github/workflows/redline.yml`, a thin wrapper around `redline ci`; every rule lives in the
 CLI. It checks out the full history, `main` and `refs/notes/*`. A second job, `runners`, runs the
-real Jest and Stryker on a toy project, the real mutmut on toy repositories (§5) and the real
-`gh api` calls on one of this repository's merged PRs and one of its push runs (Approvals, below),
-and records nothing. The mutmut toys hold a scenario whose test kills no mutant beside a test that
-kills them
-all, so a kill credited to the wrong test shows. A repository with Jest tests
-installs Node and runs `npm ci` in its workflow before `redline ci`, so the suite can run them. A
-third job, `windows`, runs Redline's own suite on Windows with a read-only token, and records
-nothing either. It runs pytest, not `redline ci`: mutmut doesn't run on Windows, and a skipped
-break fails the run (§5). A fourth, `suite`, runs a PR's code, apart from the gate (below).
+real Jest and Stryker on a toy project, the real mutmut on toy repositories (§5) and the real `gh
+api` calls on one of this repository's merged PRs and one of its push runs (Approvals, below), and
+records nothing. The mutmut toys hold a scenario whose test kills no mutant beside a test that kills
+them all, so a kill credited to the wrong test shows. A repository with Jest tests installs Node and
+runs `npm ci` in its workflow before `redline ci`, so the suite can run them. A third job,
+`windows`, runs Redline's own suite on Windows with a read-only token, and records nothing either.
+It runs pytest, not `redline ci`: mutmut doesn't run on Windows, and a skipped break fails the run
+(§5). A fourth, `suite`, runs a PR's code, apart from the gate (below).
 
 **The suite can run with another Python than the gate's.** A runner's commands run pytest as
 `<python> -m pytest`, the suite's and check-break's unmutated runs alike (§5), and `<python>` is the
 interpreter Redline itself runs in. That is right where Redline and the project share one
-environment, as in a repository that installs a pinned Redline beside its own packages. It isn't
-for Redline itself: a gate the PR can't edit must sit in an environment of its own (O-SELF3), and
-the gate and the code under test are both the package `redline`, so a suite run with the gate's
-Python would import the gate and test it, not the PR. So `redline ci pr --python <path>` runs those
+environment, as in a repository that installs a pinned Redline beside its own packages. It isn't for
+Redline itself: a gate the PR can't edit must sit in an environment of its own (O-SELF3), and the
+gate and the code under test are both the package `redline`, so a suite run with the gate's Python
+would import the gate and test it, not the PR. So `redline ci pr --python <path>` runs those
 commands with that interpreter instead. mutmut is already the one on `PATH`, the project's, and
 Jest's command has no Python. A path that isn't a file is an error, never a fallback to the gate's
 own. The path is the workflow's word, as every line CI runs is, and on a PR the workflow is the PR's
@@ -86,23 +85,21 @@ alone, other options refused. As with `--python`, the PR that adds
 them, the change `suite-job`'s G1, can't use them; its G2 moves the workflows.
 
 O-CI11 (build 9 part 37): an adopting repository defines its dependency installation once in
-`.github/actions/redline-project/action.yml`, a local composite action called by `suite` and,
-with `if: github.event_name == 'push'`, by `redline`. The installer writes a starter
-(`shell: bash`) that installs the pinned Redline for pytest from the clone's hashed requirements,
-with a place for the adopter's own dependency steps, preserves an existing action byte for byte, and
-refuses
-an existing workflow before writing either file. Invalid installation metadata writes neither.
-The pinned Redline installs first in `$RUNNER_TEMP/gate`, using that venv's Python and its own
-clone's hashed requirements on both events. The project action installs the project's packages
-in setup-python's environment; the starter includes the pinned Redline there for pytest's plugin.
-Both `ci suite` and `ci push` call the gate by its absolute path with `--python
-"$(command -v python)"`; `ci pr --suite-result` runs no project action. `ci push --python`
-selects the interpreter for the suite and R-step check-break's unmutated runs, restores the
-previous selection even on an error, and preserves note and claims behavior. A missing file
-is an error before tests or note writes; omitting the option keeps the current interpreter.
-This separates installed packages, not same-user filesystem access on a push: project code can
-still rewrite the gate's files. PR isolation continues to depend on separate hosted jobs.
-Workflow triggers and Redline's own workflow stay unchanged.
+`.github/actions/redline-project/action.yml`, a local composite action called by `suite` and, with
+`if: github.event_name == 'push'`, by `redline`. The installer writes a starter (`shell: bash`) that
+installs the pinned Redline for pytest from the clone's hashed requirements, with a place for the
+adopter's own dependency steps, preserves an existing action byte for byte, and refuses an existing
+workflow before writing either file. Invalid installation metadata writes neither. The pinned
+Redline installs first in `$RUNNER_TEMP/gate`, using that venv's Python and its own clone's hashed
+requirements on both events. The project action installs the project's packages in setup-python's
+environment; the starter includes the pinned Redline there for pytest's plugin. Both `ci suite` and
+`ci push` call the gate by its absolute path with `--python "$(command -v python)"`; `ci pr
+--suite-result` runs no project action. `ci push --python` selects the interpreter for the suite and
+R-step check-break's unmutated runs, restores the previous selection even on an error, and preserves
+note and claims behavior. A missing file is an error before tests or note writes; omitting the
+option keeps the current interpreter. This separates installed packages, not same-user filesystem
+access on a push: project code can still rewrite the gate's files. PR isolation continues to depend
+on separate hosted jobs. Workflow triggers and Redline's own workflow stay unchanged.
 
 What it doesn't prove:
 
@@ -117,47 +114,45 @@ What it doesn't prove:
   why. A runner that isn't fresh for each job, a self-hosted one reused, would let the suite job
   leave files for the next job; Redline's jobs run on GitHub's hosted images (§12, Judgments).
 
-**An adopting repository's workflow.** `.github/workflows/redline.yml` is Redline's own: it
-installs the Redline its PR contains and gates with the merge-base's, and runs the `runners` and
-`windows` jobs, none of which an adopting repository has. So `redline install workflow` writes
-one for that repository at `.github/workflows/redline.yml`, the one path a note checks out from
-(§4), from a template shipped in the package. It installs the Redline that ran the command: pip
-records a commit installed by `redline @ git+<url>@<commit>` in the distribution's
-`direct_url.json` (PEP 610), with its URL, `vcs_info.vcs` `git` and the full `commit_id` even
-when a short one was asked for. The workflow clones that URL into `$RUNNER_TEMP`, checks out that
-commit and installs it with Redline's own three hashed pip lines, read from that commit's
-requirements files, not editable, in the `redline` job on a push as on a PR and in the `suite`
-job, into its own venv; the shared project action follows it as above. Every other line is Redline's
-own: the triggers, the default permissions, the concurrency group, the `redline` job's checkout,
-fetch, setup-python and note hand-off, the `suite` job's checkout, fetch and
-setup-python, and the `note` job, so a note it writes checks out (§4). Its PR gate calls the venv's
-`redline ci pr --base main --pr <n> --suite-result "$SUITE"`; suite and push select the project
-Python above.
-A test keeps the template in step: it writes the workflow and compares it with Redline's own, both
-parsed as YAML, so comments aside: with the installs, project-action calls, the `ci pr`, `ci suite`
-and `ci push` runs and
+**An adopting repository's workflow.** `.github/workflows/redline.yml` is Redline's own: it installs
+the Redline its PR contains and gates with the merge-base's, and runs the `runners` and `windows`
+jobs, none of which an adopting repository has. So `redline install workflow` writes one for that
+repository at `.github/workflows/redline.yml`, the one path a note checks out from (§4), from a
+template shipped in the package. It installs the Redline that ran the command: pip records a commit
+installed by `redline @ git+<url>@<commit>` in the distribution's `direct_url.json` (PEP 610), with
+its URL, `vcs_info.vcs` `git` and the full `commit_id` even when a short one was asked for. The
+workflow clones that URL into `$RUNNER_TEMP`, checks out that commit and installs it with Redline's
+own three hashed pip lines, read from that commit's requirements files, not editable, in the
+`redline` job on a push as on a PR and in the `suite` job, into its own venv; the shared project
+action follows it as above. Every other line is Redline's own: the triggers, the default
+permissions, the concurrency group, the `redline` job's checkout, fetch, setup-python and note
+hand-off, the `suite` job's checkout, fetch and setup-python, and the `note` job, so a note it
+writes checks out (§4). Its PR gate calls the venv's `redline ci pr --base main --pr <n>
+--suite-result "$SUITE"`; suite and push select the project Python above. A test keeps the template
+in step: it writes the workflow and compares it with Redline's own, both parsed as YAML, so comments
+aside: with the installs, project-action calls, the `ci pr`, `ci suite` and `ci push` runs and
 Redline's other jobs taken out, the two are equal whole, a job's `name` or `if` included, and a
-change to Redline's workflow that an adopter needs fails until the template has it too. The
-template isn't one of the runners' helpers: a written workflow never equals it and may hold the
-project's own steps, so check-helpers doesn't read it. Every suite runs on an editable install,
-which reads the template from the tree, so a test builds the wheel and finds it there. The
-template, `src/redline/helpers/redline.yml`, holds `{url}` and `{commit}` in the install step's
-script, and `write_workflow` in `redline/runner.py` puts in the commit, checked as 40 hex digits,
-and the URL, quoted for the shell by `shlex.quote`. It reads `direct_url.json` through
-`distribution("redline")`, imported into `redline.runner` so the tests can give it any.
+change to Redline's workflow that an adopter needs fails until the template has it too. The template
+isn't one of the runners' helpers: a written workflow never equals it and may hold the project's own
+steps, so check-helpers doesn't read it. Every suite runs on an editable install, which reads the
+template from the tree, so a test builds the wheel and finds it there. The template,
+`src/redline/helpers/redline.yml`, holds `{url}` and `{commit}` in the install step's script, and
+`write_workflow` in `redline/runner.py` puts in the commit, checked as 40 hex digits, and the URL,
+quoted for the shell by `shlex.quote`. It reads `direct_url.json` through `distribution("redline")`,
+imported into `redline.runner` so the tests can give it any.
 
-O-SELF6 (build 9 part 36): before creating directories or writing the workflow, require the
-URL to be a nonempty string of ASCII letters, digits, and exactly these punctuation characters:
-`-._~:/?#[]@!&'()*+,;=%`. A leading `-` is refused so git cannot read the URL as an option.
-This supports HTTPS, SSH, git, file and scp-style addresses, IPv6 hosts, credentials, query
-strings and percent-encoded path characters. Spaces and non-ASCII path characters must be
-percent-encoded. This is a character boundary, not a check of schemes, URL structure or
-reachability.
-It excludes all whitespace and control characters, `$`, braces, backticks, backslashes and
-double quotes; shell quoting still handles permitted shell punctuation. An unsupported URL
-gets a diagnostic naming the URL and writes nothing, including no workflow directories.
-Tests exercise accepted URLs through both jobs' parsed clone commands and reject hostile URLs,
-including Actions expressions and YAML line breaks, before any filesystem write.
+O-SELF6 (build 9 part 36): before creating directories or writing the workflow, require the URL to
+be a nonempty string of ASCII letters, digits, and exactly these punctuation characters:
+`-._~:/?#[]@!&'()*+,;=%`. A leading `-` is refused so git cannot read the URL as an option. This
+supports HTTPS, SSH, git, file and scp-style addresses, IPv6 hosts, credentials, query strings and
+percent-encoded path characters. Spaces and non-ASCII path characters must be percent-encoded. This
+is a character boundary, not a check of schemes, URL structure or reachability. It excludes all
+whitespace and control characters, `$`, braces, backticks, backslashes and double quotes; shell
+quoting still handles permitted shell punctuation. An unsupported URL gets a diagnostic saying
+`unsupported git URL in direct_url.json` and explaining the URL character requirements, and writes
+nothing, including no workflow directories. Tests exercise accepted URLs through both jobs' parsed
+clone commands and reject hostile URLs, including Actions expressions and YAML line breaks, before
+any filesystem write.
 
 The command refuses, writing nothing, when the Redline that runs it wasn't installed from a git
 commit (an editable or local install, an index or archive URL, another VCS), so a workflow never
