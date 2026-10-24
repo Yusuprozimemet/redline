@@ -20,4 +20,4 @@ Track: .github/workflows/redline.yml, src/redline/helpers/redline.yml, README.md
 - O2 [G2]: the README's setup step 3 names the `suite` job and the two comments that mark the project's install
 - O3 [C]: close O-CI10 in specs/12-open-problems.md (§12)
 - O4 [C]: relabel.yaml from the redline-relabeller, since suite-job is critical
-- O5 [R]: CI.APART.S4's tests take over the four that pin today's workflow: `tests/test_pins.py:68` expects five `python-version` and `node-version` values, `:73` five jobs, `:80-81` pip lines in `redline`, `suite`, `runners` and `windows`; `tests/test_ci.py:235-243` expects the `cd` before `python -m venv` and the gate's `run` ending `--suite-result "$SUITE"`
+- O5 [R]: CI.APART.S4's tests take over the four that pin today's workflow: `tests/test_pins.py:68` expects five `python-version` and `node-version` values, `:73` five jobs, `:80-81` pip lines in `redline`, `suite`, `runners` and `windows`; `tests/test_ci.py:235-243` keeps the `cd` before `python -m venv` (PR #81), in both jobs, and expects the gate's `run` ending `--suite-result "$SUITE"`

@@ -35,9 +35,9 @@ then the PR's to decide.
   --python "$(command -v python)"`, and no `outputs`. The `redline` job `needs: suite` with
   `if: always()`, its editable install runs on a push alone, and its PR gate runs `ci pr` with
   `--suite-result "$SUITE"`, `SUITE` set in the step's `env` to `${{ needs.suite.result }}`, the one
-  thing of `suite` the workflow reads. The merge-base's install `cd`s out of the PR's checkout
-  before its `python -m venv`, which today runs there, so a PR's own `venv.py` would run in the
-  gate's job and could leave a `.pth` file in the gate's venv.
+  thing of `suite` the workflow reads. The merge-base's install keeps `cd`ing out of the PR's
+  checkout before its `python -m venv`, as PR #81 made it, so a PR's own `venv.py` can't run in
+  either job's install and leave a `.pth` file in the gate's venv.
 - The template `redline install workflow` writes follows: a `suite` job with the clone install, a
   comment after it marking the project's install, and `redline ci suite --base main`; the
   `redline` job's install as before, its comment saying the project's install goes there on a
