@@ -4,6 +4,7 @@ FakeDistribution, which stands in for `importlib.metadata.distribution` as `redl
 
 import copy
 import json
+import shlex
 import shutil
 import subprocess
 import sys
@@ -165,6 +166,50 @@ def test_a_redline_with_no_git_commit_to_install_writes_nothing(repo, capsys, in
     assert "installed from a git commit" in out and 'pip install "redline @ git+<url>@<commit>"' in out, out
     assert code == 2
     assert not (repo.path / WRITTEN).exists()
+
+
+@pytest.mark.parametrize("url", [
+    URL, "http://host/repo.git", "git://host/repo.git", "ssh://git@host:2222/repo.git",
+    "git@host:team/repo.git", "file:///home/me/repo.git", "../repo.git",
+    "https://[2001:db8::1]/a%20b/%C3%A9.git",
+    "https://user:pass@host/~team/repo.git?x=1&y=two+three#ref",
+    "https://host/a!b'c(d)*e,f;g=h.git",
+])
+def test_supported_git_urls_survive_yaml_and_shell_parsing(repo, capsys, installed, url):
+    installed.direct_url = {**GIT, "url": url}
+    workflow = written(repo, capsys)
+    for job in JOBS:
+        [step] = [s for s in workflow["jobs"][job]["steps"] if runs(s, "git clone")]
+        [clone] = [line.strip() for line in step["run"].splitlines() if line.strip().startswith("git clone")]
+        assert shlex.split(clone) == ["git", "clone", "--no-checkout", url, "$RUNNER_TEMP/redline"]
+        assert f"git checkout --detach {COMMIT}" in step["run"]
+
+
+URL_CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~:/?#[]@!&'()*+,;=%"
+BAD_URLS = [URL + chr(n) + "tail" for n in range(128) if chr(n) not in URL_CHARACTERS] + [
+    "https://host/${{github.token}}", URL + "\npermissions: write-all", URL + "\r\nrun: evil",
+    URL + "\u0085tail", URL + "\u2028tail", URL + "/café", "--upload-pack=evil", "", None, 42, [URL],
+]
+
+
+@pytest.mark.parametrize("url", BAD_URLS, ids=repr)
+def test_unsupported_git_url_is_refused_before_any_workflow_write(repo, capsys, installed, url):
+    repo.commit("start")
+    installed.direct_url = {**GIT, "url": url}
+    code, out = install(repo, capsys)
+    assert code == 2, out
+    assert "unsupported git URL" in out, out
+    assert not (repo.path / ".github").exists()
+
+
+def test_hostile_git_url_preserves_an_existing_workflow(repo, capsys, installed):
+    installed.direct_url = {**GIT, "url": URL + "\nrun: evil"}
+    target = repo.path / WRITTEN
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"# mine\r\non: push\r\n")
+    code, _ = install(repo, capsys)
+    assert code == 2
+    assert target.read_bytes() == b"# mine\r\non: push\r\n"
 
 
 @pytest.mark.spec("INSTALL.WF.S4")
