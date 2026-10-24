@@ -6,7 +6,7 @@
 Owns: REPORT.PY.S1, REPORT.PY.S2, REPORT.PY.S3, REPORT.JS.S1, REPORT.JS.S2, REPORT.ALL.S1, REPORT.CI.S1, REPORT.CI.H1, REPORT.CI.H2
 
 ## G1: Produce pytest reports
-Owns: REPORT.PY.S1, REPORT.PY.S2, REPORT.PY.S3, REPORT.ALL.S1
+Owns: REPORT.PY.S1, REPORT.PY.S2, REPORT.PY.S3
 Track: src/redline/plugin.py, src/redline/runner.py, src/redline/reports.py, README.md
 
 ## G2: Produce Jest reports
@@ -27,3 +27,6 @@ Track: src/redline/ci.py, src/redline/runner.py, src/redline/reports.py, README.
 - O5 [C]: apply the delta, rebuild merged evidence and record defects; leave O-CLOSE6 open
 - O6 [C]: use only the maintainer-approved relabel-waiver trailer and matching fresh personal label
 - O7 [C]: stop for inspection of report production and actual CI; scenario-outcomes needs approval
+- O8 [R]: maintainer must resolve O-REPORT1 before crediting Jest evidence; it owns real-Jest evidence-job integration (F2)
+- O9 [C]: defer to maintainer at scenario-outcomes/S; O-REPORT2 owns bounded transport and its scenario (F10)
+- O10 [C]: defer to maintainer at ci-apart-python/S; O-REPORT3 owns stale CI.APART.S2 and its red/green (F12)

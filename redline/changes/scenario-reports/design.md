@@ -7,79 +7,44 @@ together; G steps remove their owned new markers after separate red and implemen
 Each complete PR, including audit, ledger and lock, stays at most 400 changed lines.
 
 Reports describe execution; existing ledger/close rules and PR job-result gating stay in force
-through this C. O-CLOSE6/review item 19 stays open for scenario-outcomes. That change must require
-both today's run-confirmed passing suite AND qualifying complete per-scenario outcomes, retain
-repository/commit/workflow/event/job checks, ancestry, owning step, change window and R-only
-hold-break provenance, and never let detailed passes override suite/break inconsistency.
-The PR-gate execution check in the delta's trust-limit wording is future consumer behavior.
-The corresponding text in specs/07-trust-model.md belongs at scenario-outcomes' C.
-
-No legacy note is rewritten or given inferred outcomes. Reports begin with the producer's
-deployment, including active changes' subsequent runs. Missing/unknown-version detail is legacy
-or unavailable, never a fabricated pass. Consumer activation is the merged scenario-outcomes S:
-changes already closed before that boundary retain historical closure; new or still-active
-changes must obtain fresh qualifying proof inside their own evidence windows. That consumer
-selects the first qualifying merged red and later qualifying green, with ancestry, rather than
-crediting the first marker transition. This boundary grants no close enforcement in A.
-
-## Report v1
-
-Add `outcomes` to the push note: `version: 1`, `commit` (full merged SHA), `complete` (boolean),
-`expected`, `observed`, `scenarios`, and `diagnostics`. Lists are sorted, serialization is UTF-8
-with LF, and identities retain Unicode and case; normalize path separators only, never basename
-or test-name matching. Every identity includes runner and repository-relative path. Pytest uses
-full node ID including class and parameter ID; Jest uses file, full describe/test title and
-parameter instance. Duplicate titles/parameter IDs that cannot be distinguished are diagnosed.
-
-`expected` records each linked logical test at the snapshot, scenario IDs and new/hold state,
-plus its independently collected concrete instances. Declaration kind comes from that snapshot's
-specs/deltas; `new` is the execution marker, not the declaration tag. Source links provide a
-floor even when a file is never collected. Full discovery before selection supplies parameter
-instances; an unavailable expansion is incomplete, never an empty passing set.
-
-`observed` records concrete identity, links and marker states, runner phases, terminal outcome
-and strict-new provenance. Outcomes are `pass`, `expected-failure`, `unexpected-pass`, `skip`,
-`deselected`, `error`, or `missing`; aborted runs also carry an abort diagnostic. `diagnostics`
-contains code, identity (or runner) and reason. Missing, extra, duplicate, conflicting, malformed
-and unsupported records have distinct diagnostics. No last-writer-wins or silent deduplication.
-
-`scenarios` maps each ID to expected/observed identities, `complete`, and `red`, `green` or
-`nonqualifying`. Red needs every required instance to be a strict-new assertion failure in the
-test body, with successful setup/teardown; green needs every instance to execute and pass with
-new removed and without unrelated xfail. An empty set, mixed new/hold execution links, or any
-nonqualifying instance cannot yield red/green. A test linked to several scenarios must satisfy
-each; mixed marker states on that test produce a diagnostic. Global complete requires completed
-discovery and execution of every expected instance with no identity/protocol errors. A complete
-failed execution can be nonqualifying; skips, deselection and missing phases are incomplete.
+through this C. O-CLOSE6 stays open for scenario-outcomes; report consumers and their activation
+rules are outside this change. No legacy note is rewritten or given inferred outcomes.
+The normative v1 schema, qualification and diagnostics live in specs/reports/delta.md.
 
 ## Collector and transport seams
 
 Use per-invocation temporary report paths passed by runner.py to pytest's plugin and the shipped
 Jest helper/reporter. Normal test commands and scenario filtering keep their current meaning;
-mutation and filtered check-break runs cannot overwrite the full suite report. No stale report
-from a previous invocation is reused. ci push combines all configured runners against the same
+mutation and filtered check-break runs cannot overwrite the full suite report.
+Bind the sink to the owning invocation/process and pytest session, not inherited environment or
+module-global state alone. Nested in-process/subprocess runs get no access to the outer sink.
+No stale report from a previous invocation is reused. ci push combines all configured runners against the same
 snapshot. Missing runner/report, collection failure or partial output stays visible and incomplete.
 
-Pytest joins setup/call/teardown and verifies the added strict-new mark caused an assertion xfail.
-Setup/teardown xfail, arbitrary exceptions, unrelated or overridden xfail and collection errors
-are never red. Collect expected instances before filters; compare them with source links and
+Pytest joins setup/call/teardown and verifies Redline's strict-new mark caused a body xfail.
+Any body failure qualifies with passing setup/teardown, including absent-code exceptions and
+pytest's Failed; setup/teardown xfail, unrelated/overridden xfail and collection errors never do.
+Collect expected instances before filters; compare them with source links and
 post-filter execution. xdist uses the controller's expected worker set and collection manifests;
 agreeing duplicate worker inventories are allowed, duplicate execution records are not. A lost
 worker, divergent inventory or missing parameter is incomplete regardless of other passes.
 
-Jest reports the helper's explicit link/new state and body assertion outcome alongside the real
-test.failing result. Generic Jest `passed` cannot establish red. Unexpected test.failing success,
+Jest reports the helper's explicit link/new state and body outcome alongside the real
+test.failing result; any body throw/rejection qualifies with passing hooks and new provenance.
+Generic Jest `passed` cannot establish red. Unexpected test.failing success,
 hook failure, pending/skip, omitted file or unresolved parameter identity is nonqualifying.
 The installed helper/reporter remains package data checked by check-helpers, not user-editable
 configuration trusted by the gate. Tests exercise real frameworks, not just synthetic payloads.
 
 ci push appends the report for successful and failed/partial suites without replacing result,
-run, break or claims. Existing suite failures remain failures; collection/protocol errors fail
-report production and CI. Legitimate skips can retain today's suite success while outcomes stay
+run, break or claims. Existing suite failures remain failures. Report defects produce incomplete
+diagnostics only; they do not add CI failures or alter ledger/check-close acceptance.
+Legitimate skips can retain today's suite success while outcomes stay
 incomplete/nonqualifying. Report detail alone is never run confirmation. Preserve --python and
 restore interpreter state on errors. The existing read-only producer writes --note; the existing
-writer transports those bytes with git alone, including failed-run notes. No workflow trigger,
-permission or PR handoff change is needed here; cancellation may leave no note, never proof.
+writer transports those bytes with git alone, including failed-run notes. Transport sizing remains
+deferred as O-REPORT2; no trigger,
+permission or PR handoff change is specified here; cancellation may leave no note, never proof.
 
 ## R sizing checkpoint (A only, before delta)
 
@@ -89,8 +54,8 @@ shared assertions and keep distinct diagnostics observable. No production helper
 
 | Group / scenarios | Required distinct cases | Changed lines |
 |---|---|---|
-| Pytest S1-S3 | assertion strict-xfail, pass, xpass, skip, deselect, uncollected/missing, setup/teardown error/xfail, unrelated xfail, parameters, xdist/lost worker, Unicode/path | 90-105 |
-| Jest S1-S2 | real test.failing red/xpass, normal green, hook error, pending/skip, omitted file, duplicate/parameter identity, explicit new provenance | 65-75 |
+| Pytest S1-S3 | body-failure strict-xfail (including absent code), pass, xpass, skip, deselect, uncollected/missing, setup/teardown error/xfail, unrelated xfail, parameters, xdist/lost worker, Unicode/path, nested runs | 90-105 |
+| Jest S1-S2 | real test.failing red/xpass, normal green, hook error, pending/skip, omitted file, duplicate/parameter identity, source/runtime joins, nested runs, explicit new provenance | 65-75 |
 | ALL.S1 | all tests/parameters, mixed runners and markers, duplicate/conflict/extra, aborted/partial/malformed reports | 35-40 |
 | CI.S1, H1-H2 | complete/partial notes, version/old fields, no failure upgrade, project Python/path, separate writer and unchanged suite/run acceptance | 40-45 |
 | Imports/setup/links | reuse fixtures, decorators, compact report builders and held assertions | 30-35 |
@@ -111,8 +76,8 @@ At audit preparation, stop. The maintainer runs a fresh Claude session on unchan
 `redline audit-brief scenario-reports`; that session writes its reply unedited to this branch's
 audit.md and commits it. Pull that commit before continuing. Codex never writes/edits audit.md
 or relabel.yaml and launches no auditor/relabeller. Keep the critical round limit; resolution
-requires the maintainer's recorded audit, never Codex's declaration. Open the S PR only after it
-is resolved, verify remote head equals local HEAD, then stop.
+requires the maintainer's recorded audit, never Codex's declaration. Do not open an S PR in this
+fix pass; round 2 is the maintainer's call. Push the spec fixes and stop.
 
 C uses `Redline-Relabel: waived-by @Yusuprozimemet: <maintainer-approved reason>` only after the
 maintainer approves the reason and personally applies the matching fresh label after final push.
