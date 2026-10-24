@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     ci.add_argument("--run-url", default="", help="push: the CI run to record in the note")
     ci.add_argument("--pr", type=int, help="pr: the PR's number, to read its approval labels")
     ci.add_argument("--note", type=Path, help="push: write the note to this file instead of adding and pushing it")
-    ci.add_argument("--python", type=Path, help="pr, suite: run the suite with this interpreter, not Redline's own")
+    ci.add_argument("--python", type=Path, help="pr, suite, push: run tests with this interpreter, not Redline's own")
     ci.add_argument("--suite-result", choices=["success", "failure", "cancelled", "skipped"],
                     help="pr: the suite job's result, so the suite doesn't run here")
     ci.add_argument("--repo", type=Path, default=Path.cwd())
@@ -463,9 +463,6 @@ def run_ci(repo: Path, event: str, base: str, run_url: str, number: int | None, 
     if event == "suite" and (number is not None or run_url or to):
         print("redline: ci suite takes --base and --python alone")
         return 2
-    if python and event == "push":
-        print("redline: --python is for ci pr and ci suite only: a push run's suite is the merged code's own")
-        return 2
     if python and not python.is_file():
         print(f"redline: --python {python} isn't a file")
         return 2
@@ -479,7 +476,7 @@ def run_ci(repo: Path, event: str, base: str, run_url: str, number: int | None, 
             done = (f"ok: {name} passes check-break and the test suite" if name.endswith("/R") else
                     f"ok: {name or 'a PR outside any step'} passes the test suite")
         else:
-            failures = ci_push(repo, run_url, to=to)
+            failures = ci_push(repo, run_url, to=to, python=str(python) if python else None)
             done = f"ok: the test suite passed; {f'the note is in {to}' if to else 'noted on refs/notes/redline-ci'}"
     except Refused as reason:
         print(f"refused: {reason}")

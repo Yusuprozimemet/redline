@@ -153,7 +153,14 @@ def step_pr(repo: Path, base: str, number: int | None, result: str | None = None
     return name, failures
 
 
-def ci_push(repo: Path, run_url: str, rev: str = "HEAD", to: Path | None = None) -> list[str]:
+def ci_push(repo: Path, run_url: str, rev: str = "HEAD", to: Path | None = None,
+            python: str | None = None) -> list[str]:
+    """Run the merged project's tests with its interpreter, apart from the pinned gate (O-CI11)."""
+    with interpreter(python) if python else nullcontext():
+        return push_note(repo, run_url, rev, to)
+
+
+def push_note(repo: Path, run_url: str, rev: str, to: Path | None) -> list[str]:
     """`to`: write the note there instead, for a job that runs no repository code to add and push."""
     failures = suite(repo)
     message = f"result: {'fail' if failures else 'pass'}\nrun: {run_url}\n"
