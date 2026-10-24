@@ -205,7 +205,9 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   URL holding `${{` would be an Actions expression, and one holding a line break would end the
   YAML block, before the quoting counts. pip writes the URL the person installing typed, and the
   file is reviewed under CODEOWNERS before it runs, so it is their own; still, the command should
-  refuse a URL outside the characters a git URL needs.
+  refuse a URL outside the characters a git URL needs. The design in §7 now defines the exact
+  ASCII character boundary, rejects a leading option hyphen, preserves supported git addresses,
+  and requires rejection before creating directories; implementation and verification remain.
 - O-SELF5 [closed, build 9 part 27]: Redline's own tree failed check-links and check-order, which
   every step from R on runs: `tests/toys/jest/src/adult.test.js` linked TOY.H1 and TOY.H2, which no
   spec declares, and check-order read their green with no red in af3968c, which stays in history.

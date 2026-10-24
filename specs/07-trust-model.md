@@ -132,6 +132,22 @@ script, and `write_workflow` in `redline/runner.py` puts in the commit, checked 
 and the URL, quoted for the shell by `shlex.quote`. It reads `direct_url.json` through
 `distribution("redline")`, imported into `redline.runner` so the tests can give it any.
 
+O-SELF6 (build 9 part 36): before creating directories or writing the workflow, require the
+URL to be a nonempty string of ASCII letters, digits, and exactly these punctuation characters:
+`-._~:/?#[]@!&'()*+,;=%`. A leading `-` is refused so git cannot read the URL as an option.
+This supports HTTPS, SSH, git, file and scp-style addresses, IPv6 hosts, credentials, query
+strings and percent-encoded path characters. Spaces and non-ASCII path characters must be
+percent-encoded. This is a character boundary, not a check of schemes, URL structure or reachability.
+It excludes all whitespace and control characters, `$`, braces, backticks, backslashes and
+double quotes; shell quoting still handles permitted shell punctuation. An unsupported URL
+gets a diagnostic naming the URL and writes nothing, including no workflow directories.
+Tests exercise accepted URLs through both jobs' parsed clone commands and reject hostile URLs,
+including Actions expressions and YAML line breaks, before any filesystem write.
+
+No remaining open item in review-2026-10-20 belongs here: item 11's settings, item 18's CLI,
+fixtures and tooling, item 19 (O-CLOSE6, build 11), and item 20's token accounting remain deferred.
+O-CI11 stays with build 9 part 37.
+
 The command refuses, writing nothing, when the Redline that runs it wasn't installed from a git
 commit (an editable or local install, an index or archive URL, another VCS), so a workflow never
 pins a Redline nobody can fetch; and when `.github/workflows/redline.yml` exists, which is the
@@ -140,8 +156,6 @@ reinstall Redline from it, remove the file and run the command again.
 
 What it doesn't prove: that the commit is on a branch a clone fetches, or that the URL serves the
 same commit later; a clone that can't check it out fails the run, where it is seen. Nor that the
-URL is safe outside the shell: a `${{` in it is an Actions expression, and a line break ends the
-script, before the shell's quoting counts (O-SELF6). Nor that the
 project's own dependencies, installed beside Redline's pins, leave them as they were (O-CI11).
 
 **Text is UTF-8, on every platform.** Windows' Python decodes and prints text in the code page
