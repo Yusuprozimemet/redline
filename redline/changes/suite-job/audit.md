@@ -30,7 +30,8 @@ Resolution: §7 now has `suite` run the PR's pip lines on a PR (`specs/07-trust-
 ## F9 [closed]: three wordings say less than meant, or something else
 Resolution: S1's GIVEN says "every gate but check-break" (`redline/changes/suite-job/specs/ci/delta.md:16`), INSTALL.WF.S1 says "in the same job" (`redline/changes/suite-job/specs/install/delta.md:21`), and the install delta's P3 cites `tests/test_install_workflow.py:87-97` (`redline/changes/suite-job/specs/install/delta.md:36`).
 
-## F10 [open]: the merge-base's install runs `python -m venv` in the PR's checkout, so the PR's code still runs in the `redline` job
+## F10 [waived]: the merge-base's install runs `python -m venv` in the PR's checkout, so the PR's code still runs in the `redline` job
+Waived-by: @Yusuprozimemet: fixed in the spec without a re-audit (d3c4f4c, fcf63d3)
 - **Where it runs.** The step runs `python -m venv "$RUNNER_TEMP/gate"` (`.github/workflows/redline.yml:47`) before its `cd "$RUNNER_TEMP/base"` (`.github/workflows/redline.yml:48`). It sets no `working-directory`, so its directory is the checkout of the PR's head (`.github/workflows/redline.yml:30-34`).
 - **What that lets a PR do.** `python -m` puts the working directory first on `sys.path`. A PR that adds a `venv.py` at its root therefore runs its own module in place of the standard library's. That happens in the gate's job, before the gate is installed. The module can build the venv and leave a `.pth` file in its site-packages. The three pip lines after it don't remove that file (`.github/workflows/redline.yml:49-51`), so every Python process the venv starts runs it, the gate step's `"$RUNNER_TEMP/gate/bin/redline"` included.
 - **Nothing else stops it.** The PR needs to touch nothing CODEOWNERS guards, which is only `.github/` and `redline/config.yaml` (`specs/07-trust-model.md:557-560`). `tests/test_ci.py:235-239` pins `python -m venv` before the `cd`.
@@ -46,7 +47,8 @@ Resolution: S1's GIVEN says "every gate but check-break" (`redline/changes/suite
   - Give S4 a THEN that the merge-base's install runs Python only after its `cd` out of the checkout, or only with `-I`, so that no `python -m` or `python -c` in the `redline` job's PR steps runs in the PR's checkout.
   - Say which step changes `tests/test_ci.py:235-239`.
 
-## F11 [open]: P8 is wrong about "nothing to mutate": today that refusal comes only after the scenario's tests ran unmutated and passed
+## F11 [waived]: P8 is wrong about "nothing to mutate": today that refusal comes only after the scenario's tests ran unmutated and passed
+Waived-by: @Yusuprozimemet: fixed in the spec without a re-audit (d3c4f4c, fcf63d3)
 - **The order today.**
   - `check_break` reaches `mutate`, which holds the refusal (`src/redline/breaks.py:236-237`), only in its `else` (`src/redline/breaks.py:249-250`).
   - That `else` runs only after `unmutated` has run each runner's tests for the scenario (`src/redline/breaks.py:247`, `src/redline/breaks.py:209-213`, `src/redline/breaks.py:205-206`).
@@ -57,7 +59,8 @@ Resolution: S1's GIVEN says "every gate but check-break" (`redline/changes/suite
   - Restate P8 with the order as it is.
   - Say what each command prints for a scenario whose tests fail unmutated and whose premises cite nothing to mutate. `ci pr --suite-result` would print "nothing to mutate". `ci suite`, if its check-break keeps today's order, would print that the tests fail on unmutated code.
 
-## F12 [open]: four of today's tests pin the workflow S4 replaces, and no step says which one changes them
+## F12 [waived]: four of today's tests pin the workflow S4 replaces, and no step says which one changes them
+Waived-by: @Yusuprozimemet: fixed in the spec without a re-audit (d3c4f4c, fcf63d3)
 None of these tests has a spec marker or a lock entry (`redline/contracts/lock.yaml:1-5`), and each fails on the workflow G2 must write:
 - `tests/test_pins.py:68` counts four `python-version` and `node-version` values; `suite`'s setup-python makes five.
 - `tests/test_pins.py:73` counts four jobs.
@@ -66,7 +69,8 @@ None of these tests has a spec marker or a lock entry (`redline/contracts/lock.y
 
 check-track exempts every test file (`src/redline/track.py:20`, `src/redline/track.py:32-35`). G2 could therefore rewrite these tests, the pin test among them, with no scenario behind the edit. Either link them to S4 at R, or give G2 an open item that names each test and what it will expect.
 
-## F13 [open]: G1's and G2's Track lines, and O3, name `docs/design.md`, which the split removed
+## F13 [waived]: G1's and G2's Track lines, and O3, name `docs/design.md`, which the split removed
+Waived-by: @Yusuprozimemet: fixed in the spec without a re-audit (d3c4f4c, fcf63d3)
 - **The stale entries.** `redline/changes/suite-job/steps.md:10` and `redline/changes/suite-job/steps.md:14` list `docs/design.md`. O3 closes O-CI10 "in docs/design.md §12" (`redline/changes/suite-job/steps.md:21`).
 - **No such file.** There is no `docs/` now: §7 is `specs/07-trust-model.md` and §12 is `specs/12-open-problems.md` (`specs/README.md:7-9`).
 - **What check-track does.**
@@ -76,6 +80,7 @@ check-track exempts every test file (`src/redline/track.py:20`, `src/redline/tra
   - So a design-text edit at G1 or G2 is outside its track, and needs a `Redline-Track` claim and its label (`src/redline/track.py:38-43`).
 - **What to change.** Name the `specs/` files each step may edit, or drop the entry, and point O3 at `specs/12-open-problems.md`.
 
-## F14 [open]: two wordings say less than meant
+## F14 [waived]: two wordings say less than meant
+Waived-by: @Yusuprozimemet: fixed in the spec without a re-audit (d3c4f4c, fcf63d3)
 - **`ci push --python`.** The refusal says `--python is for ci pr only` (`src/redline/cli.py:446`), and P11 cites it (`redline/changes/suite-job/specs/ci/delta.md:74`). Once `ci suite` takes `--python` (`redline/changes/suite-job/proposal.md:19`), that text is wrong, and `tests/test_ci.py:97` asserts it whole. Say what `ci push --python` prints after G1, as S2 does for `--suite-result`.
 - **S1's R-step change.** S1's GIVEN doesn't say that the change's premises cite a file its `hold` test's runner mutates (`redline/changes/suite-job/specs/ci/delta.md:16`). Without such a file, S5's refusal fails that PR (`redline/changes/suite-job/specs/ci/delta.md:53`), and S1's exit 0 can't hold (`redline/changes/suite-job/specs/ci/delta.md:19`). Say so in the GIVEN.
