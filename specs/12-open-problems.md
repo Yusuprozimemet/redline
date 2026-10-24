@@ -178,12 +178,10 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   it, in Redline's own workflow and the one `redline install workflow` writes (§7, the PR's code
   runs in a job of its own). Its C step passed check-close, each red and green and H1's break,
   confirmed by its push run (§4).
-- O-CI11 [build 9 part 37]: in an adopting repository's workflow the project's dependencies install
-  twice, in the `suite` job and, on a push alone, in the `redline` job, each by hand; nothing checks
-  that a step there has `if: github.event_name == 'push'`, without which the PR's code runs in the
-  gate's job again, and on a push they share the gate's site-packages and can replace one of its
-  pins (§7). The plan: the project's install written once, in a local composite action both jobs
-  call, and the gate in a venv of its own on a push too, with `ci push --python`.
+- O-CI11 [closed, build 9 part 37]: adopting workflows call one local composite action for project
+  dependencies, in `suite` and on pushes alone in `redline`. The pinned gate installs in its
+  own venv on both events; `ci push --python` selects the project interpreter for the suite
+  and check-break's unmutated runs (§7). This isolates packages, not same-user file access.
 - O-LINK1 [closed, build 9 part 28]: check-links failed every scenario of a change whose S step was merged
   and whose R wasn't, though at S they have no tests by design, so one change's merged S failed every
   other change's R, G and C gates, and Redline's own suite on the S merge's push run, until its R

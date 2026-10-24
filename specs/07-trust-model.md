@@ -28,7 +28,7 @@ Python would import the gate and test it, not the PR. So `redline ci pr --python
 commands with that interpreter instead. mutmut is already the one on `PATH`, the project's, and
 Jest's command has no Python. A path that isn't a file is an error, never a fallback to the gate's
 own. The path is the workflow's word, as every line CI runs is, and on a PR the workflow is the PR's
-own (Repository settings, CODEOWNERS). `redline ci push` and the local commands take no such option.
+own (Repository settings, CODEOWNERS). `redline ci push --python <path>` selects the merged project's interpreter too; local commands take no such option.
 
 **The merge-base's Redline gates each PR.** Redline's own workflow installs the Redline the PR
 contains, `pip install -e .`, for the suite to test; gated by that one, a PR that weakens a gate
@@ -83,12 +83,22 @@ one process, as before, for a local preview; `--suite-result` takes `success`, `
 alone, other options refused. As with `--python`, the PR that adds
 them, the change `suite-job`'s G1, can't use them; its G2 moves the workflows.
 
-An adopting repository's workflow has the same two jobs (below). On a pull request its `redline`
-job installs the pinned Redline and nothing of the project's, so the project's dependencies, `npm
-ci` and the scripts it runs among them, install in `suite`, where a comment marks the place. On a
-push the `redline` job's suite needs them too, so a comment there says they go in steps with
-`if: github.event_name == 'push'`. Nothing checks that such a step has it, and on a push they share
-the gate's site-packages and can replace one of its pins (O-CI11).
+O-CI11 (build 9 part 37): an adopting repository defines its dependency installation once in
+`.github/actions/redline-project/action.yml`, a local composite action called by `suite` and,
+with `if: github.event_name == 'push'`, by `redline`. The installer writes a starter
+(`shell: bash`) that installs the pinned Redline for pytest from the clone's hashed requirements,
+with a place for the adopter's own dependency steps, preserves an existing action byte for byte, and refuses
+an existing workflow before writing either file. Invalid installation metadata writes neither.
+The pinned Redline installs first in `$RUNNER_TEMP/gate`, using that venv's Python and its own
+clone's hashed requirements on both events. The project action installs the project's packages
+in setup-python's environment; the starter includes the pinned Redline there for pytest's plugin. Both `ci suite` and `ci push` call the gate by its absolute path with `--python
+"$(command -v python)"`; `ci pr --suite-result` runs no project action. `ci push --python`
+selects the interpreter for the suite and R-step check-break's unmutated runs, restores the
+previous selection even on an error, and preserves note and claims behavior. A missing file
+is an error before tests or note writes; omitting the option keeps the current interpreter.
+This separates installed packages, not same-user filesystem access on a push: project code can
+still rewrite the gate's files. PR isolation continues to depend on separate hosted jobs.
+Workflow triggers and Redline's own workflow stay unchanged.
 
 What it doesn't prove:
 
@@ -113,15 +123,12 @@ records a commit installed by `redline @ git+<url>@<commit>` in the distribution
 when a short one was asked for. The workflow clones that URL into `$RUNNER_TEMP`, checks out that
 commit and installs it with Redline's own three hashed pip lines, read from that commit's
 requirements files, not editable, in the `redline` job on a push as on a PR and in the `suite`
-job; then a comment after each such step, outside its script, marks where the project installs
-its own dependencies, on a push alone in the `redline` job (above). Every other line is Redline's
+job, into its own venv; the shared project action follows it as above. Every other line is Redline's
 own: the triggers, the default permissions, the concurrency group, the `redline` job's checkout,
-fetch, setup-python, push step and note hand-off, the `suite` job's checkout, fetch and
-setup-python, and the `note` job, so a note it writes checks out (§4). Its PR gate runs `redline
-ci pr --base main --pr <n> --suite-result "$SUITE"` and its suite job `redline ci suite --base
-main`, with no `--python`, since Redline and the project share one environment in `suite` (above).
+fetch, setup-python and note hand-off, the `suite` job's checkout, fetch and
+setup-python, and the `note` job, so a note it writes checks out (§4). Its PR gate calls the venv's `redline ci pr --base main --pr <n> --suite-result "$SUITE"`; suite and push select the project Python above.
 A test keeps the template in step: it writes the workflow and compares it with Redline's own, both
-parsed as YAML, so comments aside: with the installs, the `ci pr` and `ci suite` runs and
+parsed as YAML, so comments aside: with the installs, project-action calls, the `ci pr`, `ci suite` and `ci push` runs and
 Redline's other jobs taken out, the two are equal whole, a job's `name` or `if` included, and a
 change to Redline's workflow that an adopter needs fails until the template has it too. The
 template isn't one of the runners' helpers: a written workflow never equals it and may hold the
@@ -146,7 +153,7 @@ including Actions expressions and YAML line breaks, before any filesystem write.
 
 No remaining open item in review-2026-10-20 belongs here: item 11's settings, item 18's CLI,
 fixtures and tooling, item 19 (O-CLOSE6, build 11), and item 20's token accounting remain deferred.
-O-CI11 stays with build 9 part 37.
+O-CI11 is the only item taken by build 9 part 37; those review items do not fit its dependency-isolation scope.
 
 The command refuses, writing nothing, when the Redline that runs it wasn't installed from a git
 commit (an editable or local install, an index or archive URL, another VCS), so a workflow never
@@ -155,8 +162,7 @@ repository's own and may hold its own steps (Node for Jest, say). To move to ano
 reinstall Redline from it, remove the file and run the command again.
 
 What it doesn't prove: that the commit is on a branch a clone fetches, or that the URL serves the
-same commit later; a clone that can't check it out fails the run, where it is seen. Nor that the
-project's own dependencies, installed beside Redline's pins, leave them as they were (O-CI11).
+same commit later; a clone that can't check it out fails the run, where it is seen. The same-user filesystem limit on a push remains as described above.
 
 **Text is UTF-8, on every platform.** Windows' Python decodes and prints text in the code page
 (cp1252) unless told otherwise, while git writes, and Redline's files hold, UTF-8. So every file
