@@ -63,20 +63,20 @@ def test_every_action_is_pinned_to_a_commit_with_its_tag_in_a_comment():
     assert all(len(shas) == 1 for shas in used.values()), used
 
 
-@pytest.mark.spec("CI.APART.S4", new=True)  # O5: the suite job's setup-python is the fifth
+@pytest.mark.spec("CI.APART.S4")  # O5: the suite job's setup-python is the fifth
 def test_python_and_node_are_exact_versions():
     versions = [str(v) for step in steps() for k, v in step.get("with", {}).items() if k in ("python-version", "node-version")]
     assert len(versions) == 5 and all(re.fullmatch(r"\d+\.\d+\.\d+", v) for v in versions), versions
 
 
-@pytest.mark.spec("CI.APART.S4", new=True)  # O5: five jobs, the suite job among them
+@pytest.mark.spec("CI.APART.S4")  # O5: five jobs, the suite job among them
 def test_every_runner_image_is_named_by_its_version_never_latest():
     images = {job: spec["runs-on"] for job, spec in jobs().items()}
     assert len(images) == 5 and not any("latest" in image for image in images.values()), images
     assert all(re.fullmatch(r"ubuntu-\d+\.\d+|windows-\d{4}-vs\d{4}", image) for image in images.values()), images
 
 
-@pytest.mark.spec("CI.APART.S4", new=True)  # O5: the suite job installs as the redline job does
+@pytest.mark.spec("CI.APART.S4")  # O5: the suite job installs as the redline job does
 def test_every_job_that_runs_pip_runs_the_hashed_lines_in_order_and_no_other():
     installs = {job: [line.strip() for step in spec["steps"] for line in step.get("run", "").splitlines() if "pip" in line]
                 for job, spec in jobs().items()}

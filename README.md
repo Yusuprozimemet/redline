@@ -49,15 +49,20 @@ the tests import.
 3. **CI**: `redline install workflow` writes `.github/workflows/redline.yml`, which installs the
    commit Redline was installed from, by hash, and refuses if Redline wasn't installed from a git
    commit or the file exists. Add the project's own dependencies (Node and `npm ci` for Jest, say)
-   where its comment says, after Redline's install. The workflow checks out the full history with
-   `main` and `refs/notes/*`, runs `redline ci pr --base main --pr <number>` on each PR (and on
-   `labeled` and `unlabeled`), and on a push to `main` runs `redline ci push --note <file>` in a
+   where its two comments say, after Redline's install in each of the `suite` and `redline` jobs:
+   in `suite` as they are, and in `redline` in steps with `if: github.event_name == 'push'`, so on
+   a PR the gate's job runs none of the PR's code. The workflow checks out the full history with
+   `main` and `refs/notes/*`. On each PR (and on `labeled` and `unlabeled`) the `suite` job runs
+   `redline ci suite --base main`, the PR's check-break and suite, and the `redline` job, which
+   `needs: suite` and runs `if: always()`, runs `redline ci pr --base main --pr <number>
+   --suite-result "$SUITE"`, every other gate on that job's result. On a push to `main` it runs
+   `redline ci push --note <file>` in a
    read-only job and hands the note to a job that runs git alone to add and push it. A note
    counts only from a push run of `.github/workflows/redline.yml` on `main` whose `redline` job runs `redline ci push` with
    `--run-url` its own run's URL (`${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`),
    and whose outcome agrees with the note; any other reads `unconfirmed` ([§4](specs/04-files.md)).
    The jobs that rebuild a ledger hold `actions: read`, and no job `actions: write`. The written
-   workflow is Redline's own [workflow](.github/workflows/redline.yml)'s `redline` and `note` jobs,
+   workflow is Redline's own [workflow](.github/workflows/redline.yml)'s `suite`, `redline` and `note` jobs,
    so keep its lines as they are. To move to another commit, reinstall Redline from it, remove the
    file and run the command again.
 4. **The repository settings** Redline's guarantees rest on. Without them a gate is advice. Each is

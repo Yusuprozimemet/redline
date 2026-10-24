@@ -36,9 +36,10 @@ would be checked by the weakened gate. So on a pull request the `redline` job fi
 merge-base with `main` as a worktree in `$RUNNER_TEMP`, and installs that tree, not editable,
 into a venv of its own with the three hashed pip lines (below), run with the venv's Python and
 reading the merge-base's own requirements files. That runs before the PR's own pip lines, so no
-code of the PR's has run yet. The gate step then calls that venv's `redline` by its path:
+code of the PR's has run yet. The gate step then called that venv's `redline` by its path:
 `redline ci pr --base main --pr <n> --python "$(command -v python)"`, the setup-python
-environment that holds the PR's own Redline, which the suite tests. Everything else is read at
+environment that holds the PR's own Redline, which the suite tests; that call is the `suite`
+job's now, as `ci suite` (below). Everything else is read at
 the merge-base already (above), so the gate's code is now read there too. A push run is unchanged:
 its merged code is `main`. So are `runners` and `windows`, which test the PR's own code and record
 nothing. A PR that changes `ci pr`'s options can't use them in its own workflow, since the

@@ -102,7 +102,7 @@ def core(workflow: dict) -> dict:
     return workflow
 
 
-@pytest.mark.spec("INSTALL.WF.S1", new=True)
+@pytest.mark.spec("INSTALL.WF.S1")
 def test_the_workflow_installs_the_commit_redline_was_installed_from(repo, capsys, installed):
     repo.commit("start")
     code, out = install(repo, capsys)
@@ -138,7 +138,7 @@ def test_the_workflow_installs_the_commit_redline_was_installed_from(repo, capsy
     assert check_helpers(repo.path) == []
 
 
-@pytest.mark.spec("INSTALL.WF.S2", new=True)
+@pytest.mark.spec("INSTALL.WF.S2")
 def test_the_workflow_is_redlines_own_outside_the_installs_the_pr_gate_and_the_suite(repo, capsys, installed):
     workflow = written(repo, capsys)
     assert core(workflow) == core(own())
