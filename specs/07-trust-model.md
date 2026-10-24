@@ -188,7 +188,8 @@ it. That is by design: the step began under an audited plan, and a later edit is
 step's `start` and, through the end audit, by check-plan on every PR (§4).
 
 It then runs that step's gates (the same ones `pr` runs
-locally), the test suite, and `check-ledger <change> --main main`, and prints every failure. This
+locally), the test suite, and `check-ledger <change> --main main`, and prints every failure; with
+`--suite-result`, the suite job's result stands for the suite and check-break's test runs (above). This
 proves the PR's state: the gates hold, `new` tests fail strictly, and the committed ledger
 matches `main`'s evidence. It records nothing. A PR run is not evidence, because its commits are
 not on `main` yet.
