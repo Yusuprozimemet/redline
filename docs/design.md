@@ -990,8 +990,8 @@ would link TOY.H1 and TOY.H2 in Redline's own tree, where no spec declares them,
 check-links there. `tests/test_self.py` runs check-links and check-order on Redline's own checkout,
 as every step from R on runs them, with the step check-links takes on its own (above), and fails on
 any gap. check-order needs the whole history, so it
-is skipped in a shallow clone, as the `windows` and `runners` jobs check out; the `redline` job
-fetches it all and runs it with the suite.
+is skipped in a shallow clone, as the `windows` and `runners` jobs check out; the `suite` job on
+a PR, and the `redline` job on a push, fetch it all and run it with the suite.
 
 A Jest test is `path::name`, where the name is the first argument of its `test` call, a string
 literal. Two tests in one file with the same name are an error, since a `describe` around them
@@ -1293,7 +1293,7 @@ all, so a kill credited to the wrong test shows. A repository with Jest tests
 installs Node and runs `npm ci` in its workflow before `redline ci`, so the suite can run them. A
 third job, `windows`, runs Redline's own suite on Windows with a read-only token, and records
 nothing either. It runs pytest, not `redline ci`: mutmut doesn't run on Windows, and a skipped
-break fails the run (§5).
+break fails the run (§5). A fourth, `suite`, runs a PR's code, apart from the gate (below).
 
 **The suite can run with another Python than the gate's.** A runner's commands run pytest as
 `<python> -m pytest`, the suite's and check-break's unmutated runs alike (§5), and `<python>` is the
@@ -1323,6 +1323,49 @@ merge-base's Redline doesn't have them yet; the next PR is the first gated with 
 was the first gated with `--python`. An adopting repository installs a pinned Redline, which its
 PRs don't contain, and needs none of this.
 
+**The PR's code runs in a job of its own.** Gated by the merge-base's Redline, the PR's code still
+ran in the gate's job, as the same user: its `pip install -e .`, its suite and check-break's runs,
+any of which could rewrite a file the gate imports after it, a lazy import in the standard library
+or a file in the gate's venv, and in an adopting repository the site-packages the gate shares with
+the code under test (O-CI10). So on a pull request a fourth job, `suite`, runs all of the PR's
+code, and the `redline` job runs none of it. `suite` checks out, fetches and sets up Python as
+`redline` does, installs the merge-base's Redline into a venv of its own and the PR's beside it, as
+above, and runs `"$RUNNER_TEMP/gate/bin/redline" ci suite --base main --python "$(command -v
+python)"`: the step from the trailers, as `ci pr` works it out, check-break at an R step, then the
+suite. It holds `contents: read` alone and has no `outputs`, so nothing the PR's code writes
+reaches the gate but the job's result. The `redline` job `needs: suite` and runs `if: always()`,
+so a failed suite job still gates, where a skipped job would leave a skipped check that branch
+protection reads as passed; `!cancelled()` wouldn't do, since a run cancelled while `suite` runs
+would then skip the gate, where `always()` runs it to fail on the result `cancelled`. On a pull
+request it installs only the
+merge-base's Redline, its editable install now `if: github.event_name == 'push'`, and its gate runs
+`ci pr --base main --pr <n> --suite-result "$SUITE"`, `SUITE` being `${{ needs.suite.result }}`:
+every gate and check-ledger, as before, but not the suite or the part of check-break that runs
+tests, and a result other than `success` is the failure `suite: the suite job's result is
+<result>`. Each job gets a runner of its
+own, so nothing the PR's code writes reaches the gate's files. A push run is unchanged: `suite` is
+skipped, and the `redline` job's code is `main`'s, which gates itself.
+
+Moving the suite and check-break's test runs loses nothing: their verdicts were the PR's code's
+already. A PR's `conftest.py` can turn any test's outcome, a mutant's run included, and in
+Redline's own suite the plugin is the PR's (below). check-break's two refusals that run no test, a
+`hold` scenario no test links without `new=True` and premises that cite no file to mutate, aren't
+the PR's code's, so at an R step `ci pr --suite-result` still makes them; `ci suite` makes them
+too, with the rest of check-break. What the move keeps from the PR's code is every other gate,
+which starts no process but git and `gh` and reads the PR's files as data: the trailers and the
+step's order, the lock, the ledger, the approvals. `ci pr` without `--suite-result` runs it all in
+one process, as before, for a local preview; `--suite-result` takes `success`, `failure`,
+`cancelled` or `skipped`, the results a job can have, and `ci suite` takes `--base` and `--python`
+alone, other options refused. As with `--python`, the PR that adds
+them, the change `suite-job`'s G1, can't use them; its G2 moves the workflows.
+
+An adopting repository's workflow has the same two jobs (below). On a pull request its `redline`
+job installs the pinned Redline and nothing of the project's, so the project's dependencies, `npm
+ci` and the scripts it runs among them, install in `suite`, where a comment marks the place. On a
+push the `redline` job's suite needs them too, so a comment there says they go in steps with
+`if: github.event_name == 'push'`. Nothing checks that such a step has it, and on a push they share
+the gate's site-packages and can replace one of its pins (O-CI11).
+
 What it doesn't prove:
 
 - **The workflow.** On `pull_request` GitHub runs the PR's own workflow file, so a PR can call its
@@ -1332,11 +1375,9 @@ What it doesn't prove:
   is the PR's own code under test, like the note's text (§12, Judgments): one process imports one
   `redline`, so the gate can't put its own plugin in the PR's pytest. In an adopting repository the
   plugin is the pinned Redline's.
-- **The job.** The PR's code runs in the gate's job, as the same user: its `pip install -e .`, its
-  suite and check-break's runs. It could rewrite a file the gate imports later, a lazy import in the
-  standard library or a file in the venv or the setup-python toolcache; `redline/ci.py` imports
-  Redline's own modules before the suite runs, which narrows this and doesn't close it. In an
-  adopting repository the gate shares its site-packages with the code under test (O-CI10).
+- **The suite job.** Its result is the PR's code's: the gate reads whether the job succeeded, not
+  why. A runner that isn't fresh for each job, a self-hosted one reused, would let the suite job
+  leave files for the next job; Redline's jobs run on GitHub's hosted images (§12, Judgments).
 
 **An adopting repository's workflow.** `.github/workflows/redline.yml` is Redline's own: it
 installs the Redline its PR contains and gates with the merge-base's, and runs the `runners` and
@@ -1347,13 +1388,16 @@ records a commit installed by `redline @ git+<url>@<commit>` in the distribution
 `direct_url.json` (PEP 610), with its URL, `vcs_info.vcs` `git` and the full `commit_id` even
 when a short one was asked for. The workflow clones that URL into `$RUNNER_TEMP`, checks out that
 commit and installs it with Redline's own three hashed pip lines, read from that commit's
-requirements files, not editable, on a push as on a PR; then a comment after that step, outside
-its script, marks where the project installs its own dependencies. Every other line is Redline's own: the triggers, the default permissions, the
-concurrency group, the `redline` job's checkout, fetch, setup-python, push step and note
-hand-off, and the `note` job, so a note it writes checks out (§4). Its PR gate runs `redline ci
-pr --base main --pr <n>` with no `--python`, since Redline and the project share one environment
-there (above). A test keeps the template in step: it writes the workflow and compares it with
-Redline's own, both parsed as YAML, so comments aside: with the install, the PR gate's `run` and
+requirements files, not editable, in the `redline` job on a push as on a PR and in the `suite`
+job; then a comment after each such step, outside its script, marks where the project installs
+its own dependencies, on a push alone in the `redline` job (above). Every other line is Redline's
+own: the triggers, the default permissions, the concurrency group, the `redline` job's checkout,
+fetch, setup-python, push step and note hand-off, the `suite` job's checkout, fetch and
+setup-python, and the `note` job, so a note it writes checks out (§4). Its PR gate runs `redline
+ci pr --base main --pr <n> --suite-result "$SUITE"` and its suite job `redline ci suite --base
+main`, with no `--python`, since Redline and the project share one environment in `suite` (above).
+A test keeps the template in step: it writes the workflow and compares it with Redline's own, both
+parsed as YAML, so comments aside: with the installs, the `ci pr` and `ci suite` runs and
 Redline's other jobs taken out, the two are equal whole, a job's `name` or `if` included, and a
 change to Redline's workflow that an adopter needs fails until the template has it too. The
 template isn't one of the runners' helpers: a written workflow never equals it and may hold the
@@ -1374,8 +1418,7 @@ What it doesn't prove: that the commit is on a branch a clone fetches, or that t
 same commit later; a clone that can't check it out fails the run, where it is seen. Nor that the
 URL is safe outside the shell: a `${{` in it is an Actions expression, and a line break ends the
 script, before the shell's quoting counts (O-SELF6). Nor that the
-project's own dependencies, installed beside Redline's pins, leave them as they were: that is the
-site-packages the gate shares with the code under test (O-CI10).
+project's own dependencies, installed beside Redline's pins, leave them as they were (O-CI11).
 
 **Text is UTF-8, on every platform.** Windows' Python decodes and prints text in the code page
 (cp1252) unless told otherwise, while git writes, and Redline's files hold, UTF-8. So every file
@@ -1576,8 +1619,9 @@ lines, in this order, and no other pip line:
    nothing, and builds with the setuptools line 2 installed, which must be `[build-system]`'s
    `setuptools==84.2.1`.
 
-The `redline` job runs them twice: first the gate's, in the merge-base's worktree with the
-venv's Python, line 3 installing `.`, not `-e .` (above); then the PR's own.
+On a PR the `redline` and `suite` jobs run first the gate's, in the merge-base's worktree with
+the venv's Python, line 3 installing `.`, not `-e .` (above); then `suite` runs the PR's own, and
+on a push `redline` runs `main`'s.
 
 A marker keeps mutmut, and what only it needs, off Windows, where it doesn't run, so every job
 installs the one file. `npm ci` already installs from the toy's `package-lock.json`, whose sha512
@@ -1592,15 +1636,15 @@ files' headers say. A bump is a PR outside any step, gated like any other.
 Tests read the workflow and both files: every `uses:` is a 40-hex SHA with a `# vX.Y.Z` tag;
 every `python-version` and `node-version` is `X.Y.Z`; no `runs-on` ends in `-latest`, and each
 names a version; each job that runs pip runs the three lines in order, and no other, with no `==`,
-`redline` the gate's three before them;
+`redline` and `suite` the gate's three before them;
 every line of the files is a comment or an `==` pin with at least one sha256; pip is pinned;
 setuptools is pinned as in `[build-system]`; and every dependency and extra in `pyproject.toml`,
 and pytest-xdist, is pinned. pip refuses what the file lacks, but line 3 doesn't resolve
 Redline's own requirements. So one more test, which runs only in GitHub Actions, follows what the
 jobs installed, from the metadata: Redline's requirements, its `mutation` extra where mutmut is
 installed and pytest-xdist where it is, and their requirements in turn. It fails on any of those
-that isn't in the file at the version installed. It runs with the suite, in the `redline` and
-`windows` jobs. It follows requirements, not every installed distribution, because a runner image
+that isn't in the file at the version installed. It runs with the suite, in the `suite` job on a
+PR, the `redline` job on a push, and the `windows` job. It follows requirements, not every installed distribution, because a runner image
 brings tools of its own that no job installs or runs: Windows' Python carries pipx and its
 dependencies. It follows the setup-python environment the suite runs in, not the gate's venv,
 which installs the merge-base's `requirements.txt`, the file that passed it on the merge-base's
@@ -1980,11 +2024,13 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    by its level, each after the first reading only what changed (O-AUDIT2); then the change `note-run`, Redline's first
    build step run as a change, S, R, G1 and C (O-NOTE1, O-SELF1); part 30, the change
    `install-workflow`, a workflow an adopting repository writes with `redline install workflow`,
-   S, R, G1 and C (O-SELF4); part 31, the PR's code run apart from the gate's job (O-CI10); part 32, the plan
+   S, R, G1 and C (O-SELF4); part 31, the change `suite-job`, the PR's code run in a job of its own,
+   apart from the gate, S, R, G1, G2 and C (O-CI10); part 32, the plan
    and end-of-initiative audits' rounds limited too (O-AUDIT3); part 35, a cited file in a
    package mutated in a copy of its whole package (O-MUT3), found by install-workflow/R's
    check-break and merged before that step; part 36, the URL a written workflow clones held to
-   what a git URL needs (O-SELF6).
+   what a git URL needs (O-SELF6); part 37, an adopting repository's dependencies installed once for
+   both jobs, and its gate kept apart from them on a push too (O-CI11).
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.
@@ -2029,7 +2075,9 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   (§4, §9); who pressed a label's button, and the role a person had before CI ran (§7); that
   GitHub's times for a label and a push are true, and its record of a run a note names (§4), and
   what a maintainer read before labelling (§7); that
-  GitHub enforces the permissions it is given, and that a pinned action's commit is sound; that
+  GitHub enforces the permissions it is given, gives each job of a hosted runner a machine of
+  its own, which a reused self-hosted runner doesn't, and runs an `always()` job in a cancelled run
+  (§7); that a pinned action's commit is sound; that
   PyPI's files were sound when their hashes were taken; what a hosted runner brings under the pins,
   its image's weekly build under a version label and the Python and Node builds the setup actions
   fetch by version (a container pinned by digest would only move that trust to its registry and
@@ -2159,11 +2207,20 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   of its own with the merge-base's pins, before any of the PR's code runs, and calls that venv's
   `redline ci pr --python "$(command -v python)"`, so the suite tests the PR's own Redline; a push
   run is unchanged (§7, the merge-base's Redline).
-- O-CI10 [build 9 part 31]: the PR's code, its install, suite and check-break's runs, runs in the
-  gate's job as the same user, so it could rewrite a file the gate imports after it, in the
-  standard library, the gate's venv or, in an adopting repository, the site-packages it shares
-  with the gate (§7, the merge-base's Redline). The plan: the PR's code runs where it can't write
-  the gate's files, in a job of its own whose result the gate reads, or as another user.
+- O-CI10 [build 9 part 31, the change `suite-job`]: the PR's code, its install, suite and
+  check-break's runs, runs in the gate's job as the same user, so it could rewrite a file the gate
+  imports after it, in the standard library, the gate's venv or, in an adopting repository, the
+  site-packages it shares with the gate (§7, the merge-base's Redline). The plan: on a PR a `suite`
+  job runs all of the PR's code with `redline ci suite`, and the `redline` job, which `needs` it,
+  runs none: `ci pr --suite-result` runs every other gate and reads the suite job's result, in
+  Redline's own workflow and the one `redline install workflow` writes (§7, the PR's code runs in a
+  job of its own).
+- O-CI11 [build 9 part 37]: in an adopting repository's workflow the project's dependencies install
+  twice, in the `suite` job and, on a push alone, in the `redline` job, each by hand; nothing checks
+  that a step there has `if: github.event_name == 'push'`, without which the PR's code runs in the
+  gate's job again, and on a push they share the gate's site-packages and can replace one of its
+  pins (§7). The plan: the project's install written once, in a local composite action both jobs
+  call, and the gate in a venv of its own on a push too, with `ci push --python`.
 - O-LINK1 [closed, build 9 part 28]: check-links failed every scenario of a change whose S step was merged
   and whose R wasn't, though at S they have no tests by design, so one change's merged S failed every
   other change's R, G and C gates, and Redline's own suite on the S merge's push run, until its R
