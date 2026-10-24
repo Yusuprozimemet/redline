@@ -25,8 +25,6 @@ COMMIT = "dea7b6981106798b773ae799e71a404488e5b33d"
 # what pip wrote on 2026-10-23 for `pip install --no-deps "redline @ git+<URL>@dea7b69"` (proposal.md)
 GIT = {"url": URL, "vcs_info": {"commit_id": COMMIT, "requested_revision": "dea7b69", "vcs": "git"}}
 GATE = 'redline ci pr --base main --pr ${{ github.event.pull_request.number }} --suite-result "$SUITE"'
-SUITE = "redline ci suite --base main"
-JOBS = ("suite", "redline")  # the jobs with an install step, in the template's order
 HELPER = "redline/runners/jest.js"
 
 
@@ -59,6 +57,10 @@ def install(repo, capsys, runner: str = "workflow") -> tuple[int, str]:
         code = exit.code
     out = capsys.readouterr()
     return code, out.out + out.err
+
+
+SUITE = "redline ci suite --base main"
+JOBS = ("suite", "redline")  # the jobs with an install step, in the template's order
 
 
 def runs(step: dict, *text: str) -> bool:
