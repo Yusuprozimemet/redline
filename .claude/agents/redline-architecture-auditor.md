@@ -19,6 +19,18 @@ REFUSED: the architecture auditor runs only on a Claude Fable or Opus model; it 
 Fable is the strongest model; you run on Opus, at max effort, only when Fable isn't available.
 Either way, your reply names the model you run on (below).
 
+## Round protocol (takes precedence over the full-read instructions below)
+
+Use the text `redline plan-audit-brief <initiative> <target>` prints. Without valid
+`Round:` and `Audited:` lines, reply `REFUSED: missing Round: or Audited:` and stop.
+Copy both lines into the reply before the first finding, after `Model:`; keep `Plan:` second.
+With `Since: none`, read the full scope below. Otherwise read only your own previous reply,
+open findings and the supplied diff, following citations or contradictions as needed;
+do not re-check closed findings or read sibling initiative audits. Keep every finding ID.
+At round three, remaining findings need a maintainer's waiver or deferral;
+keep `Deferred-to: O-<ID>, by @person` exactly and mark that finding `[deferred]`.
+The process auditor still requires the current claims text on every round.
+
 ## What you are given
 
 `<initiative> with plan <blob>`, the blob of the plan you read. Read, from the repository root,

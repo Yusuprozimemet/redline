@@ -228,9 +228,10 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   diff since the commit the last one read; check-audit fails an audit without `Round:` and
   `Audited:` lines or past the limit, and a finding the maintainer defers needs `Deferred-to:` (§9,
   Rounds).
-- O-AUDIT3 [build 9 part 32]: the plan and end-of-initiative audits have no limit on their
-  rounds, and each re-run reads its whole initiative again. Part 32 specifies independent
-  three-round budgets and incremental prompts in §9, including legacy migration.
+- O-AUDIT3 [closed, build 9 part 32]: the plan and end-of-initiative audits have no limit on their
+  rounds, and each re-run reads its whole initiative again. Now `redline plan-audit-brief`
+  gives each phase boundary and initiative side an independent three-round budget and
+  incremental prompts; start/check-plan validate their metadata (§9), including legacy migration.
 - O-RELABEL1 [closed, build 9 part 38]: at the C step of a critical change, check-relabel failed
   without `relabel.yaml`, and nothing let a maintainer waive the relabel, as an audit finding can
   be waived, so a change whose maintainer chose to skip it couldn't close (found at suite-job/C).

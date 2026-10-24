@@ -14,7 +14,7 @@ of the last complete phase and the three. Earlier audits need only be resolved.
 import re
 from pathlib import Path
 
-from redline.audit import read_findings
+from redline.audit import header, read_findings
 from redline.config import rigor
 from redline.order import git
 from redline.plan import ROOT, Plan, initiatives, read_plan
@@ -59,7 +59,7 @@ def unresolved_at(repo: Path, plan: Plan, where: str, run: str, rev: str | None 
     run += f" with plan {(now := blob(repo, plan, rev))}"
     if text is None:
         return [f"{where}: missing; run {run}"]
-    bad = read_findings(text, where).bad
+    bad = read_findings(text, where).bad + round_errors(text, where)
     if current and not (read := RECORDED.search(text)):
         bad.append(f"{where}: no `Plan:` line; run {run} again")
     elif current and read[1] != now:
@@ -103,6 +103,8 @@ def due(repo: Path, plan: Plan, index: int) -> str:
             f"to {audit_path(plan, number, 'end')}, in a PR outside any step. Until it lands with every finding "
             f"resolved, check-plan fails on every PR.\n"
             f"Give each auditor `with plan {blob(repo, plan, 'main')}` after its arguments: its `Plan:` line.\n")
+    said += ("Use `redline plan-audit-brief <initiative> <target>` for each prompt: target is "
+             "phase-<n>-start, phase-<n>-end, security, architecture or process; at most three rounds each.\n")
     if index + 1 < len(plan.phases):
         following = plan.phases[index + 1].number
         said += (f"Before phase {following}'s first step, its start audit is due too: "
@@ -114,3 +116,56 @@ def due(repo: Path, plan: Plan, index: int) -> str:
                     f"{side_path(plan, side)}\n" for side in SIDES)
     said += f"Give redline-process-auditor, after its arguments, the text `redline claims {plan.name}` prints.\n"
     return said + "Until all three land with every finding resolved, check-plan fails on every PR.\n"
+
+
+def round_errors(text: str, where: str) -> list[str]:
+    """Legacy replies remain readable; any round metadata opts into the complete header."""
+    lines = text.split("## ", 1)[0].splitlines()
+    fields = {key: [line for line in lines if line.startswith(prefix)]
+              for key, prefix in (("round", "Round:"), ("audited", "Audited:"))}
+    if not any(fields.values()):
+        return []
+    found = header(text)
+    bad = [f"{where}: invalid or missing `{prefix}` line" for key, prefix in
+           (("round", "Round: <n>"), ("audited", "Audited: <commit>"))
+           if len(fields[key]) != 1 or key not in found]
+    if "round" in found and int(found["round"][1]) > 3:
+        bad.append(f"{where}: round {found['round'][1]} is past the limit of 3")
+    return bad
+
+
+def plan_audit_brief(repo: Path, name: str, target: str) -> str:
+    """An independent three-round budget per phase boundary or initiative side."""
+    if git(repo, "status", "--porcelain", "--untracked-files=no").stdout.strip():
+        raise RuntimeError(f"{name}: the working tree has uncommitted changes; commit them before the audit")
+    plan = read_plan(repo, name)
+    if target in SIDES:
+        where, args = side_path(plan, target), name
+    elif (match := re.fullmatch(r"phase-([1-9]\d*)-(start|end)", target)) and any(
+            phase.number == int(match[1]) for phase in plan.phases):
+        where, args = audit_path(plan, int(match[1]), match[2]), f"{name} phase {match[1]} {match[2]}"
+    else:
+        raise RuntimeError(f"{name}: unknown audit target {target}")
+    if not critical(repo, plan):
+        raise RuntimeError(f"{name}: initiative audits require critical rigor")
+    n, since = 1, None
+    if (repo / where).is_file():
+        text = (repo / where).read_text(encoding="utf-8")
+        if bad := round_errors(text, where):
+            raise RuntimeError("; ".join(bad))
+        found = header(text)
+        if "round" in found:
+            n, since = int(found["round"][1]) + 1, found["audited"][1]
+        else:
+            last = git(repo, "log", "-1", "--format=%H", "HEAD", "--", where).stdout.strip()
+            n, since = 3, (git(repo, "rev-parse", "-q", "--verify", f"{last}^").stdout.strip() if last else None)
+    if n > 3:
+        raise RuntimeError(f"{where}: round 3 of 3 has run; the maintainer waives or defers "
+                           "each open finding (`Waived-by:`, `Deferred-to:`)")
+    if since and git(repo, "merge-base", "--is-ancestor", since, "HEAD").returncode:
+        since = None
+    head = git(repo, "rev-parse", "HEAD").stdout.strip()
+    text = f"{args} with plan {blob(repo, plan)}\nTarget: {target}\nRound: {n} of 3\nAudited: {head}\nSince: {since or 'none'}\n"
+    if since:
+        text += "\n" + git(repo, "diff", since, "HEAD", "--", ".", f":(exclude){ROOT}/{name}/audits").stdout
+    return text

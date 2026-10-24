@@ -113,6 +113,7 @@ Records and helpers:
 | `redline ledger <change>` | rebuilds the change's `ledger.yaml` from `main`'s history and CI's notes |
 | `redline lock <change>` | writes the change's `hold` tests into `redline/contracts/lock.yaml` |
 | `redline blind <change>` | prints the defect log without its causes, for the relabeller |
+| `redline plan-audit-brief <initiative> <target>` | prints the next phase or initiative-side audit prompt, at most three rounds each |
 | `redline audit-brief <change>` | prints the auditor's prompt for the next round, or refuses past the level's limit (1, 2, 3) |
 | `redline retro <change>` | groups the defects by cause and proposes rules; writes nothing |
 | `redline claims <initiative>` | prints every approved claim in `main`'s history, for the process auditor |
