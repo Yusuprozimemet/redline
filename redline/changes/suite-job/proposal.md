@@ -24,7 +24,8 @@ then the PR's to decide.
   `skipped`, the results a GitHub job can have: every gate and check-ledger, as `ci pr` runs them,
   but not the suite or the part of check-break that runs tests, so no process of the PR's code
   runs; check-break's two refusals that run no test, a `hold` scenario no test links without
-  `new=True` and premises that cite no file to mutate, stay. A result other than `success` is the
+  `new=True` and premises that cite no file to mutate, stay, the second decided from the premises'
+  files before any test runs, where today it comes only after the unmutated run passed. A result other than `success` is the
   failure `suite: the suite job's result is <result>`. Without the option, `ci pr` runs everything
   as before. `--suite-result` is for `ci pr` alone, and `ci suite` takes `--base` and `--python`
   alone; elsewhere each exits 2, saying so.
@@ -34,7 +35,9 @@ then the PR's to decide.
   --python "$(command -v python)"`, and no `outputs`. The `redline` job `needs: suite` with
   `if: always()`, its editable install runs on a push alone, and its PR gate runs `ci pr` with
   `--suite-result "$SUITE"`, `SUITE` set in the step's `env` to `${{ needs.suite.result }}`, the one
-  thing of `suite` the workflow reads.
+  thing of `suite` the workflow reads. The merge-base's install `cd`s out of the PR's checkout
+  before its `python -m venv`, which today runs there, so a PR's own `venv.py` would run in the
+  gate's job and could leave a `.pth` file in the gate's venv.
 - The template `redline install workflow` writes follows: a `suite` job with the clone install, a
   comment after it marking the project's install, and `redline ci suite --base main`; the
   `redline` job's install as before, its comment saying the project's install goes there on a

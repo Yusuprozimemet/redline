@@ -1,73 +1,81 @@
 # Audit: suite-job
 Model: claude-opus-5-5
-Round: 1
-Audited: e9f0f47895f986f62306e33d4bb74bd29308a87c
+Round: 2
+Audited: bcdc05c1b3ba7e6b36cfd6e0a40213571d783cc6
 
-## F1 [open]: no scenario gives `ci pr --suite-result` a failing result or a failing gate at a step, so at a step the option could pass anything
-At a step, S1 is the only scenario that gives `--suite-result`. It gives only `success`, to a PR that passes every gate (`redline/changes/suite-job/specs/ci/delta.md:13-16`), so its THEN (exit 0 and a line starting `ok:`) can't show that any gate ran. S2's THEN can show it (check-lines' failure beside `suite: the suite job's result is <result>`, `redline/changes/suite-job/specs/ci/delta.md:22-23`), but S2 runs only on a PR outside any step (`redline/changes/suite-job/specs/ci/delta.md:20`). Today these are two separate code paths, `step_pr` (`src/redline/ci.py:120-130`) and `outside` (`src/redline/ci.py:102-111`), and the option has to reach both. Suppose G1's `ci pr --suite-result` runs no gate at a step, or reads `failure`, `cancelled` or `skipped` as `success`. That G1 passes S1 to S4 and H1. Once G2 passes the suite job's result to the gate (`redline/changes/suite-job/specs/ci/delta.md:39`), every step PR, Redline's own included, would then pass the gate on a failed suite job.
-Give S2 the step case: an R-step or G-step PR that fails a gate. With each of the three results it should print both failures and exit 1. With `success` it should fail on the gate alone.
-H1 has the same gap (`redline/changes/suite-job/specs/ci/delta.md:42-45`): it holds `ci pr` without the option outside any step only. At an R step, check-break and the suite without the option (`src/redline/pr.py:229-230`, `src/redline/ci.py:128`) are in no scenario, though the proposal says `ci pr` without the option still "runs everything as before" (`redline/changes/suite-job/proposal.md:26-27`).
+## F1 [closed]: no scenario gives `ci pr --suite-result` a failing result or a failing gate at a step, so at a step the option could pass anything
+Resolution: S2 now gives a G1 step's PR over 400 lines, which prints both failures with `failure`, `cancelled` and `skipped`, and check-lines' failure alone with `success` (`redline/changes/suite-job/specs/ci/delta.md:25-28`). H1 now holds check-break and the suite at an R step without the option (`redline/changes/suite-job/specs/ci/delta.md:58-61`).
 
-## F2 [open]: a run cancelled while `suite` runs leaves the required `redline` job unrun, and nothing says its check can't then read as passed
-S4 gives the `redline` job `needs: suite` and `if: ${{ !cancelled() }}` (`redline/changes/suite-job/specs/ci/delta.md:38`). The reason given is that a skipped required check reads as passed, "so the `redline` job runs whatever `suite` concluded" (`redline/changes/suite-job/proposal.md:42-44`, `docs/design.md:1335-1337`).
-That doesn't hold when the run itself is cancelled: `!cancelled()` is then false and the job never starts.
-- Anyone with `write` can cancel a run at any point while the suite job runs, the agent's own account included (`docs/design.md:1813-1821`).
-- `redline` is the one required check (`docs/design.md:1804-1809`).
-- GitHub reports a job whose `if` is false as skipped, the result the proposal says branch protection reads as passed. What a cancelled run leaves for a job still waiting on `needs` is GitHub's behaviour; no premise states it and no scenario reaches it.
-- Today's `redline` job has no `needs` and no `if` (`.github/workflows/redline.yml:20-29`), so a cancel leaves it cancelled, which is a failed check.
-- S2's `cancelled` result (`redline/changes/suite-job/specs/ci/delta.md:21`) covers only a `suite` job that ends cancelled in a run that isn't.
-- P8 is the precedent the delta cites (`redline/changes/suite-job/specs/ci/delta.md:55`). It says the `note` job "runs unless the run was cancelled", but its `if` also needs a push and a note (`.github/workflows/redline.yml:74`). So on a PR it never runs, and it isn't a required check.
-The spec needs one of two things. It can state what the `redline` check reads after a cancelled run, and why that can't pass, as a premise or as a limit with an O-ID. Or it can make a passing check impossible, with a THEN for it: either a job condition under which the job runs and fails after a cancel, or `suite` required beside `redline` (`docs/design.md:1804-1809`). Either way, give P8 the `note` job's whole condition.
+## F2 [closed]: a run cancelled while `suite` runs leaves the required `redline` job unrun, and nothing says its check can't then read as passed
+Resolution: S4 now gives the `redline` job `if: always()` (`redline/changes/suite-job/specs/ci/delta.md:45`). §7 says this runs the job in a cancelled run, where it fails on `cancelled` (`specs/07-trust-model.md:59-62`), and §12 lists that GitHub behaviour as trusted (`specs/12-open-problems.md:37-39`). S2 fails on `cancelled` (`redline/changes/suite-job/specs/ci/delta.md:26-27`), and P13 gives the `note` job's whole condition (`redline/changes/suite-job/specs/ci/delta.md:76`).
 
-## F3 [open]: S4's last clause forbids the `redline ci push` step the change keeps
-S4 ends with "no step of either job runs `pip install -e .` or `redline` outside those named here" (`redline/changes/suite-job/specs/ci/delta.md:40`). The steps S4 names are:
-- the `suite` job's six (`redline/changes/suite-job/specs/ci/delta.md:37`);
-- the `redline` job's editable install (`redline/changes/suite-job/specs/ci/delta.md:38`);
-- the `redline` job's five steps that run on a pull request (`redline/changes/suite-job/specs/ci/delta.md:39`).
-The `redline` job's push step runs `redline ci push` (`.github/workflows/redline.yml:62-66`). The proposal keeps that step unchanged (`redline/changes/suite-job/proposal.md:51-52`), but S4 doesn't name it. A test that reads the clause as written would fail on the workflow G2 must write. Name the push step, with its `if: github.event_name == 'push'`, among the steps that may run `redline`, or say which steps the clause covers.
+## F3 [closed]: S4's last clause forbids the `redline ci push` step the change keeps
+Resolution: S4's last clause now names the push step, with its `if`, as the one other step that runs `redline` (`redline/changes/suite-job/specs/ci/delta.md:48`).
 
-## F4 [open]: no premise states the claim S1's "none of the PR's code" rests on: only check-break and the suite run the repository's code
-S1 has `ci pr --suite-result success` load no `conftest.py` (`redline/changes/suite-job/specs/ci/delta.md:12-17`). The proposal's case is that, without check-break and the suite, `ci pr` runs none of the PR's code (`redline/changes/suite-job/proposal.md:23-26`). No premise says so. The claim holds today:
-- The processes Redline starts are a runner's tests (`src/redline/runner.py:216`), called by the suite (`src/redline/ci.py:81`) and by check-break's unmutated run (`src/redline/breaks.py:206`).
-- The others are mutmut and Stryker (`src/redline/breaks.py:118`, `src/redline/breaks.py:146`), git (`src/redline/order.py:36`, `src/redline/order.py:50`) and `gh` (`src/redline/pr.py:63`).
-- `src/redline/merged.py:31` belongs to `merged`, not to a gate.
-- Every YAML read is `safe_load` (for example `src/redline/config.py:37`, `src/redline/lock.py:45`), and `reach` reads tests with `ast` (`src/redline/reach.py:5`).
-State the claim as a premise, with those citations.
-S3 rests on two more claims that no premise cites:
-- The step is worked out from the trailers of `main..HEAD`, and two steps are refused (`src/redline/ci.py:87-99`), which is printed as `refused:` with exit 1 (`src/redline/cli.py:459-461`).
-- `--python` reaches the suite and check-break's unmutated run through `interpreter` and `pytest_command` (`src/redline/runner.py:183-198`).
+## F4 [closed]: no premise states the claim S1's "none of the PR's code" rests on: only check-break and the suite run the repository's code
+Resolution: P4 to P7 state which processes the gates start and that they read the PR's files as data (`redline/changes/suite-job/specs/ci/delta.md:67-70`). P9 and P10 state the two claims S3 rests on (`redline/changes/suite-job/specs/ci/delta.md:72-73`). Each holds at its citation.
 
-## F5 [open]: nothing holds the proposal's "the gate reads only the result": the suite job's outputs, which the PR's code can write, could reach the gate
-The proposal says the gate reads only the suite job's result (`redline/changes/suite-job/proposal.md:56`), and §7 says the gate "reads whether the job succeeded, not why" (`docs/design.md:1370-1371`). The PR's code runs in `suite` and can write to its steps' `$GITHUB_OUTPUT`. Suppose the job declared an output from one of those steps, and the `redline` job read it, as `note` reads `redline`'s output today (`.github/workflows/redline.yml:27-28`, `.github/workflows/redline.yml:92`). The PR's text would then reach the gate's step.
-S4 doesn't check for this:
-- It says the gate's `env` holds `SUITE` and `GH_TOKEN` (`redline/changes/suite-job/specs/ci/delta.md:39`), not those two alone.
-- It says nothing of the `suite` job's `outputs`, of the `redline` job's own `env`, or of any other read of `needs.suite`.
-Add a THEN with three parts: the `suite` job has no `outputs`; `needs.suite.result` is the only part of `needs.suite` the workflow reads; and the gate's `env` holds `SUITE` and `GH_TOKEN` alone.
+## F5 [closed]: nothing holds the proposal's "the gate reads only the result": the suite job's outputs, which the PR's code can write, could reach the gate
+Resolution: S4 now says the `suite` job has no `outputs` (`redline/changes/suite-job/specs/ci/delta.md:44`), that the gate's `env` is `SUITE` and `GH_TOKEN` alone (`redline/changes/suite-job/specs/ci/delta.md:46`), and that `needs.suite.result` is the one read of `needs.suite` (`redline/changes/suite-job/specs/ci/delta.md:47`).
 
-## F6 [open]: four clauses pass without the behaviour they name, either on today's code or with a test that can't see it
-- **S1's conftest clause.** "The `conftest.py`'s file isn't written" (`redline/changes/suite-job/specs/ci/delta.md:17`) is S1's point. It holds today, because argparse refuses the unknown option before anything runs (`src/redline/cli.py:103-111`). It also holds after G1 with a `conftest.py` that never writes. So the red proves nothing about it. Give it a control: on the same PRs, `redline ci pr --base main` without the option writes the file, since check-break's unmutated run and the suite both load it (`src/redline/breaks.py:206`, `src/redline/ci.py:81`).
-- **S2's last clause.** It holds today (`redline/changes/suite-job/specs/ci/delta.md:24`): argparse exits 2 on an option `ci` doesn't have and on the event `suite` (`src/redline/cli.py:104`). Name the refusal's text, as `src/redline/cli.py:446` does for `--python`, so the clause fails today. §7 also says `ci suite` takes `--base` and `--python` alone (`docs/design.md:1350-1351`), and no clause holds that.
-- **S3's "alone".** "On a PR outside any step whose tests pass, it runs the suite alone" (`redline/changes/suite-job/specs/ci/delta.md:31`) can't detect "alone" on a PR that passes every gate: a `ci suite` that ran every gate would pass it. Give that PR a failing gate, for example more than 400 changed lines, and keep exit 0.
-- **S3's check-break at R.** S3 has `ci suite` run check-break at an R step (`redline/changes/suite-job/specs/ci/delta.md:27-29`) and never tests another step. A `ci suite` that ran it at every step passes S3. At an S step, where a `hold` scenario has no test yet, that would fail every such PR's suite job (`src/redline/breaks.py:243-246`). Add a step other than R, with no `check-break:` line.
+## F6 [closed]: four clauses pass without the behaviour they name, either on today's code or with a test that can't see it
+Resolution: S1 has its control without the option (`redline/changes/suite-job/specs/ci/delta.md:21`), and S2 names the text of both refusals (`redline/changes/suite-job/specs/ci/delta.md:29`). S3 has a G1 step with no `check-break:` line, and a PR outside any step, over 400 lines, that exits 0 (`redline/changes/suite-job/specs/ci/delta.md:37-38`).
 
-## F7 [open]: "loses nothing" is false for two of check-break's refusals, which run no test
-The proposal (`redline/changes/suite-job/proposal.md:41-42`) and §7 (`docs/design.md:1345-1346`) say that moving check-break out of the gate's job loses nothing, since a `conftest.py` can turn any test's outcome. Two of its refusals don't come from a test's outcome:
-- a `hold` scenario that no test links without `new=True` (`src/redline/breaks.py:245-246`);
-- premises that cite no file to mutate (`src/redline/breaks.py:236-237`).
-No other gate of an R step refuses either one. check-links counts a `new=True` marker as a link (`src/redline/links.py:140-141`), and the lock takes only markers without it (`src/redline/breaks.py:194`, `src/redline/lock.py:90-95`). Under `--suite-result`, both refusals move into the suite job, whose result the PR's code decides, so the PR's code can get an R PR past them. After the merge, only the push run's check-break (`src/redline/ci.py:138-142`) and check-close at C still refuse them.
-There are two ways to resolve this:
-- Keep those two checks in `ci pr --suite-result` at R, with a THEN. Add `src/redline/breaks.py` to G1's `Track:` (`redline/changes/suite-job/steps.md:10`) if it must change.
-- Or say in the proposal and §7 that they move, and that the push run's break and check-close still refuse them.
+## F7 [closed]: "loses nothing" is false for two of check-break's refusals, which run no test
+Resolution: S5 keeps both refusals in `ci pr --suite-result` at R (`redline/changes/suite-job/specs/ci/delta.md:50-54`). The proposal and §7 say they stay (`redline/changes/suite-job/proposal.md:25-27`, `specs/07-trust-model.md:74-77`), and G1's Track has `src/redline/breaks.py` (`redline/changes/suite-job/steps.md:10`). F11 covers how one of the two is reached today.
 
-## F8 [open]: §5 and §7 still put the PR's install and suite in the `redline` job, against S4
-S4 has the `redline` job, on a pull request, install only the merge-base's Redline and run `ci pr --suite-result` (`redline/changes/suite-job/specs/ci/delta.md:38-39`). The `suite` job runs both installs and the suite (`redline/changes/suite-job/specs/ci/delta.md:37`). The design text still says otherwise in four places:
-- §7 says the `redline` job runs the pip lines twice, the gate's and then the PR's own (`docs/design.md:1614-1615`).
-- §7 says the pin test has only `redline` run the gate's three lines first (`docs/design.md:1629-1630`).
-- §7 says the installed-pins test runs with the suite in the `redline` and `windows` jobs (`docs/design.md:1637-1638`).
-- §5 says the `redline` job runs check-order with the suite (`docs/design.md:992-994`).
-The R and G sessions read §7 beside the delta, which is how install-workflow's D5 arose (`redline/changes/install-workflow/defects.md:37-44`). Bring these lines in line with S4, or give G2 an open item that names each one.
+## F8 [closed]: §5 and §7 still put the PR's install and suite in the `redline` job, against S4
+Resolution: §7 now has `suite` run the PR's pip lines on a PR (`specs/07-trust-model.md:345-347`), the pin test expect the gate's lines in both `redline` and `suite` (`specs/07-trust-model.md:361-362`), and the installed-pins test run in `suite` on a PR (`specs/07-trust-model.md:369-370`). §5 has `suite` run check-order on a PR (`specs/05-steps.md:180-181`).
 
-## F9 [open]: three wordings say less than meant, or something else
-- **S1's GIVEN contradicts itself.** S1's R-step PR "passes every gate but holds a `hold` scenario whose test fails unmutated" (`redline/changes/suite-job/specs/ci/delta.md:13`). But check-break is one of an R step's gates (`src/redline/pr.py:229-230`), and it fails that scenario (`src/redline/breaks.py:247-248`). Say "every gate but check-break".
-- **INSTALL.WF.S1 doesn't say which editable install.** It compares each install step's keys with "Redline's own editable install" (`redline/changes/suite-job/specs/install/delta.md:21`). After G2, Redline's own workflow has one editable install in `redline` and one in `suite` (`redline/changes/suite-job/specs/ci/delta.md:37-38`), and the test's helper takes the `redline` job's (`tests/test_install_workflow.py:70-72`). Say "the same job's".
-- **The install delta's P3 cites the wrong range.** It cites `tests/test_install_workflow.py:86-95` for `core` taking out the PR gate's `run`. Line 86 is blank, and the `run` is taken out at `tests/test_install_workflow.py:96`, outside the range. Cite `tests/test_install_workflow.py:87-97`.
+## F9 [closed]: three wordings say less than meant, or something else
+Resolution: S1's GIVEN says "every gate but check-break" (`redline/changes/suite-job/specs/ci/delta.md:16`), INSTALL.WF.S1 says "in the same job" (`redline/changes/suite-job/specs/install/delta.md:21`), and the install delta's P3 cites `tests/test_install_workflow.py:87-97` (`redline/changes/suite-job/specs/install/delta.md:36`).
+
+## F10 [open]: the merge-base's install runs `python -m venv` in the PR's checkout, so the PR's code still runs in the `redline` job
+- **Where it runs.** The step runs `python -m venv "$RUNNER_TEMP/gate"` (`.github/workflows/redline.yml:47`) before its `cd "$RUNNER_TEMP/base"` (`.github/workflows/redline.yml:48`). It sets no `working-directory`, so its directory is the checkout of the PR's head (`.github/workflows/redline.yml:30-34`).
+- **What that lets a PR do.** `python -m` puts the working directory first on `sys.path`. A PR that adds a `venv.py` at its root therefore runs its own module in place of the standard library's. That happens in the gate's job, before the gate is installed. The module can build the venv and leave a `.pth` file in its site-packages. The three pip lines after it don't remove that file (`.github/workflows/redline.yml:49-51`), so every Python process the venv starts runs it, the gate step's `"$RUNNER_TEMP/gate/bin/redline"` included.
+- **Nothing else stops it.** The PR needs to touch nothing CODEOWNERS guards, which is only `.github/` and `redline/config.yaml` (`specs/07-trust-model.md:557-560`). `tests/test_ci.py:235-239` pins `python -m venv` before the `cd`.
+- **What S4 holds.** S4 keeps this step among the `redline` job's PR steps (`redline/changes/suite-job/specs/ci/delta.md:46`), and none of S4's THENs fails on it.
+- **Claims this makes false,** today and after G2:
+  - the requirement's "the gate's job runs none of it" (`redline/changes/suite-job/specs/ci/delta.md:3`);
+  - the proposal's "no process of the PR's code runs" (`redline/changes/suite-job/proposal.md:25-26`);
+  - §7's "no code of the PR's has run yet" (`specs/07-trust-model.md:38-39`);
+  - the step's own name (`.github/workflows/redline.yml:43`);
+  - O-SELF3's closure (`specs/12-open-problems.md:165-166`).
+- **What to add.**
+  - No premise says where this step's Python runs; add one that cites `.github/workflows/redline.yml:46-48`.
+  - Give S4 a THEN that the merge-base's install runs Python only after its `cd` out of the checkout, or only with `-I`, so that no `python -m` or `python -c` in the `redline` job's PR steps runs in the PR's checkout.
+  - Say which step changes `tests/test_ci.py:235-239`.
+
+## F11 [open]: P8 is wrong about "nothing to mutate": today that refusal comes only after the scenario's tests ran unmutated and passed
+- **The order today.**
+  - `check_break` reaches `mutate`, which holds the refusal (`src/redline/breaks.py:236-237`), only in its `else` (`src/redline/breaks.py:249-250`).
+  - That `else` runs only after `unmutated` has run each runner's tests for the scenario (`src/redline/breaks.py:247`, `src/redline/breaks.py:209-213`, `src/redline/breaks.py:205-206`).
+  - So a scenario whose tests fail unmutated never gets this refusal, and one that gets it ran its tests first.
+  - Only "no test links it" (`src/redline/breaks.py:245-246`) is decided before any test runs.
+- **What G1 must do.** S5 asks for the refusal in `ci pr --suite-result` with no test run (`redline/changes/suite-job/specs/ci/delta.md:53-54`). G1 must therefore decide it from the premises' files alone (`src/redline/breaks.py:199-202`, `src/redline/breaks.py:221-223`), before the unmutated run or without it. P8 (`redline/changes/suite-job/specs/ci/delta.md:71`) and the proposal's "stay" (`redline/changes/suite-job/proposal.md:25-27`) read as though the code already worked that way.
+- **What to add.**
+  - Restate P8 with the order as it is.
+  - Say what each command prints for a scenario whose tests fail unmutated and whose premises cite nothing to mutate. `ci pr --suite-result` would print "nothing to mutate". `ci suite`, if its check-break keeps today's order, would print that the tests fail on unmutated code.
+
+## F12 [open]: four of today's tests pin the workflow S4 replaces, and no step says which one changes them
+None of these tests has a spec marker or a lock entry (`redline/contracts/lock.yaml:1-5`), and each fails on the workflow G2 must write:
+- `tests/test_pins.py:68` counts four `python-version` and `node-version` values; `suite`'s setup-python makes five.
+- `tests/test_pins.py:73` counts four jobs.
+- `tests/test_pins.py:80-81` expects pip lines in `redline`, `runners` and `windows` alone, but `suite` runs the gate's three lines and the editable install's three. §7 already says the test expects `suite` (`specs/07-trust-model.md:361-362`).
+- `tests/test_ci.py:242-243` expects the gate's `run` to end in `--python "$(command -v python)"`.
+
+check-track exempts every test file (`src/redline/track.py:20`, `src/redline/track.py:32-35`). G2 could therefore rewrite these tests, the pin test among them, with no scenario behind the edit. Either link them to S4 at R, or give G2 an open item that names each test and what it will expect.
+
+## F13 [open]: G1's and G2's Track lines, and O3, name `docs/design.md`, which the split removed
+- **The stale entries.** `redline/changes/suite-job/steps.md:10` and `redline/changes/suite-job/steps.md:14` list `docs/design.md`. O3 closes O-CI10 "in docs/design.md §12" (`redline/changes/suite-job/steps.md:21`).
+- **No such file.** There is no `docs/` now: §7 is `specs/07-trust-model.md` and §12 is `specs/12-open-problems.md` (`specs/README.md:7-9`).
+- **What check-track does.**
+  - check-track reads each track at the merge-base (`src/redline/track.py:24-27`).
+  - A glob with a slash matches only that path (`src/redline/lines.py:25-27`).
+  - `redline/config.yaml:5-8` exempts no `.md` file.
+  - So a design-text edit at G1 or G2 is outside its track, and needs a `Redline-Track` claim and its label (`src/redline/track.py:38-43`).
+- **What to change.** Name the `specs/` files each step may edit, or drop the entry, and point O3 at `specs/12-open-problems.md`.
+
+## F14 [open]: two wordings say less than meant
+- **`ci push --python`.** The refusal says `--python is for ci pr only` (`src/redline/cli.py:446`), and P11 cites it (`redline/changes/suite-job/specs/ci/delta.md:74`). Once `ci suite` takes `--python` (`redline/changes/suite-job/proposal.md:19`), that text is wrong, and `tests/test_ci.py:97` asserts it whole. Say what `ci push --python` prints after G1, as S2 does for `--suite-result`.
+- **S1's R-step change.** S1's GIVEN doesn't say that the change's premises cite a file its `hold` test's runner mutates (`redline/changes/suite-job/specs/ci/delta.md:16`). Without such a file, S5's refusal fails that PR (`redline/changes/suite-job/specs/ci/delta.md:53`), and S1's exit 0 can't hold (`redline/changes/suite-job/specs/ci/delta.md:19`). Say so in the GIVEN.
