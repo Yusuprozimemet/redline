@@ -6,7 +6,7 @@ a commit where it was red (`new=True`) among its ancestors. With `since`, only t
 at `rev` links any more, or a `hold` one (O-SELF5).
 Markers are read as each runner reads them (redline.runner), once per blob; a file that doesn't
 parse at a commit gives none there, and is noted. History is read in a fixed number of git calls,
-each commit's files being its first parent's with its diff applied (O-PERF1). See docs/design.md, §5.
+each commit's files being its first parent's with its diff applied (O-PERF1). See specs/, §5.
 """
 
 import subprocess

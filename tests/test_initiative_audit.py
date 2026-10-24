@@ -1,4 +1,4 @@
-"""End-of-initiative audits of a critical initiative, once its last phase is complete. See docs/design.md §4, §6, §9."""
+"""End-of-initiative audits of a critical initiative, once its last phase is complete. See specs/ §4, §6, §9."""
 
 import re
 from pathlib import Path

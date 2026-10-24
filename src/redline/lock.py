@@ -8,7 +8,7 @@ is missing, a hold test isn't locked, or a critical entry has no `reach`; a clos
 `check_frozen`, at every step, compares the whole lock by test with the lock at the merge-base: a test frozen
 there whose hashes changed or that left the lock (and, with a base, the G steps, an entry of the change added since)
 needs a `Redline-Departure: <test> approved-by @person: <reason>` trailer in base..HEAD naming the test and the
-label of the person it names, a maintainer (approval.py). See docs/design.md, §4, §5 and §7.
+label of the person it names, a maintainer (approval.py). See specs/, §4, §5 and §7.
 """
 
 from dataclasses import dataclass, field

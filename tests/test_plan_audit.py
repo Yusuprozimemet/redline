@@ -1,4 +1,4 @@
-"""Plan audits at each phase's start and end of a critical initiative. See docs/design.md §4, §6, §9."""
+"""Plan audits at each phase's start and end of a critical initiative. See specs/ §4, §6, §9."""
 
 import re
 from pathlib import Path

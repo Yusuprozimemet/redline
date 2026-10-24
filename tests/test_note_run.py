@@ -1,4 +1,4 @@
-"""A CI note is checked against its run on GitHub (docs/design.md, section 4): the change note-run.
+"""A CI note is checked against its run on GitHub (specs/, section 4): the change note-run.
 
 Each note names a run through FakeActions (conftest.py), which answers only the runs a test registers.
 A forged note, a crafted event, branch, workflow or job, a missing field, any other note's run, a

@@ -1,6 +1,6 @@
 """What a frozen test reaches (fixtures, same-file helpers, marks, pytest settings, and names
 imported from the support files `support:` in redline/config.yaml names), which the critical
-contract lock hashes as its `reach`. Other imports aren't followed. See docs/design.md, §4."""
+contract lock hashes as its `reach`. Other imports aren't followed. See specs/, §4."""
 
 import ast
 import configparser

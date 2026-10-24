@@ -1,4 +1,4 @@
-"""The Mutator seam: one mutation tool per runner, and Stryker's counts, with its run faked. See docs/design.md, §5."""
+"""The Mutator seam: one mutation tool per runner, and Stryker's counts, with its run faked. See specs/, §5."""
 
 import json
 import subprocess

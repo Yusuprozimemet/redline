@@ -1,4 +1,4 @@
-"""Audit rounds (docs/design.md §9, Rounds; O-AUDIT2): `redline audit-brief` numbers each round, refuses past the
+"""Audit rounds (specs/ §9, Rounds; O-AUDIT2): `redline audit-brief` numbers each round, refuses past the
 change's level, and gives a re-round only what changed since the commit the last one read; check-audit reads it."""
 
 import pytest

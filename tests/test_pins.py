@@ -1,5 +1,5 @@
 """What CI runs is pinned: actions by commit, Python, Node and the runner images by version, every package pip installs by
-version and hash (docs/design.md, section 7)."""
+version and hash (specs/, section 7)."""
 import os
 import re
 import tomllib

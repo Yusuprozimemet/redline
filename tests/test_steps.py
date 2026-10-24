@@ -1,4 +1,4 @@
-"""`redline check-steps`: the form of a change's steps.md, against its own deltas. See docs/design.md §4."""
+"""`redline check-steps`: the form of a change's steps.md, against its own deltas. See specs/ §4."""
 
 import pytest
 

@@ -1,4 +1,4 @@
-"""The README kept in step with the CLI and the approvals (docs/design.md, §7 and O-DOC1).
+"""The README kept in step with the CLI and the approvals (specs/, §7 and O-DOC1).
 
 The README restates no progress, so nothing in it goes stale as steps merge. What it does state, the
 commands and the labels a repository needs, comes from the code, and these tests fail when the two part.
@@ -45,7 +45,7 @@ def test_every_command_the_readme_names_exists(capsys):
 
 
 def settings() -> str:
-    design = (ROOT / "docs" / "design.md").read_text(encoding="utf-8")
+    design = (ROOT / "specs" / "07-trust-model.md").read_text(encoding="utf-8")
     return design.split("\n### Repository settings\n", 1)[1].split("\n## ", 1)[0]
 
 

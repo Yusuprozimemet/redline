@@ -1,4 +1,4 @@
-"""`redline claims <initiative>`: the claims main's history holds, for the process auditor. See docs/design.md §4, §7, §9."""
+"""`redline claims <initiative>`: the claims main's history holds, for the process auditor. See specs/ §4, §7, §9."""
 
 from pathlib import Path
 

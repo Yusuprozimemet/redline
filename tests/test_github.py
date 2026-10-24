@@ -1,4 +1,4 @@
-"""The real `gh api` calls the `GitHub` seam makes, on this repository's own merged PR (docs/design.md, §7).
+"""The real `gh api` calls the `GitHub` seam makes, on this repository's own merged PR (specs/, §7).
 
 The suite reads GitHub through fakes and canned answers; these read GitHub itself, so a renamed field, a jq
 path that selects nothing, a ref the activity API reads another way or a time `moment` can't parse fails here.

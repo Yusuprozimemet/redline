@@ -1,4 +1,4 @@
-"""Text is UTF-8 on every platform (docs/design.md §7, O-ENC1, O-ENC2). The first three fail only
+"""Text is UTF-8 on every platform (specs/ §7, O-ENC1, O-ENC2). The first three fail only
 where Python's own encoding isn't UTF-8, as on Windows; the `windows` CI job runs them there."""
 import os
 import subprocess

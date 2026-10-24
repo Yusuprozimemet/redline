@@ -1,6 +1,6 @@
 """mutmut behind the Mutator seam: Redline's settings alone, `[tool.mutmut]` taken out of the copy, and the
 scenario's tests copied; first with mutmut's run faked, then on the real mutmut, which runs only on Linux and
-only with REDLINE_REAL_RUNNERS=1, as the runners CI job sets. See docs/design.md, §5."""
+only with REDLINE_REAL_RUNNERS=1, as the runners CI job sets. See specs/, §5."""
 
 import configparser
 import os

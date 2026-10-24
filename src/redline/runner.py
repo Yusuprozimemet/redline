@@ -1,4 +1,4 @@
-"""Runners: the test framework a test file belongs to, chosen by its extension. See docs/design.md, §5.
+"""Runners: the test framework a test file belongs to, chosen by its extension. See specs/, §5.
 
 Each knows its test files, where each of its tests starts and ends, and the spec markers on each (the
 scenario ID, and whether it is `new`): pytest's from Python's own parser, a marker counting only as a

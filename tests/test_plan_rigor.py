@@ -1,4 +1,4 @@
-"""A plan's own level, and a change's, changed (a change's lowered) only under the rigor claim. See docs/design.md §4, §7."""
+"""A plan's own level, and a change's, changed (a change's lowered) only under the rigor claim. See specs/ §4, §7."""
 
 import pytest
 
