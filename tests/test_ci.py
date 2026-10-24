@@ -234,8 +234,8 @@ def test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs
     assert steps[install]["if"] == "github.event_name == 'pull_request'"
     assert [line.strip() for line in runs[install].splitlines()][:3] == [
         'git worktree add --detach "$RUNNER_TEMP/base" "$(git merge-base main HEAD)"',
+        "cd \"$RUNNER_TEMP/base\"  # first: python -m puts its directory, the PR's checkout, on sys.path",
         'python -m venv "$RUNNER_TEMP/gate"',
-        'cd "$RUNNER_TEMP/base"',
     ]
     pr = [step for job in flow["jobs"].values() for step in job["steps"] if "ci pr" in step.get("run", "")]
     assert len(pr) == 1 and pr[0]["if"] == "github.event_name == 'pull_request'"
