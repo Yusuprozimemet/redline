@@ -24,7 +24,7 @@ URL = "https://github.com/Yusuprozimemet/redline"
 COMMIT = "dea7b6981106798b773ae799e71a404488e5b33d"
 # what pip wrote on 2026-10-23 for `pip install --no-deps "redline @ git+<URL>@dea7b69"` (proposal.md)
 GIT = {"url": URL, "vcs_info": {"commit_id": COMMIT, "requested_revision": "dea7b69", "vcs": "git"}}
-GATE = 'redline ci pr --base main --pr ${{ github.event.pull_request.number }} --suite-result "$SUITE"'
+GATE = '"$RUNNER_TEMP/gate/bin/redline" ci pr --base main --pr ${{ github.event.pull_request.number }} --suite-result "$SUITE"'
 HELPER = "redline/runners/jest.js"
 
 
@@ -59,7 +59,7 @@ def install(repo, capsys, runner: str = "workflow") -> tuple[int, str]:
     return code, out.out + out.err
 
 
-SUITE = "redline ci suite --base main"
+SUITE = '"$RUNNER_TEMP/gate/bin/redline" ci suite --base main --python "$(command -v python)"'
 JOBS = ("suite", "redline")  # the jobs with an install step, in the template's order
 
 
@@ -77,7 +77,7 @@ def own_install(job: str = "redline") -> dict:
 
 
 def pip_lines(step: dict) -> list[str]:
-    return [line.strip() for line in step["run"].splitlines() if line.strip().startswith("python -m pip")]
+    return [line.strip().replace('"$RUNNER_TEMP/gate/bin/python"', 'python') for line in step["run"].splitlines() if "-m pip" in line]
 
 
 def written(repo, capsys) -> dict:
@@ -95,9 +95,9 @@ def core(workflow: dict) -> dict:
         workflow["jobs"].pop(job, None)
     for job in JOBS:
         steps = workflow["jobs"].get(job, {}).get("steps", [])
-        steps[:] = [step for step in steps if not runs(step, "git worktree add", "pip install")]
+        steps[:] = [step for step in steps if not runs(step, "git worktree add", "pip install") and step.get("uses") != "./.github/actions/redline-project"]
         for step in steps:
-            if runs(step, "ci pr", "ci suite"):
+            if runs(step, "ci pr", "ci suite", "ci push"):
                 del step["run"]
     return workflow
 
@@ -112,7 +112,7 @@ def test_the_workflow_installs_the_commit_redline_was_installed_from(repo, capsy
     raw = text.splitlines()
     indent = next(len(line) - len(line.lstrip()) for line in raw if line.lstrip().startswith("- uses: actions/checkout"))
     pips = [line.replace(" -e .", " .") for line in pip_lines(own_install())]
-    ends = [i for i, line in enumerate(raw) if line.strip() == pips[-1]]
+    ends = [i for i, line in enumerate(raw) if line.strip().replace('"$RUNNER_TEMP/gate/bin/python"', 'python') == pips[-1]]
     assert len(pips) == 3 and len(ends) == len(JOBS), ends
     for job, end in zip(JOBS, ends):  # the template's jobs are in JOBS' order
         steps = yaml.safe_load(text)["jobs"][job]["steps"]
@@ -120,7 +120,7 @@ def test_the_workflow_installs_the_commit_redline_was_installed_from(repo, capsy
         step, lines = steps[at], [line.strip() for line in steps[at]["run"].splitlines()]
         clone = next(i for i, line in enumerate(lines) if line.startswith("git clone") and URL in line and "$RUNNER_TEMP" in line)
         checkout = next(i for i, line in enumerate(lines) if "checkout" in line and COMMIT in line)
-        assert pip_lines(step) == pips and clone < checkout < lines.index(pips[0]), job
+        assert pip_lines(step) == pips and clone < checkout < next(i for i, line in enumerate(lines) if "-m pip" in line), job
         if job == "redline":
             assert "if" not in step
         assert {k: v for k, v in step.items() if k not in ("name", "run", "if")} == {

@@ -48,10 +48,13 @@ the tests import.
    `model: opus` then), refuse any weaker model, and name the model they ran on in their reply.
 3. **CI**: `redline install workflow` writes `.github/workflows/redline.yml`, which installs the
    commit Redline was installed from, by hash, and refuses if Redline wasn't installed from a git
-   commit or the file exists. Add the project's own dependencies (Node and `npm ci` for Jest, say)
-   where its two comments say, after Redline's install in each of the `suite` and `redline` jobs:
-   in `suite` as they are, and in `redline` in steps with `if: github.event_name == 'push'`, so on
-   a PR the gate's job runs none of the PR's code. The workflow checks out the full history with
+   commit or the file exists. Edit the project's dependency steps once in
+   `.github/actions/redline-project/action.yml`, the composite action the installer creates
+   (an existing action is preserved). Both jobs call it: `suite` on PRs and `redline` on pushes
+   alone. The starter installs the pinned Redline for pytest in the project environment;
+   add Node and `npm ci` there for Jest, for example. The gate installs in a venv of its own;
+   `ci suite` and `ci push` select the project's Python with `--python`.
+   The workflow checks out the full history with
    `main` and `refs/notes/*`. On each PR (and on `labeled` and `unlabeled`) the `suite` job runs
    `redline ci suite --base main`, the PR's check-break and suite, and the `redline` job, which
    `needs: suite` and runs `if: always()`, runs `redline ci pr --base main --pr <number>

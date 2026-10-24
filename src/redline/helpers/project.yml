@@ -1,0 +1,15 @@
+# Edit the project's dependency steps here once; suite and push both call this action.
+name: Redline project dependencies
+description: Install the test environment, apart from the gate's venv
+runs:
+  using: composite
+  steps:
+    - name: Install the pinned Redline for pytest's plugin in the project environment
+      shell: bash
+      run: |
+        cd "$RUNNER_TEMP/redline"
+        python -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
+        python -m pip install --require-hashes --force-reinstall -r requirements.txt
+        python -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index .
+    # Add project dependency steps here, e.g. setup-node then npm ci for Jest.
+    # Give every run step its shell: bash (required by composite actions).

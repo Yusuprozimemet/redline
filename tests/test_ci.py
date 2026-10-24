@@ -90,11 +90,11 @@ def test_a_pr_run_with_python_runs_the_suite_with_that_interpreter(change, capsy
     assert code == 0, out
 
 
-def test_python_must_be_a_file_and_is_for_a_pr_only(change, capsys, tmp_path, remote):
+def test_python_must_be_a_file_for_pr_and_push(change, capsys, tmp_path, remote):
     code, out = ci(change, capsys, "pr", "--base", "main", "--python", str(tmp_path / "nowhere"))
     assert (code, out) == (2, f"redline: --python {tmp_path / 'nowhere'} isn't a file\n")
-    code, out = ci(change, capsys, "push", "--run-url", RUN, "--python", fake_python(tmp_path))
-    assert code == 2 and "--python is for ci pr" in out  # CI.APART.S2 gives the whole message
+    code, out = ci(change, capsys, "push", "--run-url", RUN, "--python", str(tmp_path / "nowhere"))
+    assert code == 2 and "isn't a file" in out  # CI.APART.S2 gives the whole message
     assert remote.pushed == []
 
 

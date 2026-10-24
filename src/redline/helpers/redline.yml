@@ -41,12 +41,14 @@ jobs:
           git clone --no-checkout {url} "$RUNNER_TEMP/redline"
           cd "$RUNNER_TEMP/redline"
           git checkout --detach {commit}
-          python -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
-          python -m pip install --require-hashes --force-reinstall -r requirements.txt
-          python -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index .
-      # the project's own dependencies install here, in steps of their own (Node and `npm ci` for Jest, say)
+          python -m venv "$RUNNER_TEMP/gate"
+          "$RUNNER_TEMP/gate/bin/python" -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
+          "$RUNNER_TEMP/gate/bin/python" -m pip install --require-hashes --force-reinstall -r requirements.txt
+          "$RUNNER_TEMP/gate/bin/python" -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index .
+      # the project's dependencies are defined once in this local composite action
+      - uses: ./.github/actions/redline-project
       - name: Check-break at an R step, then the suite, for the PR's step
-        run: redline ci suite --base main  # Redline and the project share this environment
+        run: '"$RUNNER_TEMP/gate/bin/redline" ci suite --base main --python "$(command -v python)"'
 
   redline:  # on a PR, the gates on the suite job's result and none of the PR's code; on a push, main's suite
     needs: suite
@@ -78,19 +80,24 @@ jobs:
           git clone --no-checkout {url} "$RUNNER_TEMP/redline"
           cd "$RUNNER_TEMP/redline"
           git checkout --detach {commit}
-          python -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
-          python -m pip install --require-hashes --force-reinstall -r requirements.txt
-          python -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index .
-      # the project's own dependencies install here too, for a push's suite, in steps with if: github.event_name == 'push'
+          python -m venv "$RUNNER_TEMP/gate"
+          "$RUNNER_TEMP/gate/bin/python" -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
+          "$RUNNER_TEMP/gate/bin/python" -m pip install --require-hashes --force-reinstall -r requirements.txt
+          "$RUNNER_TEMP/gate/bin/python" -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index .
+      # project code runs here only with if: github.event_name == 'push'
+      - uses: ./.github/actions/redline-project
+        if: github.event_name == 'push'
       - name: Gates and ledger for the PR's step on the suite job's result, or the gates for a PR outside any step
         if: github.event_name == 'pull_request'
-        run: redline ci pr --base main --pr ${{ github.event.pull_request.number }} --suite-result "$SUITE"
+        run: |
+          "$RUNNER_TEMP/gate/bin/redline" ci pr --base main --pr ${{ github.event.pull_request.number }} --suite-result "$SUITE"
         env:
           SUITE: ${{ needs.suite.result }}  # through env, as the job's result is all that reaches the gate
           GH_TOKEN: ${{ github.token }}
       - name: Run the suite and write the note for the merged commit
         if: github.event_name == 'push'
-        run: redline ci push --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --note "$RUNNER_TEMP/note"
+        run: |
+          "$RUNNER_TEMP/gate/bin/redline" ci push --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --note "$RUNNER_TEMP/note" --python "$(command -v python)"
         env:
           GH_TOKEN: ${{ github.token }}  # the merged PR's claim labels, recorded in the note
       - name: Hand the note on, a failed run's too

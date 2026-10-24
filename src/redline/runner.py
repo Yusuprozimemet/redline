@@ -254,6 +254,10 @@ def write_workflow(repo: Path) -> str:
     template = files("redline").joinpath("helpers", "redline.yml").read_text(encoding="utf-8")
     (repo / WORKFLOW).parent.mkdir(parents=True, exist_ok=True)
     (repo / WORKFLOW).write_bytes(template.replace("{url}", shlex.quote(url)).replace("{commit}", commit).encode())
+    action = repo / ".github/actions/redline-project/action.yml"
+    if not action.exists():
+        action.parent.mkdir(parents=True, exist_ok=True)
+        action.write_bytes(files("redline").joinpath("helpers", "project.yml").read_bytes())
     return WORKFLOW
 
 
