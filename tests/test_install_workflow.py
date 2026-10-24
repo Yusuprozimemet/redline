@@ -24,7 +24,7 @@ URL = "https://github.com/Yusuprozimemet/redline"
 COMMIT = "dea7b6981106798b773ae799e71a404488e5b33d"
 # what pip wrote on 2026-10-23 for `pip install --no-deps "redline @ git+<URL>@dea7b69"` (proposal.md)
 GIT = {"url": URL, "vcs_info": {"commit_id": COMMIT, "requested_revision": "dea7b69", "vcs": "git"}}
-GATE = "redline ci pr --base main --pr ${{ github.event.pull_request.number }}"
+GATE = 'redline ci pr --base main --pr ${{ github.event.pull_request.number }} --suite-result "$SUITE"'
 HELPER = "redline/runners/jest.js"
 
 
@@ -59,6 +59,10 @@ def install(repo, capsys, runner: str = "workflow") -> tuple[int, str]:
     return code, out.out + out.err
 
 
+SUITE = "redline ci suite --base main"
+JOBS = ("suite", "redline")  # the jobs with an install step, in the template's order
+
+
 def runs(step: dict, *text: str) -> bool:
     return any(part in step.get("run", "") for part in text)
 
@@ -67,9 +71,9 @@ def own() -> dict:
     return yaml.safe_load(OWN.read_text(encoding="utf-8"))
 
 
-def own_install() -> dict:
-    """Redline's own editable install step."""
-    return next(step for step in own()["jobs"]["redline"]["steps"] if runs(step, "-e ."))
+def own_install(job: str = "redline") -> dict:
+    """Redline's own editable install step in `job`."""
+    return next(step for step in own()["jobs"][job]["steps"] if runs(step, "-e ."))
 
 
 def pip_lines(step: dict) -> list[str]:
@@ -89,55 +93,62 @@ def core(workflow: dict) -> dict:
     workflow = copy.deepcopy(workflow)
     for job in ("runners", "windows"):
         workflow["jobs"].pop(job, None)
-    steps = workflow["jobs"]["redline"]["steps"]
-    steps[:] = [step for step in steps if not runs(step, "git worktree add", "pip install")]
-    for step in steps:
-        if runs(step, "ci pr"):
-            del step["run"]
+    for job in JOBS:
+        steps = workflow["jobs"].get(job, {}).get("steps", [])
+        steps[:] = [step for step in steps if not runs(step, "git worktree add", "pip install")]
+        for step in steps:
+            if runs(step, "ci pr", "ci suite"):
+                del step["run"]
     return workflow
 
 
-@pytest.mark.spec("INSTALL.WF.S1")
+@pytest.mark.spec("INSTALL.WF.S1", new=True)
 def test_the_workflow_installs_the_commit_redline_was_installed_from(repo, capsys, installed):
     repo.commit("start")
     code, out = install(repo, capsys)
     assert code == 0, out
     assert f"ok: wrote {WRITTEN}" in out
     text = (repo.path / WRITTEN).read_text(encoding="utf-8")
-    steps = yaml.safe_load(text)["jobs"]["redline"]["steps"]
-    [at] = [i for i, step in enumerate(steps) if runs(step, "pip install")]
-    step, lines = steps[at], [line.strip() for line in steps[at]["run"].splitlines()]
-    clone = next(i for i, line in enumerate(lines) if line.startswith("git clone") and URL in line and "$RUNNER_TEMP" in line)
-    checkout = next(i for i, line in enumerate(lines) if "checkout" in line and COMMIT in line)
-    pips = [line.replace(" -e .", " .") for line in pip_lines(own_install())]
-    assert len(pips) == 3 and pip_lines(step) == pips
-    assert clone < checkout < lines.index(pips[0])
-    assert "if" not in step
-    assert {k: v for k, v in step.items() if k not in ("name", "run")} == {
-        k: v for k, v in own_install().items() if k not in ("name", "run")}
-    assert steps[:at] == [s for s in own()["jobs"]["redline"]["steps"] if not runs(s, "git worktree add", "pip install")][:at]
-    assert [s.get("uses", s.get("name", "")).split("@")[0] for s in steps[:at]] == [
-        "actions/checkout", "Fetch main and the CI notes", "actions/setup-python"]
     raw = text.splitlines()
-    after = raw[next(i for i, line in enumerate(raw) if line.strip() == pips[-1]) + 1]
     indent = next(len(line) - len(line.lstrip()) for line in raw if line.lstrip().startswith("- uses: actions/checkout"))
-    assert after.lstrip().startswith("#") and len(after) - len(after.lstrip()) == indent, after
-    assert not any(after.strip() in s.get("run", "") for s in steps)
+    pips = [line.replace(" -e .", " .") for line in pip_lines(own_install())]
+    ends = [i for i, line in enumerate(raw) if line.strip() == pips[-1]]
+    assert len(pips) == 3 and len(ends) == len(JOBS), ends
+    for job, end in zip(JOBS, ends):  # the template's jobs are in JOBS' order
+        steps = yaml.safe_load(text)["jobs"][job]["steps"]
+        [at] = [i for i, step in enumerate(steps) if runs(step, "pip install")]
+        step, lines = steps[at], [line.strip() for line in steps[at]["run"].splitlines()]
+        clone = next(i for i, line in enumerate(lines) if line.startswith("git clone") and URL in line and "$RUNNER_TEMP" in line)
+        checkout = next(i for i, line in enumerate(lines) if "checkout" in line and COMMIT in line)
+        assert pip_lines(step) == pips and clone < checkout < lines.index(pips[0]), job
+        if job == "redline":
+            assert "if" not in step
+        assert {k: v for k, v in step.items() if k not in ("name", "run", "if")} == {
+            k: v for k, v in own_install(job).items() if k not in ("name", "run", "if")}, job
+        ours = [s for s in own()["jobs"][job]["steps"] if not runs(s, "git worktree add", "pip install")]
+        assert steps[:at] == ours[:at], job
+        assert [s.get("uses", s.get("name", "")).split("@")[0] for s in steps[:at]] == [
+            "actions/checkout", "Fetch main and the CI notes", "actions/setup-python"], job
+        after = raw[end + 1]
+        assert after.lstrip().startswith("#") and len(after) - len(after.lstrip()) == indent, after
+        assert not any(after.strip() in s.get("run", "") for s in steps)
+        assert ("if: github.event_name == 'push'" in after) is (job == "redline"), after
     assert check_helpers(repo.path) == []
     (repo.path / WRITTEN).write_text(text + " " * indent + "- run: npm ci --no-audit --no-fund\n", encoding="utf-8")
     assert check_helpers(repo.path) == []
 
 
-@pytest.mark.spec("INSTALL.WF.S2")
-def test_the_workflow_is_redlines_own_outside_the_install_and_the_pr_gate(repo, capsys, installed):
+@pytest.mark.spec("INSTALL.WF.S2", new=True)
+def test_the_workflow_is_redlines_own_outside_the_installs_the_pr_gate_and_the_suite(repo, capsys, installed):
     workflow = written(repo, capsys)
     assert core(workflow) == core(own())
-    ours = [step for step in own()["jobs"]["redline"]["steps"] if not runs(step, "git worktree add")]
-    theirs = workflow["jobs"]["redline"]["steps"]
-    assert [i for i, step in enumerate(theirs) if runs(step, "pip install")] == [ours.index(own_install())]
-    [gate] = [step for step in theirs if runs(step, "ci pr")]
-    assert gate["run"].strip() == GATE
-    assert list(workflow["jobs"]) == ["redline", "note"]
+    for job, command, run in (("redline", "ci pr", GATE), ("suite", "ci suite", SUITE)):
+        ours = [step for step in own()["jobs"][job]["steps"] if not runs(step, "git worktree add")]
+        theirs = workflow["jobs"][job]["steps"]
+        assert [i for i, step in enumerate(theirs) if runs(step, "pip install")] == [ours.index(own_install(job))], job
+        [step] = [step for step in theirs if runs(step, command)]
+        assert step["run"].strip() == run
+    assert list(workflow["jobs"]) == ["suite", "redline", "note"]
 
 
 @pytest.mark.parametrize("direct_url", [

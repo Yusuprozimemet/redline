@@ -94,7 +94,7 @@ def test_python_must_be_a_file_and_is_for_a_pr_only(change, capsys, tmp_path, re
     code, out = ci(change, capsys, "pr", "--base", "main", "--python", str(tmp_path / "nowhere"))
     assert (code, out) == (2, f"redline: --python {tmp_path / 'nowhere'} isn't a file\n")
     code, out = ci(change, capsys, "push", "--run-url", RUN, "--python", fake_python(tmp_path))
-    assert (code, out) == (2, "redline: --python is for ci pr only: a push run's suite is the merged code's own\n")
+    assert code == 2 and "--python is for ci pr" in out  # CI.APART.S2 gives the whole message
     assert remote.pushed == []
 
 
@@ -225,24 +225,61 @@ def test_the_workflow_runs_redline_ci_on_prs_and_on_pushes_to_main():
     assert any("redline ci push" in run for run in runs)
 
 
-def test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own():  # O-SELF3
+PR_GATE = ('"$RUNNER_TEMP/gate/bin/redline" ci pr --base main --pr ${{ github.event.pull_request.number }} '
+           '--suite-result "$SUITE"')
+SUITE_STEP = '"$RUNNER_TEMP/gate/bin/redline" ci suite --base main --python "$(command -v python)"'
+PUSH_ONLY = "github.event_name == 'push'"
+
+
+@pytest.mark.spec("CI.APART.S4", new=True)  # O5: takes over the test that pinned the one-job workflow (O-SELF3, PR #81)
+def test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own():
     flow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
-    steps = flow["jobs"]["redline"]["steps"]
-    runs = [step.get("run", "") for step in steps]
-    install = next(i for i, run in enumerate(runs) if "git worktree add" in run)
-    assert install < next(i for i, run in enumerate(runs) if "--no-index -e ." in run)  # before any of the PR's code
-    assert steps[install]["if"] == "github.event_name == 'pull_request'"
-    assert [line.strip() for line in runs[install].splitlines()][:3] == [
-        'git worktree add --detach "$RUNNER_TEMP/base" "$(git merge-base main HEAD)"',
-        "cd \"$RUNNER_TEMP/base\"  # first: python -m puts its directory, the PR's checkout, on sys.path",
-        'python -m venv "$RUNNER_TEMP/gate"',
-    ]
+    for job in ("redline", "suite"):
+        runs = [step.get("run", "") for step in flow["jobs"][job]["steps"]]
+        install = next(i for i, run in enumerate(runs) if "git worktree add" in run)
+        assert install < next(i for i, run in enumerate(runs) if "--no-index -e ." in run)  # before any of the PR's code
+        lines = [line.strip() for line in runs[install].splitlines()][:3]
+        assert lines[0] == 'git worktree add --detach "$RUNNER_TEMP/base" "$(git merge-base main HEAD)"', job
+        assert lines[1].startswith('cd "$RUNNER_TEMP/base"'), job  # first: python -m puts its directory on sys.path
+        assert lines[2] == 'python -m venv "$RUNNER_TEMP/gate"', job
     pr = [step for job in flow["jobs"].values() for step in job["steps"] if "ci pr" in step.get("run", "")]
     assert len(pr) == 1 and pr[0]["if"] == "github.event_name == 'pull_request'"
-    assert pr[0]["run"].strip() == ('"$RUNNER_TEMP/gate/bin/redline" ci pr --base main --pr '
-                                    '${{ github.event.pull_request.number }} --python "$(command -v python)"')
-    push = next(step for step in steps if "ci push" in step.get("run", ""))
+    assert pr[0]["run"].strip() == PR_GATE
+    push = next(step for step in flow["jobs"]["redline"]["steps"] if "ci push" in step.get("run", ""))
     assert push["run"].startswith("redline ci push ")  # the merged code is main's, so it gates itself
+
+
+def named(step: dict) -> str:
+    return step.get("uses", step.get("name", "")).split("@")[0] or step.get("run", "").strip()
+
+
+@pytest.mark.spec("CI.APART.S4", new=True)
+def test_the_workflow_runs_the_prs_code_in_its_suite_job_alone_and_the_gate_reads_only_its_result():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    jobs = yaml.safe_load(text)["jobs"]
+    assert set(jobs) == {"suite", "redline", "note", "runners", "windows"}
+    suite, gate = jobs["suite"], jobs["redline"]
+    assert suite["if"] == "github.event_name == 'pull_request'"
+    assert suite["permissions"] == {"contents": "read"} and "outputs" not in suite
+    assert suite["steps"][:3] == gate["steps"][:3]
+    assert [named(s) for s in suite["steps"][:3]] == ["actions/checkout", "Fetch main and the CI notes", "actions/setup-python"]
+    assert len(suite["steps"]) == 6 and "git worktree add" in suite["steps"][3]["run"]
+    assert "--no-index -e ." in suite["steps"][4]["run"] and suite["steps"][5]["run"].strip() == SUITE_STEP
+    assert (gate["needs"], gate["if"]) == ("suite", "always()")
+    [editable] = [s for s in gate["steps"] if "-e ." in s.get("run", "")]
+    assert editable["if"] == PUSH_ONLY
+    on_pr = [s for s in gate["steps"] if "push" not in s.get("if", "")]
+    assert [named(s) for s in on_pr[:3]] == ["actions/checkout", "Fetch main and the CI notes", "actions/setup-python"]
+    assert len(on_pr) == 5 and "git worktree add" in on_pr[3]["run"] and on_pr[4]["run"].strip() == PR_GATE
+    assert on_pr[4]["env"] == {"SUITE": "${{ needs.suite.result }}", "GH_TOKEN": "${{ github.token }}"}
+    assert text.count("needs.suite") == text.count("needs.suite.result") == 1
+    for job, allowed in (("suite", [SUITE_STEP]), ("redline", [PR_GATE, "redline ci push"])):
+        runs = [s for s in jobs[job]["steps"] if "redline" in s.get("run", "").replace("refs/notes", "")
+                and "ci " in s.get("run", "")]
+        assert [any(s["run"].strip().startswith(a) for a in allowed) for s in runs] == [True] * len(allowed), job
+        assert sum("-e ." in s.get("run", "") for s in jobs[job]["steps"]) == 1, job
+    [push] = [s for s in gate["steps"] if "redline ci push" in s.get("run", "")]
+    assert push["if"] == PUSH_ONLY
 
 
 def test_a_push_with_note_writes_the_note_to_the_file_and_adds_and_pushes_nothing(change, capsys, remote, tmp_path):
