@@ -190,8 +190,10 @@ def test_a_push_to_main_notes_the_suite_result_on_the_merged_commit(change, caps
     _, merge = land(change, "red", {"tests/test_greet.py": RED})
     code, out = ci(change, capsys, "push", "--run-url", RUN)
     assert code == 0, out
-    assert change.git("notes", "--ref=redline-ci", "show", merge) == f"result: pass\nrun: {RUN}"
-    assert remote.pushed == [f"result: pass\nrun: {RUN}"]
+    data = yaml.safe_load(change.git("notes", "--ref=redline-ci", "show", merge))
+    assert data.pop("outcomes")["commit"] == merge
+    assert data == {"result": "pass", "run": RUN}
+    assert len(remote.pushed) == 1 and yaml.safe_load(remote.pushed[0])["result"] == "pass"
     actions.push_run(merge, url=RUN)
     assert main(["ledger", "add-greet", "--repo", str(change.path)]) == 0
     ledger = yaml.safe_load((change.path / LEDGER).read_text(encoding="utf-8"))
@@ -203,8 +205,10 @@ def test_a_push_records_a_failed_run_and_fails(change, capsys, remote):
     code, out = ci(change, capsys, "push", "--run-url", RUN)
     assert code == 1
     assert "suite: the test suite failed" in out
-    assert change.git("notes", "--ref=redline-ci", "show", merge) == f"result: fail\nrun: {RUN}"
-    assert remote.pushed == [f"result: fail\nrun: {RUN}"]
+    data = yaml.safe_load(change.git("notes", "--ref=redline-ci", "show", merge))
+    assert data.pop("outcomes")["commit"] == merge
+    assert data == {"result": "fail", "run": RUN}
+    assert len(remote.pushed) == 1 and yaml.safe_load(remote.pushed[0])["result"] == "fail"
 
 
 def test_a_rejected_notes_push_is_an_error(change, capsys, remote):
@@ -309,7 +313,9 @@ def test_a_push_with_note_writes_the_note_to_the_file_and_adds_and_pushes_nothin
     land(change, "red", {"tests/test_greet.py": RED})
     code, out = ci(change, capsys, "push", "--run-url", RUN, "--note", str(tmp_path / "note"))
     assert code == 0, out
-    assert (tmp_path / "note").read_text(encoding="utf-8") == f"result: pass\nrun: {RUN}\n"
+    data = yaml.safe_load((tmp_path / "note").read_text(encoding="utf-8"))
+    assert data.pop("outcomes")["version"] == 1
+    assert data == {"result": "pass", "run": RUN}
     assert change.git("notes", "--ref=redline-ci", "list") == "" and remote.pushed == []
 
 
@@ -317,7 +323,9 @@ def test_a_push_with_note_still_writes_a_failed_run(change, capsys, remote, tmp_
     land(change, "broken", {"tests/test_broken.py": BROKEN})
     code, out = ci(change, capsys, "push", "--run-url", RUN, "--note", str(tmp_path / "note"))
     assert code == 1 and "suite: the test suite failed" in out
-    assert (tmp_path / "note").read_text(encoding="utf-8") == f"result: fail\nrun: {RUN}\n"
+    data = yaml.safe_load((tmp_path / "note").read_text(encoding="utf-8"))
+    assert data.pop("outcomes")["version"] == 1
+    assert data == {"result": "fail", "run": RUN}
     assert remote.pushed == []
 
 

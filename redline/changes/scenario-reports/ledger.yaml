@@ -37,21 +37,30 @@ scenarios:
       commit: cf968e617fa27692e4ea3c17e7ab2b41cce8c7fc
       merged: ea786eb47f9d3073474bbcbd27c03286558b3539
       result: pass
-    green: null
+    green:
+      commit: 35dd366f59990fb05cc2ff54559df94d82b251ba
+      merged: 8278f7d5f60b37c17c792cf0018b998abc98a581
+      result: pass
     break: null
   REPORT.JS.S2:
     red:
       commit: cf968e617fa27692e4ea3c17e7ab2b41cce8c7fc
       merged: ea786eb47f9d3073474bbcbd27c03286558b3539
       result: pass
-    green: null
+    green:
+      commit: 35dd366f59990fb05cc2ff54559df94d82b251ba
+      merged: 8278f7d5f60b37c17c792cf0018b998abc98a581
+      result: pass
     break: null
   REPORT.ALL.S1:
     red:
       commit: cf968e617fa27692e4ea3c17e7ab2b41cce8c7fc
       merged: ea786eb47f9d3073474bbcbd27c03286558b3539
       result: pass
-    green: null
+    green:
+      commit: 35dd366f59990fb05cc2ff54559df94d82b251ba
+      merged: 8278f7d5f60b37c17c792cf0018b998abc98a581
+      result: pass
     break: null
   REPORT.CI.S1:
     red:

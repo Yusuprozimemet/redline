@@ -286,5 +286,7 @@ def test_a_push_notes_a_failed_jest_suite(repo, capsys, jest, remote):
     code, out = ci(repo, capsys, "push", "--run-url", RUN)
     assert code == 1
     assert "suite: the test suite failed (jest exit 1)" in out
-    assert remote.pushed == [f"result: fail\nrun: {RUN}"]
-    assert repo.git("notes", "--ref=redline-ci", "show", merge) == f"result: fail\nrun: {RUN}"
+    data = yaml.safe_load(repo.git("notes", "--ref=redline-ci", "show", merge))
+    assert data.pop("outcomes")["commit"] == merge
+    assert data == {"result": "fail", "run": RUN}
+    assert len(remote.pushed) == 1 and yaml.safe_load(remote.pushed[0])["result"] == "fail"

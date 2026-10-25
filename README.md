@@ -215,10 +215,17 @@ cover both. The reporter preserves the project's environment and event hook, joi
 locations to decoded titles/parameters, and distinguishes real strict-new body failure from xpass
 and hook errors. `reports.aggregate` revalidates every runner's inventory and execution detail.
 Extra, missing, duplicate, conflicting and mixed-marker records cannot establish scenario success.
-Report production is being built in `scenario-reports`; push-note transport belongs to G3.
+`redline ci push` carries the existing aggregate in `outcomes:` on both note routes, including
+failed and partial suites. Missing or malformed reports remain incomplete diagnostics; the suite's
+exit status still determines `result`. The isolated writer transports the producer's bytes unchanged.
+A stripped note carries no complete execution evidence; today's ledger still checks suite/run status,
+and report consumption/enforcement remains O-CLOSE6. Unbounded transport remains O-REPORT2.
 O-REPORT1's CI setup merged in PR #97: its push run is green with Jest installed and
 `REDLINE_REAL_RUNNERS=1`. Per-case execution is absent from its published note/logs, so Jest
 evidence remains HELD pending maintainer CI evidence follow-up; local execution is validation.
+After G3 merges, inspect REPORT.JS.S1/S2's concrete observed cases, marker states and outcomes in
+the matching successful push run's published note before considering release. Earlier skipped red
+runs are not repaired; C (O11) reconciles O-REPORT1 and the remaining release evidence with the maintainer.
 Scenario-outcomes will own report consumption and enforcement (including the discovery and
 filtered-run limits tracked as O-REPORT4 and O-REPORT5).
 

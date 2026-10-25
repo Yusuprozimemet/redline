@@ -44,6 +44,7 @@ from redline.plan import check_plan
 from redline.planaudit import check_plan_audits
 from redline.pr import GitHub, gates, rigor_claim, size, touched
 from redline.relabel import stray
+from redline.reports import aggregate, diagnostic, finish, snapshot
 from redline.runner import JEST, RUNNERS, Runner, check_helpers, interpreter, run
 from redline.start import TRAILER, Refused, may_begin, merged_steps, next_step
 
@@ -71,20 +72,31 @@ def uses(repo: Path, runner: Runner) -> bool:
     return any(is_generated(path, list(runner.test_files)) for path in git(repo, "ls-files").stdout.splitlines())
 
 
+class SuiteFailures(list):
+    """Suite failures with this invocation's report; list semantics remain the exit verdict."""
+
+
 def suite(repo: Path) -> list[str]:
     """Run every test of each runner the repository uses; a failure is the one line that says so."""
     used = [r for r in RUNNERS if uses(repo, r)]
+    failures, reports = SuiteFailures(), []
     if not used:
-        return ["suite: no tests ran: git tracks no pytest test file, and package.json doesn't list jest"]
-    failures = []
+        failures.append("suite: no tests ran: git tracks no pytest test file, and package.json doesn't list jest")
     for runner in used:
+        report = None
         if runner.needs and not shutil.which(runner.needs):
             failures.append(f"suite: {runner.name} is listed in package.json, but {runner.needs} isn't installed")
         elif runner is JEST and not (repo / "node_modules" / "jest").is_dir():
             failures.append("suite: jest is listed in package.json, but node_modules/jest isn't installed")
-        elif (done := run(repo, runner)).returncode:
-            last = next((line for line in reversed(f"{done.stdout}\n{done.stderr}".splitlines()) if line.strip()), "")
-            failures.append(f"suite: the test suite failed ({runner.name} exit {done.returncode}): {last.strip('= ')}")
+        else:
+            done = run(repo, runner)
+            report = getattr(done, "outcomes", None)
+            if done.returncode:
+                last = next((line for line in reversed(f"{done.stdout}\n{done.stderr}".splitlines()) if line.strip()), "")
+                failures.append(f"suite: the test suite failed ({runner.name} exit {done.returncode}): {last.strip('= ')}")
+        reports.append(report if report is not None else finish(snapshot(repo, runner), {
+            "expected": [], "observed": [], "diagnostics": [diagnostic("missing", runner.name, "invocation report unavailable")]}))
+    failures.outcomes = aggregate(reports, commit=git(repo, "rev-parse", "HEAD").stdout.strip())
     return failures
 
 
@@ -164,6 +176,11 @@ def push_note(repo: Path, run_url: str, rev: str, to: Path | None) -> list[str]:
     """`to`: write the note there instead, for a job that runs no repository code to add and push."""
     failures = suite(repo)
     message = f"result: {'fail' if failures else 'pass'}\nrun: {run_url}\n"
+    outcomes = getattr(failures, "outcomes", None)
+    if outcomes is None:  # no report is never complete evidence, even for an otherwise passing suite
+        outcomes = aggregate([finish([], {"expected": [], "observed": [], "diagnostics": [
+            diagnostic("missing", "suite", "suite report unavailable")]})], commit=git(repo, "rev-parse", rev).stdout.strip())
+    outcomes = dict(outcomes, commit=git(repo, "rev-parse", rev).stdout.strip())
     change, _, step = pr_step(repo, f"{rev}^").partition("/")  # "" when no step merged here
     if step == "R":
         report = check_break(repo, change)
@@ -177,6 +194,7 @@ def push_note(repo: Path, run_url: str, rev: str, to: Path | None) -> list[str]:
         except RuntimeError as error:
             failures.append(f"claims: could not read the merged PR's labels: {error}")
     message += yaml.safe_dump({"claims": made}, sort_keys=False, width=1000) if made else ""
+    message += yaml.safe_dump({"outcomes": outcomes}, allow_unicode=True, sort_keys=False, width=1000)
     if to:
         to.write_text(message, encoding="utf-8", newline="\n")
         return failures
