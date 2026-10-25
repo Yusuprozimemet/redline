@@ -18,7 +18,7 @@ from test_start import change  # noqa: F401
 
 @pytest.mark.parametrize("failed,route,defect", [(f, r, d) for f in (False, True)
     for r in ("file", "direct") for d in ("complete", "missing", "malformed", "incomplete", "skip")])
-@pytest.mark.spec("REPORT.CI.S1", new=True)
+@pytest.mark.spec("REPORT.CI.S1")
 def test_current_report_survives_both_note_routes(change, remote, actions, monkeypatch, tmp_path, failed, route, defect):
     from types import SimpleNamespace
     import redline.ci as producer
