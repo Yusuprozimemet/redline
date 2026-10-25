@@ -27,6 +27,6 @@ Track: src/redline/ci.py, src/redline/runner.py, src/redline/reports.py, README.
 - O5 [C]: apply the delta, rebuild merged evidence and record defects; leave O-CLOSE6 open
 - O6 [C]: use only the maintainer-approved relabel-waiver trailer and matching fresh personal label
 - O7 [C]: stop for inspection of report production and actual CI; scenario-outcomes needs approval
-- O8 [R]: maintainer must resolve O-REPORT1 before crediting Jest evidence; it owns real-Jest evidence-job integration (F2)
+- O8 [R]: REPORT.JS.S1/S2 tests land at R with evidence HELD, never credited red/green until O-REPORT1 is fixed (F2). Maintainer owns a CI part, merging before G2, to install Jest and set REDLINE_REAL_RUNNERS=1 in the evidence-counting push run; O-REPORT1 stays open.
 - O9 [C]: defer to maintainer at scenario-outcomes/S; O-REPORT2 owns bounded transport and its scenario (F10)
 - O10 [C]: defer to maintainer at ci-apart-python/S; O-REPORT3 owns stale CI.APART.S2 and its red/green (F12)

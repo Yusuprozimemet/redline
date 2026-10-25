@@ -6,6 +6,7 @@ See specs/, §5."""
 import os
 import shutil
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -132,3 +133,64 @@ def test_check_break_runs_jest_and_stryker_end_to_end(toy_repo):
     assert report.skipped == {}
     assert report.results == {"TOY.H1": None, "TOY.H2": None,
                               "TOY.H3": "its tests survive every mutant (0 of 6 killed, in src/adult.js)"}
+
+
+# O-REPORT1: evidence HELD until the maintainer's CI part merges before G2.
+# Local/optional-job execution below is validation, never credited red/green.
+@pytest.mark.parametrize("body,new,hooks,qualification,outcome", [
+    ("throw new Error('body')", True, "", "red", "expected-failure"),
+    ("return Promise.reject(new TypeError('absent'))", True, "", "red", "expected-failure"),
+    ("missing.method()", True, "", "red", "expected-failure"),
+    ("expect(1).toBe(1)", True, "", "nonqualifying", "unexpected-pass"),
+    ("expect(1).toBe(1)", False, "", "green", "pass"),
+    ("throw new Error('body')", True, "beforeEach(() => {throw Error('hook')});", "nonqualifying", "error"),
+    ("throw new Error('body')", True, "afterEach(() => {throw Error('hook')});", "nonqualifying", "error"),
+    ("throw new Error('body')", False, "", "nonqualifying", "error"),
+])
+@pytest.mark.spec("REPORT.JS.S1", new=True)
+def test_real_jest_report_provenance(toy_repo, body, new, hooks, qualification, outcome):
+    from redline.runner import JEST, run
+    source = ('const {spec} = require("../redline/runners/jest");\n' + hooks +
+        f'\nspec("TOY.S1", {{new: {str(new).lower()}}}).test("body", () => {{{body}}});\n' +
+        'test.failing("unrelated", () => {throw Error("unrelated")});\n')
+    (toy_repo / "src/adult.test.js").write_text(source, encoding="utf-8")
+    done = run(toy_repo, replace(JEST, command=lambda sid: (JEST.command(sid)[0] + ["--runInBand"], JEST.command(sid)[1])))
+    assert hasattr(done, "outcomes"), "Jest must return execution detail, not its passed count"
+    assert done.returncode == (0 if qualification in ("red", "green") else 1), done.stderr
+    report = done.outcomes
+    assert report["scenarios"]["TOY.S1"]["qualification"] == qualification
+    [record] = [r for r in report["observed"] if "TOY.S1" in r["links"]]
+    assert record["outcome"] == outcome and record["new"] == new
+    assert record["strict_new"] == (qualification == "red")
+
+
+@pytest.mark.parametrize("fault,diagnostic", [("join", None), ("parameters", None), ("skip", "skip"), ("pending", "skip"),
+    ("omit", "missing"), ("duplicate", "duplicate"), ("ambiguous", "ambiguous"),
+    ("refused", "collection-error"), ("nested", None)])
+@pytest.mark.spec("REPORT.JS.S2", new=True)
+def test_real_jest_inventory_joins_and_isolation(toy_repo, fault, diagnostic):
+    from redline.runner import JEST, run
+    title = r"escaped \' É"
+    source = ('const {spec} = require("../redline/runners/jest");\n' +
+        f"describe('parent', () => {{spec('TOY.S1').test('{title}', () => {{expect(1).toBe(1)}});}});\n")
+    if fault == "skip": source = source.replace("describe(", "describe.skip(")
+    if fault == "pending": source = source.replace("const {spec}", 'const original = global.test; global.test = Object.assign((...a) => original.skip(...a), original);\nconst {spec}')
+    if fault == "omit": (toy_repo / "jest.config.js").write_text("module.exports={testPathIgnorePatterns:['adult.test.js']};")
+    if fault == "refused": source += source.splitlines()[-1] + "\n"
+    if fault == "duplicate": source += source.splitlines()[-1].replace("escaped", r"esc\u0061ped") + "\n"
+    if fault in ("parameters", "ambiguous"):
+        source += f"spec('TOY.S1').test.each({[1, 2] if fault == 'parameters' else [1, 1]})('parameter %s', x => expect(x).toBeGreaterThan(0));\n"
+    if fault == "nested":
+        source = source.replace("expect(1).toBe(1)", 'require("fs").writeFileSync("src/inner.test.js", "test(\'inner\',()=>{});"); require("child_process").execFileSync(process.execPath, [require.resolve("jest/bin/jest"), "--runInBand", "--runTestsByPath", "src/inner.test.js"], {env: process.env})')
+    (toy_repo / "src/adult.test.js").write_text(source, encoding="utf-8")
+    done = run(toy_repo, replace(JEST, command=lambda sid: (JEST.command(sid)[0] + ["--runInBand"], JEST.command(sid)[1])))
+    assert hasattr(done, "outcomes"), "Jest inventory/report is absent"
+    report = done.outcomes
+    assert report["complete"] == (diagnostic is None)
+    assert diagnostic is None or diagnostic in {d["code"] for d in report["diagnostics"]}
+    if diagnostic is None:
+        records = [r for r in report["observed"] if "TOY.S1" in r["links"]]
+        assert len(records) == len({r["identity"] for r in records}) == (3 if fault == "parameters" else 1)
+        record = next(r for r in records if "parent" in r["identity"])
+        assert "parent" in record["identity"] and "É" in record["identity"] and record["source"]
+        assert "inner" not in str(report["observed"])

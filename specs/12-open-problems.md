@@ -497,7 +497,9 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
 - O-REPORT1 [owner: maintainer, scenario-reports/R readiness; F2 deferred]: real-Jest REPORT.JS.S1/S2
   run only in the optional runners job, not the push run that records evidence. Before crediting
   their red/green, arrange installed Jest and REDLINE_REAL_RUNNERS=1 in an evidence-counting run;
-  skipped tests currently pass with the suite. This S specifies no CI integration fix.
+  skipped tests currently pass with the suite. R's REPORT.JS.S1/S2 evidence is HELD, not credited
+  red/green. The maintainer owns a CI part merging before G2: install Jest and set
+  REDLINE_REAL_RUNNERS=1 in the evidence-counting push run. O-REPORT1 remains open.
 - O-REPORT2 [owner: scenario-outcomes/S, maintainer; F10 deferred]: report notes are unbounded.
   Direct argv/env (128 KiB), Windows command lines (32,767 chars), and job outputs (1 MB) can
   prevent note transport. Specify bounded transport or overflow behavior and its own scenario

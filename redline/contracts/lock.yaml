@@ -3,6 +3,15 @@ install-workflow:
     tests/test_install_workflow.py::test_install_jest_writes_over_an_edited_helper:
       reach: 299aae975a741b360be07e358bf36ceeed0cea2251fb1329967c904dfbe320c8
       test: 80cc7d73a5b1867de0746a41582c45a4f30fd22e70b55227771aecc7fc5491c4
+scenario-reports:
+  REPORT.CI.H1:
+    tests/test_report_ci.py::test_outcomes_never_upgrade_existing_evidence_or_leak_python:
+      reach: 464406c19f8c1bf9f372400095fdacdf7704378cdffc33c6bfc0d10145633db3
+      test: 48fc5b2fd65d1044711cf35d76975bddc666aa1e7315965299ee4f80600107a1
+  REPORT.CI.H2:
+    tests/test_report_ci.py::test_file_direct_and_isolated_writer_keep_identical_bytes:
+      reach: 464406c19f8c1bf9f372400095fdacdf7704378cdffc33c6bfc0d10145633db3
+      test: 1114f743518abb8d1483749e6876f4e9bd8f9b02d1ce53aa9cec88d816e7221b
 suite-job:
   CI.APART.H1:
     tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite:
