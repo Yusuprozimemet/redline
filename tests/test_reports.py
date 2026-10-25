@@ -30,7 +30,7 @@ def codes(report):
 
 @pytest.mark.parametrize("body", ["assert False", "raise ImportError()", "raise AttributeError()",
     "raise NameError()", "raise TypeError()", "pytest.fail('body')", "with pytest.raises(ValueError): pass"])
-@pytest.mark.spec("REPORT.PY.S1", new=True)
+@pytest.mark.spec("REPORT.PY.S1")
 def test_strict_body_failure_is_red(pytester, body):
     report = execute(pytester, '@pytest.mark.spec("TOY.S1", new=True)\ndef test_it():\n    ' + body)
     assert report["complete"] and report["scenarios"]["TOY.S1"]["qualification"] == "red"
@@ -46,7 +46,7 @@ def test_strict_body_failure_is_red(pytester, body):
     ('', "pytest.xfail('unrelated')", 'expected-failure', 'nonqualifying'),
     (', new=True', 'assert False', 'expected-failure', 'nonqualifying'),
 ])
-@pytest.mark.spec("REPORT.PY.S1", new=True)
+@pytest.mark.spec("REPORT.PY.S1")
 def test_pytest_terminal_outcomes_and_overridden_xfail(pytester, marks, body, outcome, qualification):
     override = '@pytest.mark.xfail(reason="unrelated", strict=False)\n' if marks and body == 'assert False' else ''
     report = execute(pytester, override + f'@pytest.mark.spec("TOY.S1"{marks})\ndef test_it():\n    {body}')
@@ -56,7 +56,7 @@ def test_pytest_terminal_outcomes_and_overridden_xfail(pytester, marks, body, ou
 
 @pytest.mark.parametrize("phase,action", [(p, a) for p in ("setup", "teardown")
     for a in ("raise ValueError('hook')", "pytest.xfail('hook')")])
-@pytest.mark.spec("REPORT.PY.S1", new=True)
+@pytest.mark.spec("REPORT.PY.S1")
 def test_hook_failure_never_qualifies_as_body_red(pytester, phase, action):
     hook = action + '\n    yield' if phase == 'setup' else 'yield\n    ' + action
     report = execute(pytester, '@pytest.fixture(autouse=True)\ndef hook():\n    ' + hook +
@@ -75,7 +75,7 @@ PARAMS = '@pytest.mark.spec("TOY.S1")\n@pytest.mark.spec("TOY.S2")\n@pytest.mark
     ([], {"conftest.py": "def pytest_collection_modifyitems(items): items.pop()"}, "missing"),
     ([], {"conftest.py": "import pytest\ndef pytest_collection_modifyitems(items):\n    for item in items: item.add_marker(pytest.mark.skip(reason='skip'))\n"}, "skip"),
 ])
-@pytest.mark.spec("REPORT.PY.S2", new=True)
+@pytest.mark.spec("REPORT.PY.S2")
 def test_expected_instances_survive_selection_and_collection(pytester, selection, files, diagnostic):
     report = execute(pytester, PARAMS, *selection, files=files)
     expected = json.dumps(report["expected"], ensure_ascii=False)
@@ -88,7 +88,7 @@ def test_expected_instances_survive_selection_and_collection(pytester, selection
         assert all(report["scenarios"][sid]["qualification"] == "green" for sid in ("TOY.S1", "TOY.S2"))
 
 
-@pytest.mark.spec("REPORT.PY.S2", new=True)
+@pytest.mark.spec("REPORT.PY.S2")
 def test_filtered_and_later_runs_cannot_replace_a_previous_full_report(pytester):
     full = execute(pytester, PARAMS)
     saved = copy.deepcopy(full)
@@ -98,7 +98,7 @@ def test_filtered_and_later_runs_cannot_replace_a_previous_full_report(pytester)
     assert "TOY.S1" not in later["scenarios"] and full == saved
 
 
-@pytest.mark.spec("REPORT.PY.S2", new=True)
+@pytest.mark.spec("REPORT.PY.S2")
 def test_unicode_class_paths_and_nested_invocations_are_isolated(pytester):
     nested = 'import pytest\n@pytest.mark.spec("INNER.S1")\ndef test_inner(): pass\n'
     source = ('import os, subprocess, sys\nclass TestÉ:\n'
@@ -115,7 +115,7 @@ def test_unicode_class_paths_and_nested_invocations_are_isolated(pytester):
 
 @pytest.mark.parametrize("fault,diagnostic", [("", None), ("exit", "missing-worker"),
     ("inventory", "inventory-conflict"), ("parameter", "missing"), ("duplicate", "duplicate")])
-@pytest.mark.spec("REPORT.PY.S3", new=True)
+@pytest.mark.spec("REPORT.PY.S3")
 def test_real_xdist_inventories_and_execution(pytester, fault, diagnostic):
     hooks = 'import os\n'
     if fault == "inventory":
