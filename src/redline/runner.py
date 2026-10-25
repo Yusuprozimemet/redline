@@ -27,7 +27,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import NamedTuple
 
-HELPERS = {"jest": "redline/runners/jest.js"}  # runner -> where `redline install` writes its helper
+HELPERS = {"jest": "redline/runners/jest.js", "jest-reporter": "redline/runners/jest-reporter.js"}
 WORKFLOW = ".github/workflows/redline.yml"  # `redline install workflow`'s, the one path a note checks out from
 CLOSE = {"(": ")", "[": "]", "{": "}"}
 
@@ -162,8 +162,8 @@ def closing(code: str, start: int, path: str) -> int:
 
 
 SPEC_CALL = re.compile(r"(?<![\w.$])spec\(")
-TEST_CALL = re.compile(r"""\s*\.test\(\s*(["'])((?:\\.|(?!\1).)*)\1""")
-JEST_MARK = re.compile(r"""(?<![\w.$])spec\(\s*["']([^"']+)["']\s*(,\s*\{\s*new\s*:\s*true\s*\}\s*)?\)""")
+TEST_CALL = re.compile(r"""\s*\.test(?:\.each\([^;\n]*?\))?\(\s*(["'])((?:\\.|(?!\1).)*)\1""")
+JEST_MARK = re.compile(r"""(?<![\w.$])spec\(\s*["']([^"']+)["']\s*(,\s*\{\s*new\s*:\s*(true|false)\s*\}\s*)?\)""")
 
 
 def jest_tests(path: str, text: str) -> Iterator[tuple[str, str, tuple[Mark, ...]]]:
@@ -178,7 +178,7 @@ def jest_tests(path: str, text: str) -> Iterator[tuple[str, str, tuple[Mark, ...
         if test[2] in names:
             raise RuntimeError(f"{path}:{at}: two tests named {test[2]!r}")
         names.add(test[2])
-        yield test[2], text[found.start():closing(code, text.index("(", found.end()), path) + 1], (Mark(found[1], bool(found[2]), at),)
+        yield test[2], text[found.start():closing(code, code.rfind("(", found.end(), test.end()), path) + 1], (Mark(found[1], found[3] == "true", at),)
 
 
 PYTHON = [sys.executable]  # pytest's interpreter, the last pushed: another than the gate's own (§7, O-SELF2)
@@ -214,19 +214,24 @@ RUNNERS = (PYTEST, JEST)
 def run(repo: Path, runner: Runner, sid: str | None = None) -> subprocess.CompletedProcess:
     """Run the runner's tests, or one scenario's alone; its output is decoded as UTF-8 (O-ENC1)."""
     argv, env = runner.command(sid)
-    if runner.name != "pytest":
-        return subprocess.run(argv, cwd=repo, capture_output=True, encoding="utf-8", errors="replace", env={**os.environ, **env})
     from redline.reports import finish, snapshot
-    expected = snapshot(repo)
+    expected = snapshot(repo, runner)
     with tempfile.TemporaryDirectory(prefix="redline-report-") as directory:
         sink = Path(directory) / "report.json"
-        done = subprocess.run([*argv, f"--redline-report={sink}"], cwd=repo, capture_output=True,
+        adapter = Path(directory) / "adapter.cjs"
+        adapter.write_text("module.exports = require(" + json.dumps(str(repo / HELPERS["jest-reporter"])) + ")(" +
+                           json.dumps({"root": str(repo), "sink": directory}) + ");\n", encoding="utf-8")
+        options = [f"--redline-report={sink}"] if runner.name == "pytest" else ["--testRunner", str(adapter)]
+        done = subprocess.run([*argv, *options], cwd=repo, capture_output=True,
                               encoding="utf-8", errors="replace", env={**os.environ, **env})
         try:
-            payload = json.loads(sink.read_text(encoding="utf-8"))
+            parts = [json.loads(p.read_text(encoding="utf-8")) for p in Path(directory).glob("*.part")] if runner.name == "jest" else [json.loads(sink.read_text(encoding="utf-8"))]
+            if not parts:
+                raise ValueError("no report parts")
+            payload = {key: [row for part in parts for row in part[key]] for key in ("expected", "observed", "diagnostics")}
         except (OSError, ValueError):
             payload = {"expected": [], "observed": [], "diagnostics": [
-                {"code": "missing", "identity": "pytest", "reason": "invocation report unavailable"}]}
+                {"code": "missing", "identity": runner.name, "reason": "invocation report unavailable"}]}
         done.outcomes = finish(expected, payload)
         return done
 
@@ -242,6 +247,8 @@ def shipped(name: str) -> str:
 
 
 def install(repo: Path, name: str) -> str:
+    if name == "jest":
+        install(repo, "jest-reporter")
     (repo / HELPERS[name]).parent.mkdir(parents=True, exist_ok=True)
     (repo / HELPERS[name]).write_bytes(shipped(name).encode())
     return HELPERS[name]
@@ -280,4 +287,5 @@ def check_helpers(repo: Path) -> list[str]:
     """Each helper in the repository that differs from the one Redline ships (line endings aside)."""
     return [f"{path} differs from the helper Redline ships; run `redline install {name}`"
             for name, path in HELPERS.items()
-            if (repo / path).is_file() and (repo / path).read_text(encoding="utf-8").replace("\r\n", "\n") != shipped(name)]
+            if ((repo / path).is_file() or name == "jest-reporter" and (repo / HELPERS["jest"]).is_file())
+            and (not (repo / path).is_file() or (repo / path).read_text(encoding="utf-8").replace("\r\n", "\n") != shipped(name))]

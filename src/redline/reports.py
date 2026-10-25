@@ -1,4 +1,5 @@
-"""Invocation-local pytest discovery and phase reports; consumers belong to later steps."""
+"""Invocation-local discovery, execution detail and cross-runner report production."""
+import copy
 import json
 import os
 import re
@@ -18,8 +19,9 @@ def row(identity, marks):
             "new": any(new for _, new in marks)}
 
 
-def snapshot(repo):
-    from redline.runner import python_tests
+def snapshot(repo, runner=None):
+    from redline.runner import PYTEST
+    runner = runner or PYTEST
     expected, kinds = [], {}
     for base in (repo / "redline/specs", repo / "redline/changes"):
         for path in sorted(base.rglob("*.md")):
@@ -28,16 +30,21 @@ def snapshot(repo):
     paths = []
     for directory, children, names in os.walk(repo):
         children[:] = sorted(c for c in children if not c.startswith(".") and c not in ("node_modules", "__pycache__"))
-        paths.extend(Path(directory) / name for name in sorted(names) if name.endswith(".py"))
+        paths.extend(Path(directory) / name for name in sorted(names) if any(Path(name).match(p) for p in runner.paths))
     for path in paths:
         try:
-            for name, _, marks in python_tests(path.relative_to(repo).as_posix(), path.read_text(encoding="utf-8")):
+            text = path.read_text(encoding="utf-8")
+            for name, body, marks in runner.tests(path.relative_to(repo).as_posix(), text):
                 if marks:
                     entry = row(f"{path.relative_to(repo).as_posix()}::{name}", [(m.sid, m.new) for m in marks])
                     entry["declarations"] = {sid: kinds.get(sid, "unavailable") for sid in entry["links"]}
+                    entry["runner"] = runner.name
+                    if runner.name == "jest":
+                        offset = text.index(body)
+                        entry["location"] = [path.relative_to(repo).as_posix(), marks[0].line, offset - text.rfind("\n", 0, offset)]
                     expected.append(entry)
         except (OSError, UnicodeError, RuntimeError):
-            expected.append(dict(row(path.relative_to(repo).as_posix(), []), unavailable=True))
+            expected.append(dict(row(path.relative_to(repo).as_posix(), []), runner=runner.name, unavailable=True))
     return expected
 
 
@@ -150,32 +157,51 @@ class Collector:
 
 
 def finish(source, payload):
+    payload = copy.deepcopy(payload)
     expected, observed, diagnostics = payload["expected"], payload["observed"], payload["diagnostics"]
     for entry in source:
-        instances = [r for r in expected if (r["identity"] == entry["identity"] or r["identity"].startswith(entry["identity"] + "["))]
+        instances = [r for r in expected if r["runner"] == entry["runner"] and (
+            r.get("location") == entry["location"] if "location" in entry else
+            r["identity"] == entry["identity"] or r["identity"].startswith(entry["identity"] + "["))]
         if not instances:
             expected.append(entry)
         for instance in instances:
             instance["source"] = entry["identity"]
             instance["declarations"] = entry.get("declarations", {})
+        for record in observed:
+            if any(all(record.get(k) == r.get(k) for k in ("runner", "identity", "location")) for r in instances):
+                record["source"] = entry["identity"]
     expected = sorted(expected, key=lambda r: r["identity"])
     if not expected:
         diagnostics.append(diagnostic("empty", "pytest", "no linked instances discovered"))
     for entry in expected:
         if entry.get("unavailable"):
             diagnostics.append(diagnostic("collection-error", entry["identity"], "source inventory unavailable"))
+    wanted = {(r["runner"], r["identity"]) for r in expected}
+    for record in observed:
+        if (record["runner"], record["identity"]) not in wanted:
+            diagnostics.append(diagnostic("extra", record["identity"], "execution absent from inventory"))
     by_id = {}
     for record in observed:
-        by_id.setdefault(record["identity"], []).append(record)
+        by_id.setdefault((record["runner"], record["identity"]), []).append(record)
+    observed_ids = {r["identity"] for r in observed}
     for entry in expected:
         identity = entry["identity"]
-        records = by_id.get(identity, [])
+        records = by_id.get((entry["runner"], identity), [])
+        if sum(r["runner"] == entry["runner"] and r["identity"] == identity for r in expected) > 1:
+            diagnostics.append(diagnostic("duplicate", identity, "repeated inventory identity"))
         if not records:
             diagnostics.append(diagnostic("missing", identity, "expected instance did not execute"))
             observed.append(dict(entry, outcome="missing", phases={}, strict_new=False))
         if len(records) > 1:
             diagnostics.append(diagnostic("duplicate", identity, "repeated execution"))
+            if any(r != records[0] for r in records):
+                diagnostics.append(diagnostic("conflicting", identity, "execution records disagree"))
+            if entry.get("location") and sum(r.get("location") == entry["location"] and r["identity"] == identity for r in expected) > 1:
+                diagnostics.append(diagnostic("ambiguous", identity, "parameter identity is not unique"))
         for record in records:
+            if any(record[k] != entry[k] for k in ("links", "new", "markers")):
+                diagnostics.append(diagnostic("conflicting", identity, "inventory and execution markers differ"))
             if record["outcome"] == "skip":
                 diagnostics.append(diagnostic("skip", identity, "test skipped"))
             if set(record["phases"]) != {"setup", "call", "teardown"}:
@@ -185,12 +211,61 @@ def finish(source, payload):
         wanted = [r for r in expected if sid in r["links"]]
         actual = [r for r in observed if sid in r["links"]]
         ids = {r["identity"] for r in wanted}
-        complete = bool(wanted) and not any(d["identity"] in ids or d["identity"] not in by_id for d in diagnostics)
+        if len({r["new"] for r in wanted}) > 1 or any(len({m["new"] for m in r["markers"]}) > 1 for r in wanted):
+            diagnostics.append(diagnostic("mixed-markers", sid, "linked new/hold states differ"))
+        affected = ids | {r["identity"] for r in actual}
+        complete = bool(wanted) and not any(d["identity"] in affected or d["identity"] not in observed_ids for d in diagnostics)
         red = all(r["new"] and r["strict_new"] and r["outcome"] == "expected-failure" and
+                  r["phases"].get("call") == "expected-failure" and
                   r["phases"].get("setup") == r["phases"].get("teardown") == "pass" for r in actual)
-        green = all(not r["new"] and not r.get("unrelated_xfail") and r["outcome"] == "pass" for r in actual)
+        green = all(not r["new"] and not r.get("unrelated_xfail") and r["outcome"] == "pass" and
+                    r["phases"].get("call") == "pass" and
+                    r["phases"].get("setup") == r["phases"].get("teardown") == "pass" for r in actual)
         scenarios[sid] = {"expected": sorted(ids), "observed": sorted(r["identity"] for r in actual),
             "complete": complete, "qualification": ("red" if red else "green" if green else "nonqualifying") if complete else "nonqualifying"}
-    return {"version": 1, "complete": bool(expected) and not diagnostics, "expected": expected,
+    return {"version": 1, "complete": bool(expected) and not diagnostics, "expected": sorted(expected, key=lambda r: json.dumps(r, sort_keys=True)),
             "observed": sorted(observed, key=lambda r: r["identity"]), "scenarios": scenarios,
             "diagnostics": sorted(diagnostics, key=lambda d: (d["code"], d["identity"], d["reason"]))}
+
+
+def aggregate(reports, *, commit):
+    """Revalidate every runner's detail; never trust cached qualification or complete flags."""
+    payload = {"expected": [], "observed": [], "diagnostics": []}
+    for report in reports:
+        code = "malformed"
+        try:
+            if not isinstance(report, dict):
+                raise ValueError("report must be a mapping")
+            if type(report.get("version")) is not int or report["version"] != 1:
+                code = "unsupported"
+                raise ValueError("report version is not 1")
+            for section in ("expected", "observed", "diagnostics"):
+                if not isinstance(report[section], list):
+                    raise ValueError("report lists required")
+            for record in report["expected"] + report["observed"]:
+                if (not isinstance(record["identity"], str) or not isinstance(record["links"], list)
+                        or not all(isinstance(s, str) for s in record["links"]) or not isinstance(record["new"], bool)
+                        or record["runner"] not in ("pytest", "jest") or not isinstance(record["markers"], list)):
+                    raise ValueError("invalid execution identity or markers")
+                if any(not isinstance(m["scenario"], str) or not isinstance(m["new"], bool) for m in record["markers"]):
+                    raise ValueError("invalid marker state")
+            for record in report["observed"]:
+                if (not isinstance(record["strict_new"], bool) or record["outcome"] not in
+                        ("pass", "expected-failure", "unexpected-pass", "skip", "deselected", "error", "missing")
+                        or not isinstance(record["phases"], dict)):
+                    raise ValueError("invalid execution outcome or phases")
+            if not isinstance(report["complete"], bool):
+                raise ValueError("complete must be boolean")
+            details = copy.deepcopy(report)
+            details["diagnostics"] = [{**d, "identity": d.get("identity", d.get("runner", "report"))} for d in details["diagnostics"]]
+            if any(not all(isinstance(d[k], str) for k in ("code", "identity", "reason")) for d in details["diagnostics"]):
+                raise ValueError("invalid diagnostic")
+            if not report["complete"] and not details["diagnostics"]:
+                details["diagnostics"].append(diagnostic("abort", "report", "runner did not complete"))
+            for section in payload:
+                payload[section].extend(details[section])
+        except (KeyError, TypeError, ValueError, AttributeError) as error:
+            payload["diagnostics"].append(diagnostic(code, "report", str(error)))
+    for section in payload:
+        payload[section].sort(key=lambda r: json.dumps(r, sort_keys=True))
+    return dict(finish([], payload), commit=commit)

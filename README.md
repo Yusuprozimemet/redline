@@ -205,15 +205,20 @@ add-greet` proposes rules from its defect log.
 
 ## Execution reports in development
 
-The pytest runner returns a fresh `outcomes` report for each invocation. It keeps source links,
+The pytest and Jest runners return a fresh `outcomes` report for each invocation. They keep source links,
 pre-selection parameter inventories, setup/call/teardown results and strict-new provenance.
 Missing tests, workers or phases, skips and deselection remain incomplete even if pytest exits
 zero. Nested test runs cannot replace the owning invocation's report.
 
-Report production is being built in `scenario-reports`: Jest and cross-runner aggregation belong
-to G2; push-note transport belongs to G3. The maintainer's O-REPORT1 CI part installs Jest and
-enables `REDLINE_REAL_RUNNERS=1` in the evidence-counting push run, before G2. Jest evidence
-remains HELD in this CI part; G2 owns its release after the CI part merges.
+`redline install jest` installs the helper and circus reporter; package data and check-helpers
+cover both. The reporter preserves the project's environment and event hook, joins registration
+locations to decoded titles/parameters, and distinguishes real strict-new body failure from xpass
+and hook errors. `reports.aggregate` revalidates every runner's inventory and execution detail.
+Extra, missing, duplicate, conflicting and mixed-marker records cannot establish scenario success.
+Report production is being built in `scenario-reports`; push-note transport belongs to G3.
+O-REPORT1's CI setup merged in PR #97: its push run is green with Jest installed and
+`REDLINE_REAL_RUNNERS=1`. Per-case execution is absent from its published note/logs, so Jest
+evidence remains HELD pending maintainer CI evidence follow-up; local execution is validation.
 Scenario-outcomes will own report consumption and enforcement (including the discovery and
 filtered-run limits tracked as O-REPORT4 and O-REPORT5).
 

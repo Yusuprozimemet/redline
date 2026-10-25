@@ -38,7 +38,12 @@ def test_install_jest_writes_the_helper_redline_ships(repo, capsys):
     shipped = files("redline").joinpath("helpers", "jest.js").read_text(encoding="utf-8")
     assert (repo.path / HELPER).read_text(encoding="utf-8") == shipped
     assert "test.failing" in shipped and "REDLINE_SPEC" in shipped
+    reporter = repo.path / "redline/runners/jest-reporter.js"
+    assert reporter.read_text(encoding="utf-8") == files("redline").joinpath("helpers", "jest-reporter.js").read_text(encoding="utf-8")
     assert f"ok: wrote {HELPER}" in capsys.readouterr().out
+    from redline.runner import check_helpers
+    reporter.unlink()
+    assert "jest-reporter.js differs" in check_helpers(repo.path)[0]
 
 
 def test_every_gate_fails_on_an_edited_helper(change, capsys):
