@@ -494,14 +494,13 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   can skip or weaken tests in a PR outside any step. For pytest, only a critical `reach` covers
   its settings.
 
-- O-REPORT1 [owner: maintainer, scenario-reports/R readiness; F2 deferred]: real-Jest REPORT.JS.S1/S2
-  run only in the optional runners job, not the push run that records evidence. Before crediting
-  their red/green, arrange installed Jest and REDLINE_REAL_RUNNERS=1 in an evidence-counting run;
-  skipped tests currently pass with the suite. R's REPORT.JS.S1/S2 evidence is HELD, not credited
-  red/green. The maintainer owns a CI part merging before G2: install Jest and set
-  REDLINE_REAL_RUNNERS=1 in the evidence-counting push run (build 9 part 39). This part changes
-  only CI readiness; G2 must explicitly release the held evidence after it merges.
-  O-REPORT1 remains open until that release.
+- O-REPORT1 [open; owner: maintainer CI part, then scenario-reports/G2; F2 deferred]: build 9
+  part 39 configures the evidence-counting redline ci push run to install the toy's Jest with
+  runners' pinned Node and npm ci, and sets REDLINE_REAL_RUNNERS=1 there. PR execution,
+  concurrency, note/notes-push behavior and read-only Actions permissions are unchanged.
+  This CI part must merge before G2. R's REPORT.JS.S1/S2 evidence stays HELD in this PR,
+  not credited red/green; G2 owns release after the CI prerequisite merges and actual
+  evidence is checked. Earlier skipped push runs are not repaired. O-REPORT1 remains open.
 - O-REPORT2 [owner: scenario-outcomes/S, maintainer; F10 deferred]: report notes are unbounded.
   Direct argv/env (128 KiB), Windows command lines (32,767 chars), and job outputs (1 MB) can
   prevent note transport. Specify bounded transport or overflow behavior and its own scenario
