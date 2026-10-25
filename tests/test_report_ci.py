@@ -72,7 +72,8 @@ def test_real_report_and_stripped_report_at_isolated_handoff(change, monkeypatch
             data = yaml.safe_load(expected)
             if stripped: data.pop("outcomes")
             sent = yaml.safe_dump(data, allow_unicode=True, sort_keys=False).encode() if stripped else expected
-            env = {**os.environ, "NOTE": base64.b64encode(sent).decode(), "RUNNER_TEMP": str(tmp_path), "GITHUB_SHA": sha}
+            (tmp_path / "note").write_bytes(sent)  # the redline-note artifact, downloaded into $RUNNER_TEMP
+            env = {**os.environ, "RUNNER_TEMP": str(tmp_path), "GITHUB_SHA": sha}
             done = subprocess.run([bash(), str(script)], cwd=change.path, env=env, capture_output=True)
             assert done.returncode == 0, done.stderr
             shown = subprocess.run(["git", "notes", "--ref=redline-ci", "show", sha], cwd=change.path, capture_output=True, check=True).stdout
