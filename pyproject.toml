@@ -19,7 +19,7 @@ redline = "redline.cli:main"
 redline = "redline.plugin"
 
 [tool.setuptools.package-data]
-redline = ["helpers/*.js", "helpers/*.yml"]
+redline = ["helpers/*.js", "helpers/*.yml", "dashboard_assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

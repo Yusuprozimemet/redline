@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Redline · The evidence trail</title>
+  <link rel="stylesheet" href="/dashboard.css">
+  <script src="/dashboard.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="#"><span class="brand-mark">r</span>redline<span class="local">localhost</span></a><nav aria-label="Dashboard sections"><a href="#progress">Progress</a><a href="#drift">Spec drift</a><a href="#work">Work</a><a href="#evidence">Evidence</a><a href="#cost">Cost</a></nav><button id="refresh" type="button">Refresh data ↻</button></header>
+  <main>
+    <div class="eyebrow">THE REPOSITORY, READ BACK</div>
+    <div class="hero"><div><h1>The evidence trail<span>.</span></h1><p>From a requirement to a test that failed, then passed.<br>Redline’s progress, specification drift and verification, merge by merge.</p></div><div id="source" class="source">Reading local history…</div></div>
+    <div id="error" role="alert" hidden></div>
+    <div id="loading">Building the first snapshot from Git history. Subsequent reads are cached.</div>
+    <div id="dashboard" hidden>
+      <section class="stats" id="stats" aria-label="Selected snapshot summary"></section>
+      <div class="history-control"><button id="play" type="button" aria-label="Replay repository history">▶ Replay</button><label for="history">MERGE HISTORY</label><input id="history" type="range" min="0" max="0" value="0"><button id="latest" type="button">Latest</button><output id="selection" for="history"></output></div>
+      <section id="progress"><div class="section-title"><span>01 / PROGRESS</span><h2>Where we are</h2><p>Step completion follows merged trailers. Roadmap rows show tracked O-items, not estimated effort.</p></div>
+        <div id="current" class="current"></div><div id="change-lanes"></div>
+        <div class="grid"><article><h3>Open items across history</h3><p>Every tracked O-item at that snapshot; earlier counts may be incomplete.</p><div id="issues-chart" class="chart"></div></article><article><h3>Roadmap by owning build</h3><p>Recorded closed and open items, on one count scale.</p><div id="roadmap-chart" class="chart"></div></article></div>
+        <div class="grid"><article><h3>Declared versus merged steps</h3><p>The current steps.md is the plan at the selected snapshot.</p><div id="steps-chart" class="chart"></div></article><article><h3>Open hand-offs</h3><p>Items owned by an unmerged step.</p><div id="handoffs"></div></article></div>
+      </section>
+      <section id="drift"><div class="section-title"><span>02 / SPEC DRIFT</span><h2>Do the names move together?</h2><p>Experimental lexical signals. Matching identifiers does not prove that code implements a requirement.</p></div>
+        <article><h3>Spec–code name gap</h3><p>Angle in degrees between log-scaled identifier counts. The comparison shuffles code counts in 200 seeded draws; the band spans their central 95%. Only vocabulary known at each merge is included.</p><div id="gap-chart" class="chart"></div></article>
+        <div class="grid"><article><h3>What each merge did to the gap</h3><p>Above zero: farther apart. Below zero: closer.</p><div id="delta-chart" class="chart"></div></article><article><h3>Name coverage and overlap</h3><p>Coverage: spec names found in source. Jaccard: shared names / names in either set. Production coverage excludes tests and tooling.</p><div id="coverage-chart" class="chart"></div></article></div>
+        <div class="grid"><article><h3>Names left behind</h3><p>Retained: dropped from specs, still in source. Retired: still in specs, disappeared from source after appearing earlier.</p><div id="names-chart" class="chart"></div></article><article><h3>What the selected merge changed</h3><div id="merge-detail"></div></article></div>
+        <article><h3>Where specifications were rewritten</h3><p>Changed lines per spec file and merge. Includes the earlier docs/design.md before the split into specs/.</p><div id="heatmap" class="scroll"></div></article>
+      </section>
+      <section id="work"><div class="section-title"><span>03 / WORK</span><h2>Where the work went</h2><p>Git additions plus deletions, grouped by file path. Churn measures edits, not productivity; moves count twice.</p></div>
+        <article><h3>Work by merge</h3><div id="work-chart" class="chart"></div></article>
+        <div class="grid"><article><h3>Cumulative work</h3><div id="cumulative-chart" class="chart"></div></article><article><h3>Test / production churn</h3><p>Cumulative test edits divided by production edits; unavailable before production exists.</p><div id="ratio-chart" class="chart"></div></article></div>
+        <div class="grid"><article><h3>Commits on the main line per day</h3><p>First-parent snapshots; direct commits and squash merges are included.</p><div id="activity-chart" class="chart"></div></article><article><h3>Recorded defects by cause</h3><p>From change defect logs at the selected snapshot.</p><div id="defect-chart" class="chart"></div></article></div>
+      </section>
+      <section id="evidence"><div class="section-title"><span>04 / VERIFICATION</span><h2>What backs the progress?</h2><p>Committed ledgers are caches. Offline notes and ledger values remain recorded claims, not freshly confirmed CI evidence.</p></div>
+        <div class="grid"><article><h3>Scenario links</h3><p>Declared scenarios and source markers; a source link does not prove a test executed. S-only changes can legitimately wait for R.</p><div id="links-chart" class="chart"></div><div id="link-detail"></div></article><article><h3>Recorded evidence over time</h3><p>Scenario rows with any recorded pass, fail, unknown result, or no evidence. Partial red-only proof can be recorded pass without being closable.</p><div id="evidence-chart" class="chart"></div></article></div>
+        <article><h3>Scenario evidence matrix</h3><p>Red / green / break entries exactly as cached in each change’s ledger.</p><div id="evidence-table" class="scroll"></div></article>
+        <article><h3>CI notes on the main line</h3><p>Missing, malformed and recorded notes are distinct. With --github only the latest note is freshly checked through Redline’s run-validation logic.</p><div id="ci-chart" class="chart"></div><div id="ci-detail"></div></article>
+        <div class="grid"><article><h3>Approval exceptions</h3><p>Claims in local CI notes up to the selected snapshot. Label records do not prove what a person reviewed.</p><div id="claims-chart" class="chart"></div><div id="claims-detail"></div></article><article><h3>Recent GitHub run outcomes</h3><p>Latest fetched sample, independent of the history selector. Runs are not deduplicated pushes or lifetime totals.</p><div id="github-chart" class="chart"></div><div id="github-detail"></div></article></div>
+      </section>
+      <section id="cost"><div class="section-title"><span>05 / COST</span><h2>What the agents spent</h2><p>Tokens from the Claude Code and Codex session logs on this machine, totals only, read again on every refresh; then the auditor and relabeller runs that commit messages record.</p></div>
+        <article><h3>Tokens by model</h3><p>Context read is input plus cache writes and reads: every reply re-reads the conversation, so context per reply is what a long session costs. Sessions run on other machines, or older than the tools keep logs, are not counted.</p><div id="usage-models" class="scroll"></div></article>
+        <article><h3>Output tokens per day, by model</h3><div id="usage-days" class="chart"></div></article>
+        <article><h3>Tokens by branch</h3><p>The branch each session was on; main and unnamed branches hold work between steps.</p><div id="usage-branches" class="scroll"></div></article>
+        <article><h3>Auditor runs recorded in commits, by merge</h3><p>Runs whose commit message records “N tokens, M tool calls”, counted at the merge that brought them to the main line.</p><div id="tokens-chart" class="chart"></div></article>
+        <div class="grid"><article><h3>Cumulative recorded tokens</h3><div id="tokens-cumulative" class="chart"></div></article><article><h3>Tokens by change</h3><p>Runs merged up to the selected snapshot.</p><div id="tokens-change" class="chart"></div></article></div>
+        <article><h3>Recorded runs</h3><div id="tokens-table" class="scroll"></div></article>
+      </section>
+      <details class="method"><summary>Sources, limits and diagnostics</summary><div id="method"></div></details>
+      <footer><span>redline / local observatory</span><span>Read-only · no gates run · no deployment</span></footer>
+    </div>
+  </main>
+  <div id="tooltip" role="tooltip" hidden></div>
+</body>
+</html>
