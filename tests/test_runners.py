@@ -135,7 +135,7 @@ def test_check_break_runs_jest_and_stryker_end_to_end(toy_repo):
                               "TOY.H3": "its tests survive every mutant (0 of 6 killed, in src/adult.js)"}
 
 
-# O-REPORT1: evidence stays HELD in the CI part; G2 owns release after it merges.
+# O-REPORT1: PR #97 merged; per-case push execution is unpublished, so evidence stays HELD.
 # Local/optional-job execution below is validation, never credited red/green.
 @pytest.mark.parametrize("body,new,hooks,qualification,outcome", [
     ("throw new Error('body')", True, "", "red", "expected-failure"),
@@ -147,7 +147,7 @@ def test_check_break_runs_jest_and_stryker_end_to_end(toy_repo):
     ("throw new Error('body')", True, "afterEach(() => {throw Error('hook')});", "nonqualifying", "error"),
     ("throw new Error('body')", False, "", "nonqualifying", "error"),
 ])
-@pytest.mark.spec("REPORT.JS.S1", new=True)
+@pytest.mark.spec("REPORT.JS.S1")
 def test_real_jest_report_provenance(toy_repo, body, new, hooks, qualification, outcome):
     from redline.runner import JEST, run
     source = ('const {spec} = require("../redline/runners/jest");\n' + hooks +
@@ -167,7 +167,7 @@ def test_real_jest_report_provenance(toy_repo, body, new, hooks, qualification, 
 @pytest.mark.parametrize("fault,diagnostic", [("join", None), ("parameters", None), ("skip", "skip"), ("pending", "skip"),
     ("omit", "missing"), ("duplicate", "duplicate"), ("ambiguous", "ambiguous"),
     ("refused", "collection-error"), ("nested", None)])
-@pytest.mark.spec("REPORT.JS.S2", new=True)
+@pytest.mark.spec("REPORT.JS.S2")
 def test_real_jest_inventory_joins_and_isolation(toy_repo, fault, diagnostic):
     from redline.runner import JEST, run
     title = r"escaped \' É"
@@ -194,3 +194,22 @@ def test_real_jest_inventory_joins_and_isolation(toy_repo, fault, diagnostic):
         record = next(r for r in records if "parent" in r["identity"])
         assert "parent" in record["identity"] and "É" in record["identity"] and record["source"]
         assert "inner" not in str(report["observed"])
+
+
+@pytest.mark.parametrize("fault", ["none", "xpass", "omit"])
+@pytest.mark.spec("REPORT.ALL.S1")
+def test_real_cross_runner_qualification(toy_repo, fault):
+    from redline.reports import aggregate
+    from redline.runner import JEST, PYTEST, run
+    (toy_repo / "test_cross.py").write_text('import pytest\n@pytest.mark.spec("TOY.S1")\ndef test_cross(): pass\n')
+    (toy_repo / "src/adult.test.js").write_text('const {spec}=require("../redline/runners/jest");\n' +
+        f'spec("TOY.S1", {{new: {str(fault == "xpass").lower()}}}).test("cross", () => {{}});\n')
+    (toy_repo / "src/kept.test.js").write_text('const {spec}=require("../redline/runners/jest"); spec("TOY.S1").test("kept", () => {});\n')
+    if fault == "omit":
+        (toy_repo / "jest.config.js").write_text("module.exports={testPathIgnorePatterns:['adult.test.js']};")
+    py = run(toy_repo, PYTEST)
+    js = run(toy_repo, replace(JEST, command=lambda sid: (JEST.command(sid)[0] + ["--runInBand"], {})))
+    assert py.returncode == 0 and js.returncode == (1 if fault == "xpass" else 0)
+    report = aggregate([py.outcomes, js.outcomes], commit="b" * 40)
+    assert report["scenarios"]["TOY.S1"]["qualification"] == ("green" if fault == "none" else "nonqualifying")
+    assert fault != "omit" or "missing" in {d["code"] for d in report["diagnostics"]}

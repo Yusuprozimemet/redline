@@ -132,7 +132,7 @@ def test_real_xdist_inventories_and_execution(pytester, fault, diagnostic):
 
 @pytest.mark.parametrize("fault", ["none", "missing", "extra", "duplicate", "conflicting", "malformed",
     "unsupported", "abort", "empty", "mixed-markers", "missing-phase"])
-@pytest.mark.spec("REPORT.ALL.S1", new=True)
+@pytest.mark.spec("REPORT.ALL.S1")
 def test_cross_runner_aggregation_preserves_every_instance(pytester, fault):
     report = execute(pytester, PARAMS)
     from redline.reports import aggregate

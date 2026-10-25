@@ -7,21 +7,30 @@ scenarios:
       commit: cf968e617fa27692e4ea3c17e7ab2b41cce8c7fc
       merged: ea786eb47f9d3073474bbcbd27c03286558b3539
       result: pass
-    green: null
+    green:
+      commit: a1c73011407bb9d3e6744e1770d73e1a642da6d2
+      merged: 2ef2d6f396ce22844fbe721050f154075c09b530
+      result: pass
     break: null
   REPORT.PY.S2:
     red:
       commit: cf968e617fa27692e4ea3c17e7ab2b41cce8c7fc
       merged: ea786eb47f9d3073474bbcbd27c03286558b3539
       result: pass
-    green: null
+    green:
+      commit: a1c73011407bb9d3e6744e1770d73e1a642da6d2
+      merged: 2ef2d6f396ce22844fbe721050f154075c09b530
+      result: pass
     break: null
   REPORT.PY.S3:
     red:
       commit: cf968e617fa27692e4ea3c17e7ab2b41cce8c7fc
       merged: ea786eb47f9d3073474bbcbd27c03286558b3539
       result: pass
-    green: null
+    green:
+      commit: a1c73011407bb9d3e6744e1770d73e1a642da6d2
+      merged: 2ef2d6f396ce22844fbe721050f154075c09b530
+      result: pass
     break: null
   REPORT.JS.S1:
     red:
