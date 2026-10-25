@@ -85,6 +85,9 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    merged before that step.
    Part 39, the maintainer's evidence-counting push setup for real Jest (O-REPORT1), merges
    before scenario-reports/G2; Jest evidence stays HELD until G2 releases it.
+   Part 40, the push run's note handed to the `note` job as an artifact, not a job output read
+   through an environment variable (O-REPORT2's handoff), after G3's reports made the note too
+   long for one; it merges before scenario-reports/C.
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.

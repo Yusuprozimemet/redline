@@ -505,6 +505,11 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   Direct argv/env (128 KiB), Windows command lines (32,767 chars), and job outputs (1 MB) can
   prevent note transport. Specify bounded transport or overflow behavior and its own scenario
   before relying on reports at those sizes; this S makes no overflow delivery guarantee.
+  Build 9 part 40 takes the CI handoff only: after G3, push run 40218119783's note job failed
+  with "Argument list too long" reading the note from an environment variable. The redline job
+  now uploads the note as an artifact the note job downloads, so neither the job-output nor the
+  environment limit applies there. Any bound on the note itself and other argv/env or Windows
+  command-line paths stay here; O-REPORT2 remains open.
 - O-REPORT3 [owner: ci-apart-python/S, maintainer; F12 deferred]: living CI.APART.S2 still says
   ci push --python exits 2, contrary to current code and REPORT.CI.S1's premise. Modify that
   clause in its own delta with owned red/green evidence; this S leaves the stale clause as a defect.
