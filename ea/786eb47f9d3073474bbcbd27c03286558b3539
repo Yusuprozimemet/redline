@@ -1,0 +1,5 @@
+result: pass
+run: https://github.com/Yusuprozimemet/redline/actions/runs/40196744021
+break:
+  REPORT.CI.H1: pass
+  REPORT.CI.H2: pass
