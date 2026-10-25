@@ -1,0 +1,12 @@
+result: pass
+run: https://github.com/Yusuprozimemet/redline/actions/runs/40185467110
+claims:
+- commit: c840e0c1205d1fc792e9e37b5edaa715aadeb346
+  claim: 'Oversized: one local dashboard (server, assets, usage reader, tests, docs) in a single change, approved by the maintainer as a one-time oversize (2026-10-25)'
+  pr: 94
+  label: redline:oversized
+  by: Yusuprozimemet
+  role: admin
+  at: '2026-10-25T10:22:23Z'
+  pushed: '2026-10-25T10:18:31Z'
+  named: null
