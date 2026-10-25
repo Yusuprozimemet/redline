@@ -1,0 +1,4735 @@
+result: pass
+run: https://github.com/Yusuprozimemet/redline/actions/runs/40222312740
+outcomes:
+  version: 1
+  complete: true
+  expected:
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite[R]
+    links:
+    - CI.APART.H1
+    markers:
+    - scenario: CI.APART.H1
+      new: false
+    new: false
+    source: tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite
+    declarations: &id001
+      CI.APART.H1: hold
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite[outside]
+    links:
+    - CI.APART.H1
+    markers:
+    - scenario: CI.APART.H1
+      new: false
+    new: false
+    source: tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite
+    declarations: *id001
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code[R]
+    links:
+    - CI.APART.S1
+    markers:
+    - scenario: CI.APART.S1
+      new: false
+    new: false
+    source: tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code
+    declarations: &id002
+      CI.APART.S1: new
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code[outside]
+    links:
+    - CI.APART.S1
+    markers:
+    - scenario: CI.APART.S1
+      new: false
+    new: false
+    source: tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code
+    declarations: *id002
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_a_suite_result_fails_a_step_over_400_lines_beside_check_lines
+    links:
+    - CI.APART.S2
+    markers:
+    - scenario: CI.APART.S2
+      new: false
+    new: false
+    source: tests/test_ci_suite.py::test_a_suite_result_fails_a_step_over_400_lines_beside_check_lines
+    declarations:
+      CI.APART.S2: new
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_a_suite_result_other_than_success_fails_the_gate_beside_the_gates_failures
+    links:
+    - CI.APART.S2
+    markers:
+    - scenario: CI.APART.S2
+      new: false
+    new: false
+    source: tests/test_ci_suite.py::test_a_suite_result_other_than_success_fails_the_gate_beside_the_gates_failures
+    declarations:
+      CI.APART.S2: new
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_suite_outside_any_step_runs_the_suite_alone_and_refuses_two_steps
+    links:
+    - CI.APART.S3
+    markers:
+    - scenario: CI.APART.S3
+      new: false
+    new: false
+    source: tests/test_ci_suite.py::test_ci_suite_outside_any_step_runs_the_suite_alone_and_refuses_two_steps
+    declarations:
+      CI.APART.S3: new
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_suite_runs_check_break_at_an_r_step_then_the_suite_and_no_gate
+    links:
+    - CI.APART.S3
+    markers:
+    - scenario: CI.APART.S3
+      new: false
+    new: false
+    source: tests/test_ci_suite.py::test_ci_suite_runs_check_break_at_an_r_step_then_the_suite_and_no_gate
+    declarations:
+      CI.APART.S3: new
+  - runner: pytest
+    identity: tests/test_ci.py::test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own
+    links:
+    - CI.APART.S4
+    markers:
+    - scenario: CI.APART.S4
+      new: false
+    new: false
+    source: tests/test_ci.py::test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own
+    declarations:
+      CI.APART.S4: new
+  - runner: pytest
+    identity: tests/test_ci.py::test_the_workflow_runs_the_prs_code_in_its_suite_job_alone_and_the_gate_reads_only_its_result
+    links:
+    - CI.APART.S4
+    markers:
+    - scenario: CI.APART.S4
+      new: false
+    new: false
+    source: tests/test_ci.py::test_the_workflow_runs_the_prs_code_in_its_suite_job_alone_and_the_gate_reads_only_its_result
+    declarations:
+      CI.APART.S4: new
+  - runner: pytest
+    identity: tests/test_pins.py::test_every_job_that_runs_pip_runs_the_hashed_lines_in_order_and_no_other
+    links:
+    - CI.APART.S4
+    markers:
+    - scenario: CI.APART.S4
+      new: false
+    new: false
+    source: tests/test_pins.py::test_every_job_that_runs_pip_runs_the_hashed_lines_in_order_and_no_other
+    declarations:
+      CI.APART.S4: new
+  - runner: pytest
+    identity: tests/test_pins.py::test_every_runner_image_is_named_by_its_version_never_latest
+    links:
+    - CI.APART.S4
+    markers:
+    - scenario: CI.APART.S4
+      new: false
+    new: false
+    source: tests/test_pins.py::test_every_runner_image_is_named_by_its_version_never_latest
+    declarations:
+      CI.APART.S4: new
+  - runner: pytest
+    identity: tests/test_pins.py::test_python_and_node_are_exact_versions
+    links:
+    - CI.APART.S4
+    markers:
+    - scenario: CI.APART.S4
+      new: false
+    new: false
+    source: tests/test_pins.py::test_python_and_node_are_exact_versions
+    declarations:
+      CI.APART.S4: new
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test[new-only]
+    links:
+    - CI.APART.S5
+    markers:
+    - scenario: CI.APART.S5
+      new: false
+    new: false
+    source: tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test
+    declarations: &id003
+      CI.APART.S5: new
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test[no-code]
+    links:
+    - CI.APART.S5
+    markers:
+    - scenario: CI.APART.S5
+      new: false
+    new: false
+    source: tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test
+    declarations: *id003
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_install_jest_writes_over_an_edited_helper
+    links:
+    - INSTALL.WF.H1
+    markers:
+    - scenario: INSTALL.WF.H1
+      new: false
+    new: false
+    source: tests/test_install_workflow.py::test_install_jest_writes_over_an_edited_helper
+    declarations:
+      INSTALL.WF.H1: hold
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_the_workflow_installs_the_commit_redline_was_installed_from
+    links:
+    - INSTALL.WF.S1
+    markers:
+    - scenario: INSTALL.WF.S1
+      new: false
+    new: false
+    source: tests/test_install_workflow.py::test_the_workflow_installs_the_commit_redline_was_installed_from
+    declarations:
+      INSTALL.WF.S1: new
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_the_workflow_is_redlines_own_outside_the_installs_the_pr_gate_and_the_suite
+    links:
+    - INSTALL.WF.S2
+    markers:
+    - scenario: INSTALL.WF.S2
+      new: false
+    new: false
+    source: tests/test_install_workflow.py::test_the_workflow_is_redlines_own_outside_the_installs_the_pr_gate_and_the_suite
+    declarations:
+      INSTALL.WF.S2: new
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[dir-info]
+    links:
+    - INSTALL.WF.S3
+    markers:
+    - scenario: INSTALL.WF.S3
+      new: false
+    new: false
+    source: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing
+    declarations: &id004
+      INSTALL.WF.S3: new
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[hg]
+    links:
+    - INSTALL.WF.S3
+    markers:
+    - scenario: INSTALL.WF.S3
+      new: false
+    new: false
+    source: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing
+    declarations: *id004
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[no-direct-url]
+    links:
+    - INSTALL.WF.S3
+    markers:
+    - scenario: INSTALL.WF.S3
+      new: false
+    new: false
+    source: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing
+    declarations: *id004
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[short-commit]
+    links:
+    - INSTALL.WF.S3
+    markers:
+    - scenario: INSTALL.WF.S3
+      new: false
+    new: false
+    source: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing
+    declarations: *id004
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_an_existing_workflow_file_is_left_as_it_was
+    links:
+    - INSTALL.WF.S4
+    markers:
+    - scenario: INSTALL.WF.S4
+      new: false
+    new: false
+    source: tests/test_install_workflow.py::test_an_existing_workflow_file_is_left_as_it_was
+    declarations:
+      INSTALL.WF.S4: new
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_the_wheel_built_from_the_tree_ships_the_template
+    links:
+    - INSTALL.WF.S5
+    markers:
+    - scenario: INSTALL.WF.S5
+      new: false
+    new: false
+    source: tests/test_install_workflow.py::test_the_wheel_built_from_the_tree_ships_the_template
+    declarations:
+      INSTALL.WF.S5: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_on_its_own_run_keeps_its_result_and_a_copy_on_another_commit_is_unconfirmed
+    links:
+    - LEDGER.RUN.S1
+    markers:
+    - scenario: LEDGER.RUN.S1
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_on_its_own_run_keeps_its_result_and_a_copy_on_another_commit_is_unconfirmed
+    declarations:
+      LEDGER.RUN.S1: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a branch named like main]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: &id005
+      LEDGER.RUN.S2: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a note naming another host]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a note naming another scheme]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a workflow named like redline.yml]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another branch]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another html_url]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another workflow]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[main as a ref]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no event]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no head_branch]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no head_sha]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no html_url]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no path]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[pull_request]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[redline.yml in another directory]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+    declarations: *id005
+  - runner: pytest
+    identity: tests/test_note_run.py::test_another_repositorys_run_confirms_nothing_though_github_has_it_there
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_another_repositorys_run_confirms_nothing_though_github_has_it_there
+    declarations:
+      LEDGER.RUN.S2: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_greens_note_whose_entry_fails_beside_a_failed_job_is_unconfirmed_and_reads_no_break
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_greens_note_whose_entry_fails_beside_a_failed_job_is_unconfirmed_and_reads_no_break
+    declarations:
+      LEDGER.RUN.S3: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_agrees_with_keeps_its_result_and_a_fail_note_fails_every_break
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_agrees_with_keeps_its_result_and_a_fail_note_fails_every_break
+    declarations:
+      LEDGER.RUN.S3: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a failed break beside a job that succeeded]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: &id006
+      LEDGER.RUN.S3: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a job named Redline]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: *id006
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a job named like redline]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: *id006
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a redline job not concluded]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: *id006
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[an entry fail for a scenario never in the change]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: *id006
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[fail beside a job that succeeded]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: *id006
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[fail, no entry for H, beside a job that succeeded]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: *id006
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[no jobs]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: *id006
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[no redline job]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: *id006
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[pass beside a failed job]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: *id006
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[pass, no entry for H, beside a failed job]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+    declarations: *id006
+  - runner: pytest
+    identity: tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing[dropped]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing
+    declarations: &id007
+      LEDGER.RUN.S3: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing[retagged]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing
+    declarations: *id007
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a pull request]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+    declarations: &id008
+      LEDGER.RUN.S4: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run GitHub doesn't have]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+    declarations: *id008
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's URL and a query]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+    declarations: *id008
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's URL and a slash]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+    declarations: *id008
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's attempt]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+    declarations: *id008
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[an id that isn't a number]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+    declarations: *id008
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[no run line]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+    declarations: *id008
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[not a URL of GitHub's]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+    declarations: *id008
+  - runner: pytest
+    identity: tests/test_note_run.py::test_each_run_is_asked_about_once_in_a_rebuild_and_a_404_at_once
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_each_run_is_asked_about_once_in_a_rebuild_and_a_404_at_once
+    declarations:
+      LEDGER.RUN.S4: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_that_isnt_yaml_or_has_no_result_is_an_error_naming_its_commit_before_github_is_asked
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_note_that_isnt_yaml_or_has_no_result_is_an_error_naming_its_commit_before_github_is_asked
+    declarations:
+      LEDGER.RUN.S5: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_repository_github_doesnt_show_or_no_gh_is_an_error_and_no_run_is_asked_for
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_a_repository_github_doesnt_show_or_no_gh_is_an_error_and_no_run_is_asked_for
+    declarations:
+      LEDGER.RUN.S5: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[401]
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger
+    declarations: &id009
+      LEDGER.RUN.S5: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[403]
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger
+    declarations: *id009
+  - runner: pytest
+    identity: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[500]
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger
+    declarations: *id009
+  - runner: pytest
+    identity: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[502]
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger
+    declarations: *id009
+  - runner: pytest
+    identity: tests/test_note_run.py::test_check_close_refuses_a_note_that_doesnt_match_its_run_and_isnt_waiting
+    links:
+    - LEDGER.RUN.S6
+    markers:
+    - scenario: LEDGER.RUN.S6
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_check_close_refuses_a_note_that_doesnt_match_its_run_and_isnt_waiting
+    declarations:
+      LEDGER.RUN.S6: new
+  - runner: pytest
+    identity: tests/test_note_run.py::test_the_workflow_notes_its_own_run_and_grants_actions_read_to_the_jobs_that_read_runs
+    links:
+    - LEDGER.RUN.S7
+    markers:
+    - scenario: LEDGER.RUN.S7
+      new: false
+    new: false
+    source: tests/test_note_run.py::test_the_workflow_notes_its_own_run_and_grants_actions_read_to_the_jobs_that_read_runs
+    declarations:
+      LEDGER.RUN.S7: new
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[abort]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: &id010
+      REPORT.ALL.S1: new
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[conflicting]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: *id010
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[duplicate]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: *id010
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[empty]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: *id010
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[extra]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: *id010
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[malformed]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: *id010
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[missing-phase]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: *id010
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[missing]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: *id010
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[mixed-markers]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: *id010
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[none]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: *id010
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[unsupported]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+    declarations: *id010
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_cross_runner_qualification[none]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_cross_runner_qualification
+    declarations: &id011
+      REPORT.ALL.S1: new
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_cross_runner_qualification[omit]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_cross_runner_qualification
+    declarations: *id011
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_cross_runner_qualification[xpass]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_cross_runner_qualification
+    declarations: *id011
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_outcomes_never_upgrade_existing_evidence_or_leak_python
+    links:
+    - REPORT.CI.H1
+    markers:
+    - scenario: REPORT.CI.H1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_outcomes_never_upgrade_existing_evidence_or_leak_python
+    declarations:
+      REPORT.CI.H1: hold
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_file_direct_and_isolated_writer_keep_identical_bytes
+    links:
+    - REPORT.CI.H2
+    markers:
+    - scenario: REPORT.CI.H2
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_file_direct_and_isolated_writer_keep_identical_bytes
+    declarations:
+      REPORT.CI.H2: hold
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-complete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: &id012
+      REPORT.CI.S1: new
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-incomplete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-malformed]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-missing]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-skip]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-complete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-incomplete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-malformed]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-missing]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-skip]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-complete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-incomplete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-malformed]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-missing]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-skip]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-complete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-incomplete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-malformed]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-missing]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-skip]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+    declarations: *id012
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_lost_suite_report_is_incomplete_even_when_suite_passes
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_lost_suite_report_is_incomplete_even_when_suite_passes
+    declarations:
+      REPORT.CI.S1: new
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails[False]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails
+    declarations: &id013
+      REPORT.CI.S1: new
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails[True]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails
+    declarations: *id013
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[fail]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff
+    declarations: &id014
+      REPORT.CI.S1: new
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[pass]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff
+    declarations: *id014
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[skip]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    source: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff
+    declarations: *id014
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[expect(1).toBe(1)-False--green-pass]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_report_provenance
+    declarations: &id015
+      REPORT.JS.S1: new
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[expect(1).toBe(1)-True--nonqualifying-unexpected-pass]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_report_provenance
+    declarations: *id015
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[missing.method()-True--red-expected-failure]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_report_provenance
+    declarations: *id015
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[return Promise.reject(new TypeError('absent'))-True--red-expected-failure]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_report_provenance
+    declarations: *id015
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-False--nonqualifying-error]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_report_provenance
+    declarations: *id015
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True--red-expected-failure]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_report_provenance
+    declarations: *id015
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True-afterEach(() => {throw Error('hook')});-nonqualifying-error]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_report_provenance
+    declarations: *id015
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True-beforeEach(() => {throw Error('hook')});-nonqualifying-error]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_report_provenance
+    declarations: *id015
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[ambiguous-ambiguous]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+    declarations: &id016
+      REPORT.JS.S2: new
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[duplicate-duplicate]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+    declarations: *id016
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[join-None]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+    declarations: *id016
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[nested-None]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+    declarations: *id016
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[omit-missing]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+    declarations: *id016
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[parameters-None]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+    declarations: *id016
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[pending-skip]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+    declarations: *id016
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[refused-collection-error]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+    declarations: *id016
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[skip-skip]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+    declarations: *id016
+  - runner: pytest
+    identity: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[setup-pytest.xfail('hook')]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red
+    declarations: &id017
+      REPORT.PY.S1: new
+  - runner: pytest
+    identity: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[setup-raise ValueError('hook')]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red
+    declarations: *id017
+  - runner: pytest
+    identity: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[teardown-pytest.xfail('hook')]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red
+    declarations: *id017
+  - runner: pytest
+    identity: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[teardown-raise ValueError('hook')]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red
+    declarations: *id017
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[, new=True-assert False-expected-failure-nonqualifying]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+    declarations: &id018
+      REPORT.PY.S1: new
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[, new=True-pass-unexpected-pass-nonqualifying]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+    declarations: *id018
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-assert False-error-nonqualifying]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+    declarations: *id018
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pass-pass-green]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+    declarations: *id018
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pytest.skip('skip')-skip-nonqualifying]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+    declarations: *id018
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pytest.xfail('unrelated')-expected-failure-nonqualifying]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+    declarations: *id018
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[assert False]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+    declarations: &id019
+      REPORT.PY.S1: new
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[pytest.fail('body')]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+    declarations: *id019
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[raise AttributeError()]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+    declarations: *id019
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[raise ImportError()]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+    declarations: *id019
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[raise NameError()]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+    declarations: *id019
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[raise TypeError()]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+    declarations: *id019
+  - runner: pytest
+    identity: 'tests/test_reports.py::test_strict_body_failure_is_red[with pytest.raises(ValueError): pass]'
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+    declarations: *id019
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection0-files0-None]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+    declarations: &id020
+      REPORT.PY.S2: new
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection1-files1-deselected]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+    declarations: *id020
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection2-files2-missing]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+    declarations: *id020
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection3-files3-collection-error]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+    declarations: *id020
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection4-files4-missing]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+    declarations: *id020
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection5-files5-skip]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+    declarations: *id020
+  - runner: pytest
+    identity: tests/test_reports.py::test_filtered_and_later_runs_cannot_replace_a_previous_full_report
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    source: tests/test_reports.py::test_filtered_and_later_runs_cannot_replace_a_previous_full_report
+    declarations:
+      REPORT.PY.S2: new
+  - runner: pytest
+    identity: tests/test_reports.py::test_unicode_class_paths_and_nested_invocations_are_isolated
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    source: tests/test_reports.py::test_unicode_class_paths_and_nested_invocations_are_isolated
+    declarations:
+      REPORT.PY.S2: new
+  - runner: pytest
+    identity: tests/test_reports.py::test_real_xdist_inventories_and_execution[-None]
+    links:
+    - REPORT.PY.S3
+    markers:
+    - scenario: REPORT.PY.S3
+      new: false
+    new: false
+    source: tests/test_reports.py::test_real_xdist_inventories_and_execution
+    declarations: &id021
+      REPORT.PY.S3: new
+  - runner: pytest
+    identity: tests/test_reports.py::test_real_xdist_inventories_and_execution[duplicate-duplicate]
+    links:
+    - REPORT.PY.S3
+    markers:
+    - scenario: REPORT.PY.S3
+      new: false
+    new: false
+    source: tests/test_reports.py::test_real_xdist_inventories_and_execution
+    declarations: *id021
+  - runner: pytest
+    identity: tests/test_reports.py::test_real_xdist_inventories_and_execution[exit-missing-worker]
+    links:
+    - REPORT.PY.S3
+    markers:
+    - scenario: REPORT.PY.S3
+      new: false
+    new: false
+    source: tests/test_reports.py::test_real_xdist_inventories_and_execution
+    declarations: *id021
+  - runner: pytest
+    identity: tests/test_reports.py::test_real_xdist_inventories_and_execution[inventory-inventory-conflict]
+    links:
+    - REPORT.PY.S3
+    markers:
+    - scenario: REPORT.PY.S3
+      new: false
+    new: false
+    source: tests/test_reports.py::test_real_xdist_inventories_and_execution
+    declarations: *id021
+  - runner: pytest
+    identity: tests/test_reports.py::test_real_xdist_inventories_and_execution[parameter-missing]
+    links:
+    - REPORT.PY.S3
+    markers:
+    - scenario: REPORT.PY.S3
+      new: false
+    new: false
+    source: tests/test_reports.py::test_real_xdist_inventories_and_execution
+    declarations: *id021
+  observed:
+  - runner: pytest
+    identity: tests/test_ci.py::test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own
+    links:
+    - CI.APART.S4
+    markers:
+    - scenario: CI.APART.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci.py::test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own
+  - runner: pytest
+    identity: tests/test_ci.py::test_the_workflow_runs_the_prs_code_in_its_suite_job_alone_and_the_gate_reads_only_its_result
+    links:
+    - CI.APART.S4
+    markers:
+    - scenario: CI.APART.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci.py::test_the_workflow_runs_the_prs_code_in_its_suite_job_alone_and_the_gate_reads_only_its_result
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_a_suite_result_fails_a_step_over_400_lines_beside_check_lines
+    links:
+    - CI.APART.S2
+    markers:
+    - scenario: CI.APART.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci_suite.py::test_a_suite_result_fails_a_step_over_400_lines_beside_check_lines
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_a_suite_result_other_than_success_fails_the_gate_beside_the_gates_failures
+    links:
+    - CI.APART.S2
+    markers:
+    - scenario: CI.APART.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci_suite.py::test_a_suite_result_other_than_success_fails_the_gate_beside_the_gates_failures
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test[new-only]
+    links:
+    - CI.APART.S5
+    markers:
+    - scenario: CI.APART.S5
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test[no-code]
+    links:
+    - CI.APART.S5
+    markers:
+    - scenario: CI.APART.S5
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code[R]
+    links:
+    - CI.APART.S1
+    markers:
+    - scenario: CI.APART.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code[outside]
+    links:
+    - CI.APART.S1
+    markers:
+    - scenario: CI.APART.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite[R]
+    links:
+    - CI.APART.H1
+    markers:
+    - scenario: CI.APART.H1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite[outside]
+    links:
+    - CI.APART.H1
+    markers:
+    - scenario: CI.APART.H1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_suite_outside_any_step_runs_the_suite_alone_and_refuses_two_steps
+    links:
+    - CI.APART.S3
+    markers:
+    - scenario: CI.APART.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci_suite.py::test_ci_suite_outside_any_step_runs_the_suite_alone_and_refuses_two_steps
+  - runner: pytest
+    identity: tests/test_ci_suite.py::test_ci_suite_runs_check_break_at_an_r_step_then_the_suite_and_no_gate
+    links:
+    - CI.APART.S3
+    markers:
+    - scenario: CI.APART.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_ci_suite.py::test_ci_suite_runs_check_break_at_an_r_step_then_the_suite_and_no_gate
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[dir-info]
+    links:
+    - INSTALL.WF.S3
+    markers:
+    - scenario: INSTALL.WF.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[hg]
+    links:
+    - INSTALL.WF.S3
+    markers:
+    - scenario: INSTALL.WF.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[no-direct-url]
+    links:
+    - INSTALL.WF.S3
+    markers:
+    - scenario: INSTALL.WF.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[short-commit]
+    links:
+    - INSTALL.WF.S3
+    markers:
+    - scenario: INSTALL.WF.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_an_existing_workflow_file_is_left_as_it_was
+    links:
+    - INSTALL.WF.S4
+    markers:
+    - scenario: INSTALL.WF.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_install_workflow.py::test_an_existing_workflow_file_is_left_as_it_was
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_install_jest_writes_over_an_edited_helper
+    links:
+    - INSTALL.WF.H1
+    markers:
+    - scenario: INSTALL.WF.H1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_install_workflow.py::test_install_jest_writes_over_an_edited_helper
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_the_wheel_built_from_the_tree_ships_the_template
+    links:
+    - INSTALL.WF.S5
+    markers:
+    - scenario: INSTALL.WF.S5
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_install_workflow.py::test_the_wheel_built_from_the_tree_ships_the_template
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_the_workflow_installs_the_commit_redline_was_installed_from
+    links:
+    - INSTALL.WF.S1
+    markers:
+    - scenario: INSTALL.WF.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_install_workflow.py::test_the_workflow_installs_the_commit_redline_was_installed_from
+  - runner: pytest
+    identity: tests/test_install_workflow.py::test_the_workflow_is_redlines_own_outside_the_installs_the_pr_gate_and_the_suite
+    links:
+    - INSTALL.WF.S2
+    markers:
+    - scenario: INSTALL.WF.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_install_workflow.py::test_the_workflow_is_redlines_own_outside_the_installs_the_pr_gate_and_the_suite
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_greens_note_whose_entry_fails_beside_a_failed_job_is_unconfirmed_and_reads_no_break
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_greens_note_whose_entry_fails_beside_a_failed_job_is_unconfirmed_and_reads_no_break
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a pull request]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run GitHub doesn't have]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's URL and a query]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's URL and a slash]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's attempt]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[an id that isn't a number]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[no run line]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[not a URL of GitHub's]
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_agrees_with_keeps_its_result_and_a_fail_note_fails_every_break
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_agrees_with_keeps_its_result_and_a_fail_note_fails_every_break
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a failed break beside a job that succeeded]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a job named Redline]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a job named like redline]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a redline job not concluded]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[an entry fail for a scenario never in the change]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[fail beside a job that succeeded]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[fail, no entry for H, beside a job that succeeded]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[no jobs]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[no redline job]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[pass beside a failed job]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[pass, no entry for H, beside a failed job]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_on_its_own_run_keeps_its_result_and_a_copy_on_another_commit_is_unconfirmed
+    links:
+    - LEDGER.RUN.S1
+    markers:
+    - scenario: LEDGER.RUN.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_on_its_own_run_keeps_its_result_and_a_copy_on_another_commit_is_unconfirmed
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_note_that_isnt_yaml_or_has_no_result_is_an_error_naming_its_commit_before_github_is_asked
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_note_that_isnt_yaml_or_has_no_result_is_an_error_naming_its_commit_before_github_is_asked
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_repository_github_doesnt_show_or_no_gh_is_an_error_and_no_run_is_asked_for
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_repository_github_doesnt_show_or_no_gh_is_an_error_and_no_run_is_asked_for
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a branch named like main]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a note naming another host]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a note naming another scheme]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a workflow named like redline.yml]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another branch]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another html_url]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another workflow]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[main as a ref]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no event]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no head_branch]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no head_sha]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no html_url]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no path]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[pull_request]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[redline.yml in another directory]
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing[dropped]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing[retagged]
+    links:
+    - LEDGER.RUN.S3
+    markers:
+    - scenario: LEDGER.RUN.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing
+  - runner: pytest
+    identity: tests/test_note_run.py::test_another_repositorys_run_confirms_nothing_though_github_has_it_there
+    links:
+    - LEDGER.RUN.S2
+    markers:
+    - scenario: LEDGER.RUN.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_another_repositorys_run_confirms_nothing_though_github_has_it_there
+  - runner: pytest
+    identity: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[401]
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger
+  - runner: pytest
+    identity: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[403]
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger
+  - runner: pytest
+    identity: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[500]
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger
+  - runner: pytest
+    identity: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[502]
+    links:
+    - LEDGER.RUN.S5
+    markers:
+    - scenario: LEDGER.RUN.S5
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger
+  - runner: pytest
+    identity: tests/test_note_run.py::test_check_close_refuses_a_note_that_doesnt_match_its_run_and_isnt_waiting
+    links:
+    - LEDGER.RUN.S6
+    markers:
+    - scenario: LEDGER.RUN.S6
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_check_close_refuses_a_note_that_doesnt_match_its_run_and_isnt_waiting
+  - runner: pytest
+    identity: tests/test_note_run.py::test_each_run_is_asked_about_once_in_a_rebuild_and_a_404_at_once
+    links:
+    - LEDGER.RUN.S4
+    markers:
+    - scenario: LEDGER.RUN.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_each_run_is_asked_about_once_in_a_rebuild_and_a_404_at_once
+  - runner: pytest
+    identity: tests/test_note_run.py::test_the_workflow_notes_its_own_run_and_grants_actions_read_to_the_jobs_that_read_runs
+    links:
+    - LEDGER.RUN.S7
+    markers:
+    - scenario: LEDGER.RUN.S7
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_note_run.py::test_the_workflow_notes_its_own_run_and_grants_actions_read_to_the_jobs_that_read_runs
+  - runner: pytest
+    identity: tests/test_pins.py::test_every_job_that_runs_pip_runs_the_hashed_lines_in_order_and_no_other
+    links:
+    - CI.APART.S4
+    markers:
+    - scenario: CI.APART.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_pins.py::test_every_job_that_runs_pip_runs_the_hashed_lines_in_order_and_no_other
+  - runner: pytest
+    identity: tests/test_pins.py::test_every_runner_image_is_named_by_its_version_never_latest
+    links:
+    - CI.APART.S4
+    markers:
+    - scenario: CI.APART.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_pins.py::test_every_runner_image_is_named_by_its_version_never_latest
+  - runner: pytest
+    identity: tests/test_pins.py::test_python_and_node_are_exact_versions
+    links:
+    - CI.APART.S4
+    markers:
+    - scenario: CI.APART.S4
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_pins.py::test_python_and_node_are_exact_versions
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-complete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-incomplete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-malformed]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-missing]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-skip]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-complete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-incomplete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-malformed]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-missing]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-skip]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-complete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-incomplete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-malformed]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-missing]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-skip]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-complete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-incomplete]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-malformed]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-missing]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-skip]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_current_report_survives_both_note_routes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_file_direct_and_isolated_writer_keep_identical_bytes
+    links:
+    - REPORT.CI.H2
+    markers:
+    - scenario: REPORT.CI.H2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_file_direct_and_isolated_writer_keep_identical_bytes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_lost_suite_report_is_incomplete_even_when_suite_passes
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_lost_suite_report_is_incomplete_even_when_suite_passes
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_outcomes_never_upgrade_existing_evidence_or_leak_python
+    links:
+    - REPORT.CI.H1
+    markers:
+    - scenario: REPORT.CI.H1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_outcomes_never_upgrade_existing_evidence_or_leak_python
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails[False]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails[True]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[fail]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[pass]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff
+  - runner: pytest
+    identity: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[skip]
+    links:
+    - REPORT.CI.S1
+    markers:
+    - scenario: REPORT.CI.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[abort]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[conflicting]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[duplicate]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[empty]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[extra]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[malformed]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[missing-phase]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[missing]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[mixed-markers]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[none]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[unsupported]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection0-files0-None]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection1-files1-deselected]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection2-files2-missing]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection3-files3-collection-error]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection4-files4-missing]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+  - runner: pytest
+    identity: tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection5-files5-skip]
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_expected_instances_survive_selection_and_collection
+  - runner: pytest
+    identity: tests/test_reports.py::test_filtered_and_later_runs_cannot_replace_a_previous_full_report
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_filtered_and_later_runs_cannot_replace_a_previous_full_report
+  - runner: pytest
+    identity: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[setup-pytest.xfail('hook')]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red
+  - runner: pytest
+    identity: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[setup-raise ValueError('hook')]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red
+  - runner: pytest
+    identity: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[teardown-pytest.xfail('hook')]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red
+  - runner: pytest
+    identity: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[teardown-raise ValueError('hook')]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[, new=True-assert False-expected-failure-nonqualifying]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[, new=True-pass-unexpected-pass-nonqualifying]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-assert False-error-nonqualifying]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pass-pass-green]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pytest.skip('skip')-skip-nonqualifying]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+  - runner: pytest
+    identity: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pytest.xfail('unrelated')-expected-failure-nonqualifying]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail
+  - runner: pytest
+    identity: tests/test_reports.py::test_real_xdist_inventories_and_execution[-None]
+    links:
+    - REPORT.PY.S3
+    markers:
+    - scenario: REPORT.PY.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_real_xdist_inventories_and_execution
+  - runner: pytest
+    identity: tests/test_reports.py::test_real_xdist_inventories_and_execution[duplicate-duplicate]
+    links:
+    - REPORT.PY.S3
+    markers:
+    - scenario: REPORT.PY.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_real_xdist_inventories_and_execution
+  - runner: pytest
+    identity: tests/test_reports.py::test_real_xdist_inventories_and_execution[exit-missing-worker]
+    links:
+    - REPORT.PY.S3
+    markers:
+    - scenario: REPORT.PY.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_real_xdist_inventories_and_execution
+  - runner: pytest
+    identity: tests/test_reports.py::test_real_xdist_inventories_and_execution[inventory-inventory-conflict]
+    links:
+    - REPORT.PY.S3
+    markers:
+    - scenario: REPORT.PY.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_real_xdist_inventories_and_execution
+  - runner: pytest
+    identity: tests/test_reports.py::test_real_xdist_inventories_and_execution[parameter-missing]
+    links:
+    - REPORT.PY.S3
+    markers:
+    - scenario: REPORT.PY.S3
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_real_xdist_inventories_and_execution
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[assert False]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[pytest.fail('body')]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[raise AttributeError()]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[raise ImportError()]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[raise NameError()]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+  - runner: pytest
+    identity: tests/test_reports.py::test_strict_body_failure_is_red[raise TypeError()]
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+  - runner: pytest
+    identity: 'tests/test_reports.py::test_strict_body_failure_is_red[with pytest.raises(ValueError): pass]'
+    links:
+    - REPORT.PY.S1
+    markers:
+    - scenario: REPORT.PY.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_strict_body_failure_is_red
+  - runner: pytest
+    identity: tests/test_reports.py::test_unicode_class_paths_and_nested_invocations_are_isolated
+    links:
+    - REPORT.PY.S2
+    markers:
+    - scenario: REPORT.PY.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_reports.py::test_unicode_class_paths_and_nested_invocations_are_isolated
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_cross_runner_qualification[none]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_cross_runner_qualification
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_cross_runner_qualification[omit]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_cross_runner_qualification
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_cross_runner_qualification[xpass]
+    links:
+    - REPORT.ALL.S1
+    markers:
+    - scenario: REPORT.ALL.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_cross_runner_qualification
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[ambiguous-ambiguous]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[duplicate-duplicate]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[join-None]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[nested-None]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[omit-missing]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[parameters-None]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[pending-skip]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[refused-collection-error]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[skip-skip]
+    links:
+    - REPORT.JS.S2
+    markers:
+    - scenario: REPORT.JS.S2
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_inventory_joins_and_isolation
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[expect(1).toBe(1)-False--green-pass]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_report_provenance
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[expect(1).toBe(1)-True--nonqualifying-unexpected-pass]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_report_provenance
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[missing.method()-True--red-expected-failure]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_report_provenance
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[return Promise.reject(new TypeError('absent'))-True--red-expected-failure]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_report_provenance
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-False--nonqualifying-error]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_report_provenance
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True--red-expected-failure]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_report_provenance
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True-afterEach(() => {throw Error('hook')});-nonqualifying-error]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_report_provenance
+  - runner: pytest
+    identity: tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True-beforeEach(() => {throw Error('hook')});-nonqualifying-error]
+    links:
+    - REPORT.JS.S1
+    markers:
+    - scenario: REPORT.JS.S1
+      new: false
+    new: false
+    strict_new: false
+    unrelated_xfail: false
+    phases:
+      setup: pass
+      call: pass
+      teardown: pass
+    outcome: pass
+    source: tests/test_runners.py::test_real_jest_report_provenance
+  scenarios:
+    CI.APART.H1:
+      expected:
+      - tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite[R]
+      - tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite[outside]
+      observed:
+      - tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite[R]
+      - tests/test_ci_suite.py::test_ci_pr_without_a_suite_result_still_runs_check_break_and_the_suite[outside]
+      complete: true
+      qualification: green
+    CI.APART.S1:
+      expected:
+      - tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code[R]
+      - tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code[outside]
+      observed:
+      - tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code[R]
+      - tests/test_ci_suite.py::test_ci_pr_with_a_suite_result_of_success_runs_every_gate_and_none_of_the_prs_code[outside]
+      complete: true
+      qualification: green
+    CI.APART.S2:
+      expected:
+      - tests/test_ci_suite.py::test_a_suite_result_fails_a_step_over_400_lines_beside_check_lines
+      - tests/test_ci_suite.py::test_a_suite_result_other_than_success_fails_the_gate_beside_the_gates_failures
+      observed:
+      - tests/test_ci_suite.py::test_a_suite_result_fails_a_step_over_400_lines_beside_check_lines
+      - tests/test_ci_suite.py::test_a_suite_result_other_than_success_fails_the_gate_beside_the_gates_failures
+      complete: true
+      qualification: green
+    CI.APART.S3:
+      expected:
+      - tests/test_ci_suite.py::test_ci_suite_outside_any_step_runs_the_suite_alone_and_refuses_two_steps
+      - tests/test_ci_suite.py::test_ci_suite_runs_check_break_at_an_r_step_then_the_suite_and_no_gate
+      observed:
+      - tests/test_ci_suite.py::test_ci_suite_outside_any_step_runs_the_suite_alone_and_refuses_two_steps
+      - tests/test_ci_suite.py::test_ci_suite_runs_check_break_at_an_r_step_then_the_suite_and_no_gate
+      complete: true
+      qualification: green
+    CI.APART.S4:
+      expected:
+      - tests/test_ci.py::test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own
+      - tests/test_ci.py::test_the_workflow_runs_the_prs_code_in_its_suite_job_alone_and_the_gate_reads_only_its_result
+      - tests/test_pins.py::test_every_job_that_runs_pip_runs_the_hashed_lines_in_order_and_no_other
+      - tests/test_pins.py::test_every_runner_image_is_named_by_its_version_never_latest
+      - tests/test_pins.py::test_python_and_node_are_exact_versions
+      observed:
+      - tests/test_ci.py::test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own
+      - tests/test_ci.py::test_the_workflow_runs_the_prs_code_in_its_suite_job_alone_and_the_gate_reads_only_its_result
+      - tests/test_pins.py::test_every_job_that_runs_pip_runs_the_hashed_lines_in_order_and_no_other
+      - tests/test_pins.py::test_every_runner_image_is_named_by_its_version_never_latest
+      - tests/test_pins.py::test_python_and_node_are_exact_versions
+      complete: true
+      qualification: green
+    CI.APART.S5:
+      expected:
+      - tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test[new-only]
+      - tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test[no-code]
+      observed:
+      - tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test[new-only]
+      - tests/test_ci_suite.py::test_at_an_r_step_ci_pr_with_a_suite_result_keeps_the_refusals_that_run_no_test[no-code]
+      complete: true
+      qualification: green
+    INSTALL.WF.H1:
+      expected:
+      - tests/test_install_workflow.py::test_install_jest_writes_over_an_edited_helper
+      observed:
+      - tests/test_install_workflow.py::test_install_jest_writes_over_an_edited_helper
+      complete: true
+      qualification: green
+    INSTALL.WF.S1:
+      expected:
+      - tests/test_install_workflow.py::test_the_workflow_installs_the_commit_redline_was_installed_from
+      observed:
+      - tests/test_install_workflow.py::test_the_workflow_installs_the_commit_redline_was_installed_from
+      complete: true
+      qualification: green
+    INSTALL.WF.S2:
+      expected:
+      - tests/test_install_workflow.py::test_the_workflow_is_redlines_own_outside_the_installs_the_pr_gate_and_the_suite
+      observed:
+      - tests/test_install_workflow.py::test_the_workflow_is_redlines_own_outside_the_installs_the_pr_gate_and_the_suite
+      complete: true
+      qualification: green
+    INSTALL.WF.S3:
+      expected:
+      - tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[dir-info]
+      - tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[hg]
+      - tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[no-direct-url]
+      - tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[short-commit]
+      observed:
+      - tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[dir-info]
+      - tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[hg]
+      - tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[no-direct-url]
+      - tests/test_install_workflow.py::test_a_redline_with_no_git_commit_to_install_writes_nothing[short-commit]
+      complete: true
+      qualification: green
+    INSTALL.WF.S4:
+      expected:
+      - tests/test_install_workflow.py::test_an_existing_workflow_file_is_left_as_it_was
+      observed:
+      - tests/test_install_workflow.py::test_an_existing_workflow_file_is_left_as_it_was
+      complete: true
+      qualification: green
+    INSTALL.WF.S5:
+      expected:
+      - tests/test_install_workflow.py::test_the_wheel_built_from_the_tree_ships_the_template
+      observed:
+      - tests/test_install_workflow.py::test_the_wheel_built_from_the_tree_ships_the_template
+      complete: true
+      qualification: green
+    LEDGER.RUN.S1:
+      expected:
+      - tests/test_note_run.py::test_a_note_on_its_own_run_keeps_its_result_and_a_copy_on_another_commit_is_unconfirmed
+      observed:
+      - tests/test_note_run.py::test_a_note_on_its_own_run_keeps_its_result_and_a_copy_on_another_commit_is_unconfirmed
+      complete: true
+      qualification: green
+    LEDGER.RUN.S2:
+      expected:
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a branch named like main]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a note naming another host]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a note naming another scheme]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a workflow named like redline.yml]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another branch]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another html_url]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another workflow]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[main as a ref]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no event]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no head_branch]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no head_sha]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no html_url]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no path]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[pull_request]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[redline.yml in another directory]
+      - tests/test_note_run.py::test_another_repositorys_run_confirms_nothing_though_github_has_it_there
+      observed:
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a branch named like main]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a note naming another host]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a note naming another scheme]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[a workflow named like redline.yml]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another branch]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another html_url]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[another workflow]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[main as a ref]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no event]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no head_branch]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no head_sha]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no html_url]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[no path]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[pull_request]
+      - tests/test_note_run.py::test_a_run_of_another_event_branch_workflow_or_url_confirms_nothing[redline.yml in another directory]
+      - tests/test_note_run.py::test_another_repositorys_run_confirms_nothing_though_github_has_it_there
+      complete: true
+      qualification: green
+    LEDGER.RUN.S3:
+      expected:
+      - tests/test_note_run.py::test_a_greens_note_whose_entry_fails_beside_a_failed_job_is_unconfirmed_and_reads_no_break
+      - tests/test_note_run.py::test_a_note_its_redline_job_agrees_with_keeps_its_result_and_a_fail_note_fails_every_break
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a failed break beside a job that succeeded]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a job named Redline]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a job named like redline]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a redline job not concluded]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[an entry fail for a scenario never in the change]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[fail beside a job that succeeded]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[fail, no entry for H, beside a job that succeeded]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[no jobs]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[no redline job]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[pass beside a failed job]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[pass, no entry for H, beside a failed job]
+      - tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing[dropped]
+      - tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing[retagged]
+      observed:
+      - tests/test_note_run.py::test_a_greens_note_whose_entry_fails_beside_a_failed_job_is_unconfirmed_and_reads_no_break
+      - tests/test_note_run.py::test_a_note_its_redline_job_agrees_with_keeps_its_result_and_a_fail_note_fails_every_break
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a failed break beside a job that succeeded]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a job named Redline]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a job named like redline]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[a redline job not concluded]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[an entry fail for a scenario never in the change]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[fail beside a job that succeeded]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[fail, no entry for H, beside a job that succeeded]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[no jobs]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[no redline job]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[pass beside a failed job]
+      - tests/test_note_run.py::test_a_note_its_redline_job_disagrees_with_reads_unconfirmed_and_so_do_its_breaks[pass, no entry for H, beside a failed job]
+      - tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing[dropped]
+      - tests/test_note_run.py::test_an_entry_for_a_scenario_the_change_no_longer_holds_counts_for_nothing[retagged]
+      complete: true
+      qualification: green
+    LEDGER.RUN.S4:
+      expected:
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a pull request]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run GitHub doesn't have]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's URL and a query]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's URL and a slash]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's attempt]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[an id that isn't a number]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[no run line]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[not a URL of GitHub's]
+      - tests/test_note_run.py::test_each_run_is_asked_about_once_in_a_rebuild_and_a_404_at_once
+      observed:
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a pull request]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run GitHub doesn't have]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's URL and a query]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's URL and a slash]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[a run's attempt]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[an id that isn't a number]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[no run line]
+      - tests/test_note_run.py::test_a_missing_run_a_url_that_isnt_a_run_or_no_run_line_reads_unconfirmed[not a URL of GitHub's]
+      - tests/test_note_run.py::test_each_run_is_asked_about_once_in_a_rebuild_and_a_404_at_once
+      complete: true
+      qualification: green
+    LEDGER.RUN.S5:
+      expected:
+      - tests/test_note_run.py::test_a_note_that_isnt_yaml_or_has_no_result_is_an_error_naming_its_commit_before_github_is_asked
+      - tests/test_note_run.py::test_a_repository_github_doesnt_show_or_no_gh_is_an_error_and_no_run_is_asked_for
+      - tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[401]
+      - tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[403]
+      - tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[500]
+      - tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[502]
+      observed:
+      - tests/test_note_run.py::test_a_note_that_isnt_yaml_or_has_no_result_is_an_error_naming_its_commit_before_github_is_asked
+      - tests/test_note_run.py::test_a_repository_github_doesnt_show_or_no_gh_is_an_error_and_no_run_is_asked_for
+      - tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[401]
+      - tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[403]
+      - tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[500]
+      - tests/test_note_run.py::test_any_other_failure_to_read_a_run_is_an_error_naming_it_and_writes_no_ledger[502]
+      complete: true
+      qualification: green
+    LEDGER.RUN.S6:
+      expected:
+      - tests/test_note_run.py::test_check_close_refuses_a_note_that_doesnt_match_its_run_and_isnt_waiting
+      observed:
+      - tests/test_note_run.py::test_check_close_refuses_a_note_that_doesnt_match_its_run_and_isnt_waiting
+      complete: true
+      qualification: green
+    LEDGER.RUN.S7:
+      expected:
+      - tests/test_note_run.py::test_the_workflow_notes_its_own_run_and_grants_actions_read_to_the_jobs_that_read_runs
+      observed:
+      - tests/test_note_run.py::test_the_workflow_notes_its_own_run_and_grants_actions_read_to_the_jobs_that_read_runs
+      complete: true
+      qualification: green
+    REPORT.ALL.S1:
+      expected:
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[abort]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[conflicting]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[duplicate]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[empty]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[extra]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[malformed]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[missing-phase]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[missing]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[mixed-markers]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[none]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[unsupported]
+      - tests/test_runners.py::test_real_cross_runner_qualification[none]
+      - tests/test_runners.py::test_real_cross_runner_qualification[omit]
+      - tests/test_runners.py::test_real_cross_runner_qualification[xpass]
+      observed:
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[abort]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[conflicting]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[duplicate]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[empty]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[extra]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[malformed]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[missing-phase]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[missing]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[mixed-markers]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[none]
+      - tests/test_reports.py::test_cross_runner_aggregation_preserves_every_instance[unsupported]
+      - tests/test_runners.py::test_real_cross_runner_qualification[none]
+      - tests/test_runners.py::test_real_cross_runner_qualification[omit]
+      - tests/test_runners.py::test_real_cross_runner_qualification[xpass]
+      complete: true
+      qualification: green
+    REPORT.CI.H1:
+      expected:
+      - tests/test_report_ci.py::test_outcomes_never_upgrade_existing_evidence_or_leak_python
+      observed:
+      - tests/test_report_ci.py::test_outcomes_never_upgrade_existing_evidence_or_leak_python
+      complete: true
+      qualification: green
+    REPORT.CI.H2:
+      expected:
+      - tests/test_report_ci.py::test_file_direct_and_isolated_writer_keep_identical_bytes
+      observed:
+      - tests/test_report_ci.py::test_file_direct_and_isolated_writer_keep_identical_bytes
+      complete: true
+      qualification: green
+    REPORT.CI.S1:
+      expected:
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-complete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-incomplete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-malformed]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-missing]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-skip]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-complete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-incomplete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-malformed]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-missing]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-skip]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-complete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-incomplete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-malformed]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-missing]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-skip]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-complete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-incomplete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-malformed]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-missing]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-skip]
+      - tests/test_report_ci.py::test_lost_suite_report_is_incomplete_even_when_suite_passes
+      - tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails[False]
+      - tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails[True]
+      - tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[fail]
+      - tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[pass]
+      - tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[skip]
+      observed:
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-complete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-incomplete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-malformed]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-missing]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-direct-skip]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-complete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-incomplete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-malformed]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-missing]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[False-file-skip]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-complete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-incomplete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-malformed]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-missing]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-direct-skip]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-complete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-incomplete]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-malformed]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-missing]
+      - tests/test_report_ci.py::test_current_report_survives_both_note_routes[True-file-skip]
+      - tests/test_report_ci.py::test_lost_suite_report_is_incomplete_even_when_suite_passes
+      - tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails[False]
+      - tests/test_report_ci.py::test_push_carries_all_runner_reports_even_after_first_runner_fails[True]
+      - tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[fail]
+      - tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[pass]
+      - tests/test_report_ci.py::test_real_report_and_stripped_report_at_isolated_handoff[skip]
+      complete: true
+      qualification: green
+    REPORT.JS.S1:
+      expected:
+      - tests/test_runners.py::test_real_jest_report_provenance[expect(1).toBe(1)-False--green-pass]
+      - tests/test_runners.py::test_real_jest_report_provenance[expect(1).toBe(1)-True--nonqualifying-unexpected-pass]
+      - tests/test_runners.py::test_real_jest_report_provenance[missing.method()-True--red-expected-failure]
+      - tests/test_runners.py::test_real_jest_report_provenance[return Promise.reject(new TypeError('absent'))-True--red-expected-failure]
+      - tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-False--nonqualifying-error]
+      - tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True--red-expected-failure]
+      - tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True-afterEach(() => {throw Error('hook')});-nonqualifying-error]
+      - tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True-beforeEach(() => {throw Error('hook')});-nonqualifying-error]
+      observed:
+      - tests/test_runners.py::test_real_jest_report_provenance[expect(1).toBe(1)-False--green-pass]
+      - tests/test_runners.py::test_real_jest_report_provenance[expect(1).toBe(1)-True--nonqualifying-unexpected-pass]
+      - tests/test_runners.py::test_real_jest_report_provenance[missing.method()-True--red-expected-failure]
+      - tests/test_runners.py::test_real_jest_report_provenance[return Promise.reject(new TypeError('absent'))-True--red-expected-failure]
+      - tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-False--nonqualifying-error]
+      - tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True--red-expected-failure]
+      - tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True-afterEach(() => {throw Error('hook')});-nonqualifying-error]
+      - tests/test_runners.py::test_real_jest_report_provenance[throw new Error('body')-True-beforeEach(() => {throw Error('hook')});-nonqualifying-error]
+      complete: true
+      qualification: green
+    REPORT.JS.S2:
+      expected:
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[ambiguous-ambiguous]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[duplicate-duplicate]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[join-None]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[nested-None]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[omit-missing]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[parameters-None]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[pending-skip]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[refused-collection-error]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[skip-skip]
+      observed:
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[ambiguous-ambiguous]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[duplicate-duplicate]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[join-None]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[nested-None]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[omit-missing]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[parameters-None]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[pending-skip]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[refused-collection-error]
+      - tests/test_runners.py::test_real_jest_inventory_joins_and_isolation[skip-skip]
+      complete: true
+      qualification: green
+    REPORT.PY.S1:
+      expected:
+      - tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[setup-pytest.xfail('hook')]
+      - tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[setup-raise ValueError('hook')]
+      - tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[teardown-pytest.xfail('hook')]
+      - tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[teardown-raise ValueError('hook')]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[, new=True-assert False-expected-failure-nonqualifying]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[, new=True-pass-unexpected-pass-nonqualifying]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-assert False-error-nonqualifying]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pass-pass-green]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pytest.skip('skip')-skip-nonqualifying]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pytest.xfail('unrelated')-expected-failure-nonqualifying]
+      - tests/test_reports.py::test_strict_body_failure_is_red[assert False]
+      - tests/test_reports.py::test_strict_body_failure_is_red[pytest.fail('body')]
+      - tests/test_reports.py::test_strict_body_failure_is_red[raise AttributeError()]
+      - tests/test_reports.py::test_strict_body_failure_is_red[raise ImportError()]
+      - tests/test_reports.py::test_strict_body_failure_is_red[raise NameError()]
+      - tests/test_reports.py::test_strict_body_failure_is_red[raise TypeError()]
+      - 'tests/test_reports.py::test_strict_body_failure_is_red[with pytest.raises(ValueError): pass]'
+      observed:
+      - tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[setup-pytest.xfail('hook')]
+      - tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[setup-raise ValueError('hook')]
+      - tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[teardown-pytest.xfail('hook')]
+      - tests/test_reports.py::test_hook_failure_never_qualifies_as_body_red[teardown-raise ValueError('hook')]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[, new=True-assert False-expected-failure-nonqualifying]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[, new=True-pass-unexpected-pass-nonqualifying]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-assert False-error-nonqualifying]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pass-pass-green]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pytest.skip('skip')-skip-nonqualifying]
+      - tests/test_reports.py::test_pytest_terminal_outcomes_and_overridden_xfail[-pytest.xfail('unrelated')-expected-failure-nonqualifying]
+      - tests/test_reports.py::test_strict_body_failure_is_red[assert False]
+      - tests/test_reports.py::test_strict_body_failure_is_red[pytest.fail('body')]
+      - tests/test_reports.py::test_strict_body_failure_is_red[raise AttributeError()]
+      - tests/test_reports.py::test_strict_body_failure_is_red[raise ImportError()]
+      - tests/test_reports.py::test_strict_body_failure_is_red[raise NameError()]
+      - tests/test_reports.py::test_strict_body_failure_is_red[raise TypeError()]
+      - 'tests/test_reports.py::test_strict_body_failure_is_red[with pytest.raises(ValueError): pass]'
+      complete: true
+      qualification: green
+    REPORT.PY.S2:
+      expected:
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection0-files0-None]
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection1-files1-deselected]
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection2-files2-missing]
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection3-files3-collection-error]
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection4-files4-missing]
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection5-files5-skip]
+      - tests/test_reports.py::test_filtered_and_later_runs_cannot_replace_a_previous_full_report
+      - tests/test_reports.py::test_unicode_class_paths_and_nested_invocations_are_isolated
+      observed:
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection0-files0-None]
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection1-files1-deselected]
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection2-files2-missing]
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection3-files3-collection-error]
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection4-files4-missing]
+      - tests/test_reports.py::test_expected_instances_survive_selection_and_collection[selection5-files5-skip]
+      - tests/test_reports.py::test_filtered_and_later_runs_cannot_replace_a_previous_full_report
+      - tests/test_reports.py::test_unicode_class_paths_and_nested_invocations_are_isolated
+      complete: true
+      qualification: green
+    REPORT.PY.S3:
+      expected:
+      - tests/test_reports.py::test_real_xdist_inventories_and_execution[-None]
+      - tests/test_reports.py::test_real_xdist_inventories_and_execution[duplicate-duplicate]
+      - tests/test_reports.py::test_real_xdist_inventories_and_execution[exit-missing-worker]
+      - tests/test_reports.py::test_real_xdist_inventories_and_execution[inventory-inventory-conflict]
+      - tests/test_reports.py::test_real_xdist_inventories_and_execution[parameter-missing]
+      observed:
+      - tests/test_reports.py::test_real_xdist_inventories_and_execution[-None]
+      - tests/test_reports.py::test_real_xdist_inventories_and_execution[duplicate-duplicate]
+      - tests/test_reports.py::test_real_xdist_inventories_and_execution[exit-missing-worker]
+      - tests/test_reports.py::test_real_xdist_inventories_and_execution[inventory-inventory-conflict]
+      - tests/test_reports.py::test_real_xdist_inventories_and_execution[parameter-missing]
+      complete: true
+      qualification: green
+  diagnostics: []
+  commit: 4e4e8ad637e3ce58195c151e2a371410116d156c
