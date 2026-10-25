@@ -252,6 +252,8 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
 - O-NOTE2 [build 11]: a run that checks out confirms how it ended, not the rest of its note: the
   `claims:` record, which anyone with the `write` role can still rewrite, and which `break:` entry
   failed when one did, since the job's outcome says only that one failed (§4).
+  Writable notes can also forge `outcomes:` identities, phases and aggregates; owner:
+  scenario-outcomes/S (maintainer), alongside this authenticity limit; no signing is added here.
 - O-NOTE3 [build 11]: a note CI really wrote can read `unconfirmed` for good, and its change can
   then never close: a run GitHub no longer re-runs, after 30 days; a run deleted, which anyone
   with the `write` role can do; and every run of a repository renamed or transferred, whose
@@ -491,3 +493,15 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
 - O-RUN4 [build 8]: a runner's own configuration (`jest.config`, Stryker's config, `package.json`)
   can skip or weaken tests in a PR outside any step. For pytest, only a critical `reach` covers
   its settings.
+
+- O-REPORT1 [owner: maintainer, scenario-reports/R readiness; F2 deferred]: real-Jest REPORT.JS.S1/S2
+  run only in the optional runners job, not the push run that records evidence. Before crediting
+  their red/green, arrange installed Jest and REDLINE_REAL_RUNNERS=1 in an evidence-counting run;
+  skipped tests currently pass with the suite. This S specifies no CI integration fix.
+- O-REPORT2 [owner: scenario-outcomes/S, maintainer; F10 deferred]: report notes are unbounded.
+  Direct argv/env (128 KiB), Windows command lines (32,767 chars), and job outputs (1 MB) can
+  prevent note transport. Specify bounded transport or overflow behavior and its own scenario
+  before relying on reports at those sizes; this S makes no overflow delivery guarantee.
+- O-REPORT3 [owner: ci-apart-python/S, maintainer; F12 deferred]: living CI.APART.S2 still says
+  ci push --python exits 2, contrary to current code and REPORT.CI.S1's premise. Modify that
+  clause in its own delta with owned red/green evidence; this S leaves the stale clause as a defect.
