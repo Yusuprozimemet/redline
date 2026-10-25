@@ -176,7 +176,9 @@ def test_a_re_run_keeps_the_record_and_a_failed_read_writes_none(planned, capsys
     github.fail = True
     code, out = push(planned, capsys)
     assert code == 1 and "claims: could not read the merged PR's labels: gh api: HTTP 502" in out, out
-    assert planned.git("notes", "--ref=redline-ci", "show", merge) == f"result: pass\nrun: {RUN}"
+    data = recorded(planned, merge)
+    assert data.pop("outcomes")["commit"] == merge
+    assert data == {"result": "pass", "run": RUN}
 
 
 def test_claims_reads_the_labels_at_the_merge_from_the_ci_note(planned, capsys, github):

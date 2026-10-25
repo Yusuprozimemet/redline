@@ -163,6 +163,7 @@ def test_a_push_after_the_red_step_notes_each_break_and_fills_the_ledger(holds, 
     assert code == 1
     assert "check-break: GREET.H3: its tests survive every mutant" in out
     noted = yaml.safe_load(holds.git("notes", "--ref=redline-ci", "show", hold))
+    assert noted.pop("outcomes")["commit"] == hold
     assert noted == {"result": "pass", "run": RUN, "break": {"GREET.H1": "pass", "GREET.H2": "pass", "GREET.H3": "fail"}}
     actions.push_run(hold, "pass", noted["break"], RUN)
     assert main(["ledger", "add-greet", "--repo", str(holds.path)]) == 0

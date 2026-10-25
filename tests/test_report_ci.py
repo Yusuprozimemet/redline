@@ -3,6 +3,7 @@ import base64
 import os
 import subprocess
 from importlib.resources import files
+from pathlib import Path
 
 import pytest
 import yaml
@@ -18,13 +19,18 @@ from test_start import change  # noqa: F401
 
 @pytest.mark.parametrize("failed,route,defect", [(f, r, d) for f in (False, True)
     for r in ("file", "direct") for d in ("complete", "missing", "malformed", "incomplete", "skip")])
-@pytest.mark.spec("REPORT.CI.S1", new=True)
+@pytest.mark.spec("REPORT.CI.S1")
 def test_current_report_survives_both_note_routes(change, remote, actions, monkeypatch, tmp_path, failed, route, defect):
     from types import SimpleNamespace
     import redline.ci as producer
     sha = change.commit("report suite", {"test_ok.py": "def test_ok(): pass\n"})
     report = {"version": 1, "commit": sha, "complete": defect == "complete", "expected": [], "observed": [],
         "scenarios": {}, "diagnostics": [] if defect == "complete" else [{"code": "abort" if defect == "incomplete" else defect, "runner": "pytest", "reason": "toy"}]}
+    from redline.reports import row
+    entry = row("test_ok.py::test_ok", [("TOY.S1", False)])
+    report["expected"] = [entry]
+    report["observed"] = [dict(entry, outcome="skip" if defect == "skip" else "pass", strict_new=False,
+        phases={"setup": "pass", "call": "skip" if defect == "skip" else "pass", "teardown": "pass"})]
     payload = None if defect == "missing" else "invalid" if defect == "malformed" else report
     monkeypatch.setattr(producer, "run", lambda *a, **k: SimpleNamespace(returncode=int(failed), stdout="", stderr="", outcomes=payload))
     target = tmp_path / "note"
@@ -40,6 +46,83 @@ def test_current_report_survives_both_note_routes(change, remote, actions, monke
     from redline.ledger import ci_result
     from redline.pr import GitHub
     assert ci_result(change.path, sha, GitHub(change.path)) == data["result"]
+
+
+@pytest.mark.parametrize("state", ["pass", "skip", "fail"])
+@pytest.mark.spec("REPORT.CI.S1")
+def test_real_report_and_stripped_report_at_isolated_handoff(change, monkeypatch, tmp_path, state):
+    from redline.reports import aggregate
+    monkeypatch.setattr("redline.ci.record", lambda *a: {})
+    body = "pytest.skip('partial')" if state == "skip" else f"assert {state == 'pass'}"
+    sha = change.commit("linked suite", {"test_report.py": 'import pytest\n@pytest.mark.spec("TOY.S1")\ndef test_case(): ' + body + '\n'})
+    target = tmp_path / "note"
+    assert bool(ci_push(change.path, RUN, to=target, python=PYTHON[-1])) == (state == "fail")
+    expected = target.read_bytes()
+    detail = yaml.safe_load(expected)["outcomes"]
+    assert detail["commit"] == sha and detail["complete"] == (state != "skip")
+    assert detail["observed"][0]["outcome"] == {"pass": "pass", "skip": "skip", "fail": "error"}[state]
+    assert detail["scenarios"]["TOY.S1"]["qualification"] == ("green" if state == "pass" else "nonqualifying")
+    sources = [Path(__file__).parents[1] / ".github/workflows/redline.yml", files("redline").joinpath("helpers/redline.yml")]
+    for source in sources:
+        workflow = yaml.safe_load(source.read_text(encoding="utf-8"))
+        writer = next(s["run"] for s in workflow["jobs"]["note"]["steps"] if "run" in s)
+        script = tmp_path / "writer.sh"
+        script.write_text('git() { if [ "$1" = fetch ] || [ "$1" = push ]; then return 0; fi; command git "$@"; }\n' + writer, encoding="utf-8", newline="\n")
+        for stripped in (False, True):
+            data = yaml.safe_load(expected)
+            if stripped: data.pop("outcomes")
+            sent = yaml.safe_dump(data, allow_unicode=True, sort_keys=False).encode() if stripped else expected
+            env = {**os.environ, "NOTE": base64.b64encode(sent).decode(), "RUNNER_TEMP": str(tmp_path), "GITHUB_SHA": sha}
+            done = subprocess.run([bash(), str(script)], cwd=change.path, env=env, capture_output=True)
+            assert done.returncode == 0, done.stderr
+            shown = subprocess.run(["git", "notes", "--ref=redline-ci", "show", sha], cwd=change.path, capture_output=True, check=True).stdout
+            assert shown == sent
+            received = yaml.safe_load(shown)
+            if stripped:
+                # Transport success alone is no execution proof. No ledger enforcement is added here.
+                unavailable = aggregate([received.get("outcomes")], commit=sha)
+                assert not unavailable["complete"] and unavailable["diagnostics"]
+                assert not unavailable["scenarios"]
+            else: assert received["outcomes"] == detail
+
+
+@pytest.mark.spec("REPORT.CI.S1")
+@pytest.mark.parametrize("failed", [False, True])
+def test_push_carries_all_runner_reports_even_after_first_runner_fails(change, monkeypatch, tmp_path, failed):
+    from types import SimpleNamespace
+    from redline.reports import aggregate, finish, row
+    from redline.runner import PYTEST, JEST
+    change.commit("runners")
+    monkeypatch.setattr("redline.ci.uses", lambda *a: True)
+    monkeypatch.setattr("redline.ci.shutil.which", lambda _: "npx")
+    monkeypatch.setattr("redline.ci.record", lambda *a: {})
+    (change.path / "node_modules/jest").mkdir(parents=True)
+    parts, calls = [], []
+    for runner in (PYTEST, JEST):
+        entry = dict(row(runner.name + "::case", [("TOY.S1", False)]), runner=runner.name)
+        parts.append(finish([], {"expected": [entry], "observed": [dict(entry, outcome="pass", strict_new=False,
+            phases={"setup": "pass", "call": "pass", "teardown": "pass"})], "diagnostics": []}))
+    def run(repo, runner):
+        calls.append(runner.name)
+        return SimpleNamespace(returncode=int(failed and runner is PYTEST), stdout="", stderr="", outcomes=parts[len(calls) - 1])
+    monkeypatch.setattr("redline.ci.run", run)
+    target = tmp_path / "note"
+    assert bool(ci_push(change.path, RUN, to=target)) == failed
+    data = yaml.safe_load(target.read_text(encoding="utf-8"))
+    assert calls == ["pytest", "jest"] and data["result"] == ("fail" if failed else "pass")
+    assert data["outcomes"] == aggregate(parts, commit=change.git("rev-parse", "HEAD"))
+
+
+@pytest.mark.spec("REPORT.CI.S1")
+def test_lost_suite_report_is_incomplete_even_when_suite_passes(change, monkeypatch, tmp_path):
+    change.commit("suite run")
+    monkeypatch.setattr("redline.ci.suite", lambda _: [])
+    monkeypatch.setattr("redline.ci.record", lambda *a: {})
+    target = tmp_path / "note"
+    assert not ci_push(change.path, RUN, to=target)
+    data = yaml.safe_load(target.read_text(encoding="utf-8"))
+    assert data["result"] == "pass" and not data["outcomes"]["complete"]
+    assert "missing" in {d["code"] for d in data["outcomes"]["diagnostics"]}
 
 
 @pytest.mark.spec("REPORT.CI.H1")
