@@ -499,7 +499,9 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   their red/green, arrange installed Jest and REDLINE_REAL_RUNNERS=1 in an evidence-counting run;
   skipped tests currently pass with the suite. R's REPORT.JS.S1/S2 evidence is HELD, not credited
   red/green. The maintainer owns a CI part merging before G2: install Jest and set
-  REDLINE_REAL_RUNNERS=1 in the evidence-counting push run. O-REPORT1 remains open.
+  REDLINE_REAL_RUNNERS=1 in the evidence-counting push run (build 9 part 39). This part changes
+  only CI readiness; G2 must explicitly release the held evidence after it merges.
+  O-REPORT1 remains open until that release.
 - O-REPORT2 [owner: scenario-outcomes/S, maintainer; F10 deferred]: report notes are unbounded.
   Direct argv/env (128 KiB), Windows command lines (32,767 chars), and job outputs (1 MB) can
   prevent note transport. Specify bounded transport or overflow behavior and its own scenario
@@ -507,3 +509,13 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
 - O-REPORT3 [owner: ci-apart-python/S, maintainer; F12 deferred]: living CI.APART.S2 still says
   ci push --python exits 2, contrary to current code and REPORT.CI.S1's premise. Modify that
   clause in its own delta with owned red/green evidence; this S leaves the stale clause as a defect.
+- O-REPORT4 [owner: scenario-outcomes/S, maintainer; PR #96 review]: reports.snapshot scans
+  every non-hidden Python source outside node_modules and __pycache__, without pytest's testpaths
+  or --ignore. A linked test in examples/, build/ or venv/ outside collection becomes missing
+  and makes the report incomplete. Specify the consumer's discovery boundary before relying on
+  completeness; coordinate any producer change with scenario-reports. No fix in O-REPORT1.
+- O-REPORT5 [owner: scenario-outcomes/S, maintainer; PR #96 review]: reports.finish makes every
+  scenario incomplete when a diagnostic is not tied to an observed test, including missing or
+  deselected tests and whole-run faults. A --redline-spec single-scenario run with other linked
+  tests therefore cannot qualify as complete. This is intended (README, Execution reports in
+  development); specify how the consumer treats filtered runs before relying on reports.

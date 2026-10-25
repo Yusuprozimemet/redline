@@ -18,6 +18,13 @@ runs `npm ci` in its workflow before `redline ci`, so the suite can run them. A 
 It runs pytest, not `redline ci`: mutmut doesn't run on Windows, and a skipped break fails the run
 (§5). A fourth, `suite`, runs a PR's code, apart from the gate (below).
 
+For Redline's own evidence-counting push run, the `redline` job installs the toy's Jest with
+the same pinned Node action/version and `npm ci` as `runners`, then sets
+`REDLINE_REAL_RUNNERS=1` on `redline ci push` (O-REPORT1, build 9 part 39). These setup steps
+run on pushes alone. PR execution, push concurrency and the isolated note handoff stay as above;
+no job can write Actions runs. REPORT.JS.S1/S2 evidence stays HELD here: G2 owns its release
+after this CI part merges, not a retroactive credit of earlier skipped runs.
+
 **The suite can run with another Python than the gate's.** A runner's commands run pytest as
 `<python> -m pytest`, the suite's and check-break's unmutated runs alike (§5), and `<python>` is the
 interpreter Redline itself runs in. That is right where Redline and the project share one
