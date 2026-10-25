@@ -88,6 +88,8 @@ Reuse Repo/FakeActions, note-run's ledger fixtures and the actual writer script 
 | H1 push | ordinary ci push --note still emits result/run/break/claims/outcomes without adding/pushing a git note, failed suites included |
 | LEDGER.RUN.S2 | original rejection matrix stays, dispatch lacking full recovery proof rejects, valid recovery accepted |
 
+The S ledger is a generated pre-window cache; LEDGER.RUN.S2's old history is not this change's
+proof. Once S merges, its own window replaces that history; R must establish a fresh red.
 G1 adds metadata reader and confirmation predicate, with no dispatch enabled. G2 adds the
 trusted validator/CLI and read-only producer to own/template workflows; writer absent so no
 recovery note can publish yet. G3 adds isolated writer and enables complete handoff. Each

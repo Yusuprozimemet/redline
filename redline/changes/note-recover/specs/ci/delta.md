@@ -38,7 +38,7 @@
 - THEN the file retains result/run/break/claims/outcomes and its exit verdict, while no git note is added or pushed
 
 ### Premises
-- P1: Current workflow enables push/PR only and has separate read-only producer and file writer: `.github/workflows/redline.yml:4-8`, `.github/workflows/redline.yml:129-181`.
+- P1: Current workflow enables push/PR only and has separate read-only producer and file writer: `.github/workflows/redline.yml:4-8`, `.github/workflows/redline.yml:55-125`, `.github/workflows/redline.yml:127-149`.
 - P2: The current producer supports --note, records suite/break/claims/outcomes, and returns without git writes: `src/redline/ci.py:168-206` (`ci_push`, `push_note`).
 - P3: Writer tests execute its actual git script, including races and large note files: `tests/test_ci.py:408-466`; installer compares own/template core: `tests/test_install_workflow.py:91-106`, `tests/test_install_workflow.py:149`.
 - P4: Maintainer roles are exactly admin/maintain and role lookup uses the collaborator API: `src/redline/approval.py:26`, `src/redline/pr.py:149-150` (`role`).

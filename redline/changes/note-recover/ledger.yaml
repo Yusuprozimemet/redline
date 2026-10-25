@@ -1,0 +1,42 @@
+# A cache of evidence, rebuilt from main's history by `redline ledger <change>`.
+# CI rebuilds it and fails on a mismatch, so never edit it by hand. See docs/design.md, section 4.
+change: note-recover
+scenarios:
+  NOTE.RECOVER.S1:
+    red: null
+    green: null
+    break: null
+  NOTE.RECOVER.S2:
+    red: null
+    green: null
+    break: null
+  NOTE.RECOVER.S3:
+    red: null
+    green: null
+    break: null
+  NOTE.RECOVER.S6:
+    red: null
+    green: null
+    break: null
+  NOTE.RECOVER.H1:
+    red: null
+    green: null
+    break: null
+  LEDGER.RUN.S2:
+    red:
+      commit: d63d61ffe118d7aa2d25de5f110946c5b3cef8bd
+      merged: a057a3568bd1f84d16897a5ac43af5735b1012bb
+      result: pass
+    green:
+      commit: acf2dd4b6ceaf6c65d9d7abbdfbc51887284f89a
+      merged: b389a7a335921ed7e6335de73f7b4ac01bffbce6
+      result: pass
+    break: null
+  NOTE.RECOVER.S4:
+    red: null
+    green: null
+    break: null
+  NOTE.RECOVER.S5:
+    red: null
+    green: null
+    break: null
