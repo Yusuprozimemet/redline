@@ -211,9 +211,11 @@ Missing tests, workers or phases, skips and deselection remain incomplete even i
 zero. Nested test runs cannot replace the owning invocation's report.
 
 Report production is being built in `scenario-reports`: Jest and cross-runner aggregation belong
-to G2; push-note transport belongs to G3. Jest evidence remains HELD until the maintainer's
-O-REPORT1 CI part installs Jest and enables `REDLINE_REAL_RUNNERS=1` in the evidence-counting
-push run, before G2. Scenario-outcomes will own report consumption and enforcement.
+to G2; push-note transport belongs to G3. The maintainer's O-REPORT1 CI part installs Jest and
+enables `REDLINE_REAL_RUNNERS=1` in the evidence-counting push run, before G2. Jest evidence
+remains HELD in this CI part; G2 owns its release after the CI part merges.
+Scenario-outcomes will own report consumption and enforcement (including the discovery and
+filtered-run limits tracked as O-REPORT4 and O-REPORT5).
 
 ## Local dashboard
 

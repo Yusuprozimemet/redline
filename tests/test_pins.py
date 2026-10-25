@@ -66,7 +66,7 @@ def test_every_action_is_pinned_to_a_commit_with_its_tag_in_a_comment():
 @pytest.mark.spec("CI.APART.S4")  # O5: the suite job's setup-python is the fifth
 def test_python_and_node_are_exact_versions():
     versions = [str(v) for step in steps() for k, v in step.get("with", {}).items() if k in ("python-version", "node-version")]
-    assert len(versions) == 5 and all(re.fullmatch(r"\d+\.\d+\.\d+", v) for v in versions), versions
+    assert len(versions) == 6 and all(re.fullmatch(r"\d+\.\d+\.\d+", v) for v in versions), versions
 
 
 @pytest.mark.spec("CI.APART.S4")  # O5: five jobs, the suite job among them

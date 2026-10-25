@@ -231,6 +231,29 @@ SUITE_STEP = '"$RUNNER_TEMP/gate/bin/redline" ci suite --base main --python "$(c
 PUSH_ONLY = "github.event_name == 'push'"
 
 
+def test_evidence_counting_push_installs_jest_and_enables_the_real_report_tests():
+    """O-REPORT1: optional runners success cannot stand in for the ledger's push run."""
+    jobs = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+    steps = jobs["redline"]["steps"]
+    push = next(s for s in steps if "redline ci push" in s.get("run", ""))
+    assert push["if"] == PUSH_ONLY
+    assert push["env"].get("REDLINE_REAL_RUNNERS") == "1"
+    node = next(s for s in steps if s.get("uses", "").startswith("actions/setup-node@"))
+    npm = next(s for s in steps if "npm ci" in s.get("run", ""))
+    reference = jobs["runners"]["steps"]
+    assert {k: v for k, v in node.items() if k != "if"} == next(
+        s for s in reference if s.get("uses", "").startswith("actions/setup-node@"))
+    assert {k: v for k, v in npm.items() if k != "if"} == next(s for s in reference if "npm ci" in s.get("run", ""))
+    assert node["if"] == npm["if"] == PUSH_ONLY
+    assert npm["working-directory"] == "tests/toys/jest"
+    assert steps.index(node) < steps.index(npm) < steps.index(push)
+    assert all("REDLINE_REAL_RUNNERS" not in job.get("env", {}) for job in jobs.values())
+    enabled = [(name, s) for name, job in jobs.items() for s in job["steps"]
+               if "REDLINE_REAL_RUNNERS" in s.get("env", {})]
+    assert [(name, s.get("if")) for name, s in enabled] == [("redline", PUSH_ONLY), ("runners", None)]
+    assert all(job.get("permissions", {}).get("actions", "read") == "read" for job in jobs.values())
+
+
 @pytest.mark.spec("CI.APART.S4")  # O5: takes over the test that pinned the one-job workflow (O-SELF3, PR #81)
 def test_a_pr_is_gated_by_the_merge_bases_redline_installed_apart_before_the_prs_own():
     flow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))

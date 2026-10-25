@@ -1,5 +1,5 @@
 """The real Jest and Stryker on the toy project in tests/toys/jest. Skipped unless REDLINE_REAL_RUNNERS=1,
-which the `runners` CI job sets after `npm ci` there; with it, a missing tool fails. They prove the helper,
+which `runners` and the evidence-counting push run set after `npm ci` there; with it, a missing tool fails. They prove the helper,
 REDLINE_SPEC, Stryker's counts, and check-break end to end on a git repository holding the toy.
 See specs/, §5."""
 
@@ -16,7 +16,7 @@ from redline.runner import install
 
 TOY = Path(__file__).parent / "toys" / "jest"
 pytestmark = pytest.mark.skipif(os.environ.get("REDLINE_REAL_RUNNERS") != "1",
-                                reason="the real Jest and Stryker run in the runners CI job")
+                                reason="the real Jest and Stryker run in runners and evidence-counting push CI")
 # Written by the toy fixture, never committed or read in Redline's tree: no spec there declares TOY.H1 or TOY.H2 (O-SELF5)
 TESTS = """const { spec } = require("../redline/runners/jest");
 const { adult } = require("./adult");
@@ -135,7 +135,7 @@ def test_check_break_runs_jest_and_stryker_end_to_end(toy_repo):
                               "TOY.H3": "its tests survive every mutant (0 of 6 killed, in src/adult.js)"}
 
 
-# O-REPORT1: evidence HELD until the maintainer's CI part merges before G2.
+# O-REPORT1: evidence stays HELD in the CI part; G2 owns release after it merges.
 # Local/optional-job execution below is validation, never credited red/green.
 @pytest.mark.parametrize("body,new,hooks,qualification,outcome", [
     ("throw new Error('body')", True, "", "red", "expected-failure"),

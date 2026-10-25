@@ -83,6 +83,8 @@ part 10, every merged commit's note, none lost to a cancelled run or a raced pus
    both jobs, and its gate kept apart from them on a push too (O-CI11); part 38, a critical
    change's blind relabel waived by a maintainer's label (O-RELABEL1), found at suite-job/C and
    merged before that step.
+   Part 39, the maintainer's evidence-counting push setup for real Jest (O-REPORT1), merges
+   before scenario-reports/G2; Jest evidence stays HELD until G2 releases it.
    The review's other
    code items join this step, each with its own O-ID, as they are taken.
 10. **Progress in `merged`** (O-PROG1), after build 9's encoding fix, since the bar prints `█`.

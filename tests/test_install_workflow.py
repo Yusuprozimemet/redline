@@ -96,7 +96,12 @@ def core(workflow: dict) -> dict:
     for job in JOBS:
         steps = workflow["jobs"].get(job, {}).get("steps", [])
         steps[:] = [step for step in steps if not runs(step, "git worktree add", "pip install") and step.get("uses") != "./.github/actions/redline-project"]
+        # O-REPORT1: Redline's own push-only toy setup is not an adopter dependency.
+        steps[:] = [s for s in steps if not (s.get("if") == "github.event_name == 'push'" and
+                    (s.get("uses", "").startswith("actions/setup-node@") or runs(s, "npm ci")))]
         for step in steps:
+            if runs(step, "ci push"):
+                step.get("env", {}).pop("REDLINE_REAL_RUNNERS", None)
             if runs(step, "ci pr", "ci suite", "ci push"):
                 del step["run"]
     return workflow

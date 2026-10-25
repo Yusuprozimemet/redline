@@ -47,3 +47,6 @@ None
 - [ ] No secrets, tokens or connection strings in the diff
 - [ ] This PR does one step of one change
 - [ ] Every open item I took has its O-ID cited, and every new one has an owner
+
+<!-- Keep this attribution when Codex creates or updates the PR description. -->
+🤖 Generated with [Codex](https://openai.com/codex/)

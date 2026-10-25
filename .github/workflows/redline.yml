@@ -91,6 +91,13 @@ jobs:
           python -m pip install --require-hashes --force-reinstall -r requirements-pip.txt
           python -m pip install --require-hashes --force-reinstall -r requirements.txt
           python -m pip install --no-deps --no-build-isolation --check-build-dependencies --no-index -e .
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        if: github.event_name == 'push'
+        with:
+          node-version: "22.23.3"  # the runners job's pinned toolchain; O-REPORT1
+      - if: github.event_name == 'push'
+        run: npm ci --no-audit --no-fund
+        working-directory: tests/toys/jest
       - name: Gates and ledger for the PR's step on the suite job's result, or the gates for a PR outside any step
         if: github.event_name == 'pull_request'
         run: |  # the merge-base's gate, reading the suite job's result and running none of the PR's code
@@ -102,6 +109,7 @@ jobs:
         if: github.event_name == 'push'
         run: redline ci push --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --note "$RUNNER_TEMP/note"
         env:
+          REDLINE_REAL_RUNNERS: "1"  # real Jest tests must execute in the run whose note the ledger credits
           GH_TOKEN: ${{ github.token }}  # the merged PR's claim labels, recorded in the note
       - name: Hand the note on, a failed run's too
         id: note
