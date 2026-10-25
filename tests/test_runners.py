@@ -147,7 +147,7 @@ def test_check_break_runs_jest_and_stryker_end_to_end(toy_repo):
     ("throw new Error('body')", True, "afterEach(() => {throw Error('hook')});", "nonqualifying", "error"),
     ("throw new Error('body')", False, "", "nonqualifying", "error"),
 ])
-@pytest.mark.spec("REPORT.JS.S1", new=True)
+@pytest.mark.spec("REPORT.JS.S1")
 def test_real_jest_report_provenance(toy_repo, body, new, hooks, qualification, outcome):
     from redline.runner import JEST, run
     source = ('const {spec} = require("../redline/runners/jest");\n' + hooks +
@@ -167,7 +167,7 @@ def test_real_jest_report_provenance(toy_repo, body, new, hooks, qualification, 
 @pytest.mark.parametrize("fault,diagnostic", [("join", None), ("parameters", None), ("skip", "skip"), ("pending", "skip"),
     ("omit", "missing"), ("duplicate", "duplicate"), ("ambiguous", "ambiguous"),
     ("refused", "collection-error"), ("nested", None)])
-@pytest.mark.spec("REPORT.JS.S2", new=True)
+@pytest.mark.spec("REPORT.JS.S2")
 def test_real_jest_inventory_joins_and_isolation(toy_repo, fault, diagnostic):
     from redline.runner import JEST, run
     title = r"escaped \' É"
