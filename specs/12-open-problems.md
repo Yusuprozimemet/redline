@@ -260,6 +260,14 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   `html_url` no longer matches its notes; and an R merge whose failed break names a `hold`
   scenario a later step drops from the delta or retags, whose note then records no failure the
   ledger counts beside the job's `failure` (§4). What then confirms that evidence is open.
+- O-NOTE4 [owner: note-recover/S, maintainer; before scenario-reports/C]: a merge whose push run
+  wrote no note stays `unverified` for good, since a re-run repeats that commit's own workflow.
+  The G3 merge 5e7c4ab is one: run 40218119783's note job overflowed an environment variable
+  (build 9 part 40 stops the recurrence, not this). LEDGER.RUN accepts only a push run on the
+  noted commit, so recovering the note is a change to that requirement, not a hand-written note:
+  a maintainer-dispatched run of main's workflow that re-runs the commit's own `redline ci push`,
+  notes only a first-parent commit of main with no note, and that GitHub ties to that commit.
+  O-NOTE3's lost and deleted runs may share the answer; it keeps its own owner.
 - O-LOCK1 [closed, build 5 part 3]: a departure's approval was a recorded line, not proof. Now
   `redline ci pr` checks a maintainer's `redline:departure` label, with the same function that
   checks `Oversized` (§7, Approvals), and §7 says what that still doesn't prove.
@@ -505,6 +513,11 @@ or a judgment this list names, with whose it is and why no gate can make it (§2
   Direct argv/env (128 KiB), Windows command lines (32,767 chars), and job outputs (1 MB) can
   prevent note transport. Specify bounded transport or overflow behavior and its own scenario
   before relying on reports at those sizes; this S makes no overflow delivery guarantee.
+  Build 9 part 40 takes the CI handoff only: after G3, push run 40218119783's note job failed
+  with "Argument list too long" reading the note from an environment variable. The redline job
+  now uploads the note as an artifact the note job downloads, so neither the job-output nor the
+  environment limit applies there. Any bound on the note itself and other argv/env or Windows
+  command-line paths stay here; O-REPORT2 remains open.
 - O-REPORT3 [owner: ci-apart-python/S, maintainer; F12 deferred]: living CI.APART.S2 still says
   ci push --python exits 2, contrary to current code and REPORT.CI.S1's premise. Modify that
   clause in its own delta with owned red/green evidence; this S leaves the stale clause as a defect.

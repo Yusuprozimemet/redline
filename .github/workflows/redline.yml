@@ -62,7 +62,7 @@ jobs:
       issues: read  # who applied a PR's approval labels
       pull-requests: read
     outputs:
-      note: ${{ steps.note.outputs.note }}  # the push run's note, base64, for the `note` job
+      note: ${{ steps.note.outputs.note }}  # 1 when the push run wrote a note, its redline-note artifact
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
@@ -111,10 +111,18 @@ jobs:
         env:
           REDLINE_REAL_RUNNERS: "1"  # real Jest tests must execute in the run whose note the ledger credits
           GH_TOKEN: ${{ github.token }}  # the merged PR's claim labels, recorded in the note
-      - name: Hand the note on, a failed run's too
+      - name: Say whether there is a note to hand on, a failed run's too
         id: note
         if: always() && github.event_name == 'push'
-        run: if [ -f "$RUNNER_TEMP/note" ]; then echo "note=$(base64 -w0 "$RUNNER_TEMP/note")" >> "$GITHUB_OUTPUT"; fi
+        run: if [ -f "$RUNNER_TEMP/note" ]; then echo "note=1" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        if: always() && github.event_name == 'push' && steps.note.outputs.note == '1'  # as a file: a note with its reports outgrows an output or a variable
+        with:
+          name: redline-note
+          path: ${{ runner.temp }}/note
+          if-no-files-found: error
+          overwrite: true  # a re-run's note replaces its earlier attempt's
+          retention-days: 1
 
   note:  # the only job that can write refs/notes/redline-ci, so it runs git alone (docs/design.md, section 7)
     needs: redline
@@ -125,9 +133,13 @@ jobs:
     steps:
       # the merged commit, to note; nothing in it runs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      # the run's own note, as $RUNNER_TEMP/note: a file git reads, never shell or an environment variable
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          name: redline-note
+          path: ${{ runner.temp }}
       - name: Add the note to the merged commit and push it, again over a push that overtook it
         run: |
-          printf '%s' "$NOTE" | base64 -d > "$RUNNER_TEMP/note"
           for attempt in 1 2 3 4 5; do
             git fetch --no-tags origin '+refs/notes/*:refs/notes/*'
             git -c user.name=redline-ci -c user.email=redline-ci@users.noreply.github.com notes --ref=redline-ci add -f -F "$RUNNER_TEMP/note" "$GITHUB_SHA"
@@ -135,8 +147,6 @@ jobs:
             sleep "$attempt"
           done
           exit 1
-        env:
-          NOTE: ${{ needs.redline.outputs.note }}  # through env, never ${{ }} in the script: the text is data
 
   runners:  # the real Jest, Stryker, mutmut and gh api calls, which the suite fakes (docs/design.md, sections 5 and 7)
     runs-on: ubuntu-24.04  # by version: -latest moves to a new OS

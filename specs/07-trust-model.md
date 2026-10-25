@@ -309,12 +309,15 @@ So the workflow's default token is `contents: read`, and each job says what it h
   still fetches. On a push it runs `redline ci push --note <file>`: the suite, check-break at R
   and the claims record as above, but the note's text goes to the file, nothing is added under
   `refs/notes/redline-ci` and nothing is pushed. A step that runs even when the suite failed, so
-  a failed run is still recorded, hands the file on as a job output, base64-encoded, since a claim
-  trailer's text could hold the delimiter of a multi-line output.
+  a failed run is still recorded, uploads the file as this run's `redline-note` artifact and sets
+  the job's `note` output to `1`. The file is never a job output or an environment variable: a note
+  carrying execution reports outgrows a single environment variable (128 KiB on Linux) and a
+  job's outputs (1 MB), and a claim trailer's text could hold a multi-line output's delimiter.
 - **`note`**, on a push only, after `redline`, is the only job with `contents: write`. It checks
-  the merged commit out and runs git alone: decode the output, then fetch `refs/notes/*`, `git
-  notes add -f` it on `$GITHUB_SHA` and push the ref, up to five times (below). The output reaches it through an environment
-  variable, never a `${{ }}` inside a script, which would run the note's text as shell. A checked
+  the merged commit out, downloads the run's own `redline-note` artifact into `$RUNNER_TEMP`, and
+  runs git alone: fetch `refs/notes/*`, `git notes add -f -F` the file on `$GITHUB_SHA` and push
+  the ref, up to five times (below). The note's text reaches git as a file, never through an
+  environment variable or a `${{ }}` inside a script, which would run it as shell. A checked
   out tree can't make git run code: hooks and filter drivers come from git's config, which a
   repository doesn't carry. The commit it notes is the workflow's, not something `redline` said,
   so merged code can choose only the text of its own merge commit's note, as before.

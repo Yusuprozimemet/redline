@@ -1,4 +1,3 @@
-import base64
 import os
 import shutil
 import subprocess
@@ -330,7 +329,6 @@ def test_a_push_with_note_still_writes_a_failed_run(change, capsys, remote, tmp_
 
 
 NOTE_LINES = {  # every line the job that writes the note may run: git alone, on the workflow's commit
-    "printf '%s' \"$NOTE\" | base64 -d > \"$RUNNER_TEMP/note\"",
     "for attempt in 1 2 3 4 5; do",
     "git fetch --no-tags origin '+refs/notes/*:refs/notes/*'",
     'git -c user.name=redline-ci -c user.email=redline-ci@users.noreply.github.com '
@@ -351,14 +349,17 @@ def test_only_the_note_job_can_write_and_it_runs_no_repository_code():
     assert job["needs"] == "redline" and "github.event_name == 'push'" in job["if"]
     for step in job["steps"]:
         if "uses" in step:
-            assert step["uses"].startswith("actions/checkout@") and "run" not in step, step
+            assert step["uses"].split("@")[0] in ("actions/checkout", "actions/download-artifact") and "run" not in step, step
             assert not {"submodules", "lfs"} & set(step.get("with", {})), step
         else:
             lines = [line.strip() for line in step["run"].splitlines() if line.strip()]
             assert all(line in NOTE_LINES for line in lines), lines
-            assert "${{" not in step["run"]
+            assert "${{" not in step["run"] and "env" not in step, step  # the note reaches git as a file alone
     assert {line.strip() for s in job["steps"] for line in s.get("run", "").splitlines() if line.strip()} == NOTE_LINES
-    assert next(s for s in job["steps"] if "run" in s)["env"] == {"NOTE": "${{ needs.redline.outputs.note }}"}
+    uses = [s["uses"].split("@")[0] for s in job["steps"] if "uses" in s]
+    assert uses == ["actions/checkout", "actions/download-artifact"]  # the run's own artifact, after the checkout
+    fetched = next(s for s in job["steps"] if s.get("uses", "").startswith("actions/download-artifact@"))
+    assert fetched["with"] == {"name": "redline-note", "path": "${{ runner.temp }}"}, fetched
 
 
 def test_every_job_that_runs_repository_code_is_read_only_and_drops_its_credentials():
@@ -374,7 +375,12 @@ def test_every_job_that_runs_repository_code_is_read_only_and_drops_its_credenti
     push = next(s for s in steps if "redline ci push" in s.get("run", ""))
     assert '--note "$RUNNER_TEMP/note"' in push["run"]
     handed = next(s for s in steps if s.get("id") == "note")
-    assert "always()" in handed["if"] and "base64 -w0" in handed["run"] and "GITHUB_OUTPUT" in handed["run"]
+    assert "always()" in handed["if"] and "note=1" in handed["run"] and "GITHUB_OUTPUT" in handed["run"]
+    assert "base64" not in handed["run"]  # the note itself is never an output: G3's reports outgrew one
+    uploaded = next(s for s in steps if s.get("uses", "").startswith("actions/upload-artifact@"))
+    assert "always()" in uploaded["if"] and "steps.note.outputs.note == '1'" in uploaded["if"], uploaded
+    assert uploaded["with"]["name"] == "redline-note" and uploaded["with"]["path"] == "${{ runner.temp }}/note", uploaded
+    assert uploaded["with"]["overwrite"] is True and uploaded["with"]["if-no-files-found"] == "error", uploaded
     assert flow["jobs"]["redline"]["outputs"] == {"note": "${{ steps.note.outputs.note }}"}
 
 
@@ -399,8 +405,9 @@ def git_in(where: Path, *args: str) -> str:
     return done.stdout.strip()
 
 
-def run_note_job(tmp_path: Path, hook: str) -> tuple[subprocess.CompletedProcess, Path, str, str]:
-    """The note job's own script, read from the workflow, on a clone of a bare origin whose pre-receive hook is `hook`.
+def run_note_job(tmp_path: Path, hook: str, note: str = f"result: pass\nrun: {RUN}\n") -> tuple[subprocess.CompletedProcess, Path, str, str]:
+    """The note job's own script, read from the workflow, on a clone of a bare origin whose pre-receive hook is `hook`;
+    `note` is the artifact the job downloaded into $RUNNER_TEMP.
 
     `$OTHER` in the hook is a commit another run notes; the hook's git runs outside the push's quarantine."""
     shell = bash()
@@ -421,9 +428,9 @@ def run_note_job(tmp_path: Path, hook: str) -> tuple[subprocess.CompletedProcess
     bin_dir.mkdir()
     (bin_dir / "sleep").write_bytes(b'#!/bin/sh\necho "$1" >> "$SLEEPS"\n')  # no waiting, and each wait counted
     (bin_dir / "sleep").chmod(0o755)
-    note = f"result: pass\nrun: {RUN}\n"
+    (tmp_path / "note").write_bytes(note.encode())
     script = next(s["run"] for s in yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["note"]["steps"] if "run" in s)
-    env = {**os.environ, "NOTE": base64.b64encode(note.encode()).decode(), "RUNNER_TEMP": str(tmp_path),
+    env = {**os.environ, "RUNNER_TEMP": str(tmp_path),
            "GITHUB_SHA": mine, "SLEEPS": str(tmp_path / "sleeps"), "PUSHES": str(tmp_path / "pushes")}
     done = subprocess.run([shell, "-eo", "pipefail", "-c", f'export PATH="$(cygpath -u "{bin_dir}" 2>/dev/null || echo "{bin_dir}"):$PATH"\n{script}'],
                           cwd=job, env=env, capture_output=True, text=True)
@@ -440,6 +447,15 @@ def test_the_note_job_overtaken_by_another_run_fetches_re_adds_and_keeps_both_no
     assert git_in(origin, "notes", "--ref=redline-ci", "show", other) == "result: fail"
     assert git_in(origin, "notes", "--ref=redline-ci", "show", mine) == f"result: pass\nrun: {RUN}"
     assert (tmp_path / "pushes").read_text().count("x") == 2 and (tmp_path / "sleeps").read_text().split() == ["1"]
+
+
+def test_the_note_job_adds_a_note_longer_than_one_environment_variable_may_be(tmp_path):
+    reports = "".join(f"  - tests/test_x.py::test_{i}: {{outcome: pass}}\n" for i in range(5000))
+    note = f"result: pass\nrun: {RUN}\noutcomes:\n{reports}"
+    assert len(note) > 128 * 1024  # Linux's limit on one argument or variable, which push run 40218119783 hit
+    done, origin, _, mine = run_note_job(tmp_path, "exit 0\n", note)
+    assert done.returncode == 0, done.stderr
+    assert git_in(origin, "notes", "--ref=redline-ci", "show", mine) == note.rstrip("\n")
 
 
 def test_the_note_job_stops_after_five_refused_pushes_and_fails(tmp_path):
