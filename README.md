@@ -203,6 +203,33 @@ GREET.H1:
 After the C merge, `redline merged add-greet/C` says the change is complete, and `redline retro
 add-greet` proposes rules from its defect log.
 
+## Local dashboard
+
+From an installed checkout, start the read-only dashboard:
+
+```powershell
+python -m redline.dashboard
+```
+
+Open [localhost:8765](http://127.0.0.1:8765). It reports local `main`, with a merge-history
+scrubber, change steps, open items, experimental spec/code name drift, work charts, defects,
+scenario links, ledger evidence, CI-note history and recorded agent token usage. Refresh reads local refs; it does not
+fetch, run gates or alter the repository. Stop the server with Ctrl+C.
+
+Use `--ref origin/main` to report the last fetched remote main, `--port 8766` for another
+loopback port, or `--repo <path>` for another Redline checkout. `--github` enables read-only
+`gh` calls for recent runs, open PRs and confirmation of the latest note. Offline notes and
+ledger results are labelled recorded, never freshly verified. If notes are missing locally,
+fetch them explicitly with `git fetch origin 'refs/notes/*:refs/notes/*'` and refresh.
+
+`python -m redline.dashboard --export snapshot.json` writes the data without starting a
+server. Assets ship in the Python package; no frontend install, CDN or cloud hosting is needed.
+Its caches (history, token totals, GitHub's last answer) are JSON files in the Git directory,
+so a restart loads in well under a second. See [the dashboard design](docs/dashboard.md) for
+metric definitions and limitations. Token usage per model is read from the
+Claude Code and Codex session logs on this machine (totals only; `--no-usage` skips them) and from
+the "N tokens, M tool calls" lines that audit and relabel commits record.
+
 ## How Redline is built
 
 Redline follows its own rules: every PR changes at most 400 lines, one session builds one step,
