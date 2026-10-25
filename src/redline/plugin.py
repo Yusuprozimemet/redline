@@ -7,16 +7,20 @@ failure, so a `new` test that already passes fails the run: a check that can't f
 
 import pytest
 
+from redline.reports import attach
+
 USAGE = 'use @pytest.mark.spec("ID") or @pytest.mark.spec("ID", new=True)'
 
 
 def pytest_configure(config: pytest.Config) -> None:
+    attach(config)
     config.addinivalue_line(
         "markers", "spec(id, new=False): link a test to a scenario; new=True expects it to fail"
     )
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption("--redline-report", help="private invocation report sink")
     parser.addoption("--redline-spec", metavar="ID", help="run only the tests linked to ID without new=True")
 
 

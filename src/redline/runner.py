@@ -17,6 +17,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -213,7 +214,21 @@ RUNNERS = (PYTEST, JEST)
 def run(repo: Path, runner: Runner, sid: str | None = None) -> subprocess.CompletedProcess:
     """Run the runner's tests, or one scenario's alone; its output is decoded as UTF-8 (O-ENC1)."""
     argv, env = runner.command(sid)
-    return subprocess.run(argv, cwd=repo, capture_output=True, encoding="utf-8", errors="replace", env={**os.environ, **env})
+    if runner.name != "pytest":
+        return subprocess.run(argv, cwd=repo, capture_output=True, encoding="utf-8", errors="replace", env={**os.environ, **env})
+    from redline.reports import finish, snapshot
+    expected = snapshot(repo)
+    with tempfile.TemporaryDirectory(prefix="redline-report-") as directory:
+        sink = Path(directory) / "report.json"
+        done = subprocess.run([*argv, f"--redline-report={sink}"], cwd=repo, capture_output=True,
+                              encoding="utf-8", errors="replace", env={**os.environ, **env})
+        try:
+            payload = json.loads(sink.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            payload = {"expected": [], "observed": [], "diagnostics": [
+                {"code": "missing", "identity": "pytest", "reason": "invocation report unavailable"}]}
+        done.outcomes = finish(expected, payload)
+        return done
 
 
 def runner_for(test: str) -> Runner | None:

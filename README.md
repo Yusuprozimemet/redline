@@ -203,6 +203,18 @@ GREET.H1:
 After the C merge, `redline merged add-greet/C` says the change is complete, and `redline retro
 add-greet` proposes rules from its defect log.
 
+## Execution reports in development
+
+The pytest runner returns a fresh `outcomes` report for each invocation. It keeps source links,
+pre-selection parameter inventories, setup/call/teardown results and strict-new provenance.
+Missing tests, workers or phases, skips and deselection remain incomplete even if pytest exits
+zero. Nested test runs cannot replace the owning invocation's report.
+
+Report production is being built in `scenario-reports`: Jest and cross-runner aggregation belong
+to G2; push-note transport belongs to G3. Jest evidence remains HELD until the maintainer's
+O-REPORT1 CI part installs Jest and enables `REDLINE_REAL_RUNNERS=1` in the evidence-counting
+push run, before G2. Scenario-outcomes will own report consumption and enforcement.
+
 ## Local dashboard
 
 From an installed checkout, start the read-only dashboard:
